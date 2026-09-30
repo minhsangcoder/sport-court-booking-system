@@ -16,12 +16,12 @@ public interface EventPublisher {
     <T> void publish(String exchange, String routingKey, DomainEvent<T> event);
 
     /**
-     * Publish a domain event using its {@code type} field as the routing key.
+     * Publish a domain event using its {@code eventType} field as the routing key.
      *
      * @param exchange RabbitMQ exchange name
-     * @param event    The domain event (routingKey = event.getType())
+     * @param event    The domain event (routingKey = event.eventType())
      */
     default <T> void publish(String exchange, DomainEvent<T> event) {
-        publish(exchange, event.getType(), event);
+        publish(exchange, event.eventType(), event);
     }
 }

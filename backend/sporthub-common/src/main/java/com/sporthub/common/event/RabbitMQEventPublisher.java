@@ -22,15 +22,15 @@ public class RabbitMQEventPublisher implements EventPublisher {
 
     @Override
     public <T> void publish(String exchange, String routingKey, DomainEvent<T> event) {
-        log.info("📤 Publishing event — type: {}, id: {}, correlationId: {}, exchange: {}, routingKey: {}",
-                event.getType(), event.getId(), event.getCorrelationId(), exchange, routingKey);
+        log.info("Publishing event - type: {}, id: {}, correlationId: {}, exchange: {}, routingKey: {}",
+                event.eventType(), event.eventId(), event.correlationId(), exchange, routingKey);
 
         try {
             rabbitTemplate.convertAndSend(exchange, routingKey, event);
-            log.debug("✅ Event published successfully: {}", event.getId());
+            log.debug("Event published successfully: {}", event.eventId());
         } catch (Exception e) {
-            log.error("❌ Failed to publish event — type: {}, id: {}, error: {}",
-                    event.getType(), event.getId(), e.getMessage(), e);
+            log.error("Failed to publish event - type: {}, id: {}, error: {}",
+                    event.eventType(), event.eventId(), e.getMessage(), e);
             // Rethrow so the caller can decide whether to retry or compensate
             throw e;
         }

@@ -1,142 +1,138 @@
 package com.sporthub.common.exception;
 
-import com.sporthub.common.dto.ApiResponse;
+import com.sporthub.common.dto.ErrorResponse;
+import com.sporthub.common.dto.FieldError;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * Global exception handler for all SportHub microservices.
- * Catches domain exceptions and converts them to standardized {@link ApiResponse} envelopes.
- *
- * <p>Each service that depends on sporthub-common automatically inherits this handler
- * via component scanning.</p>
- */
+/** Converts technical exceptions to the shared {@link ErrorResponse} contract. */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ── 404 Not Found ───────────────────────────────────────────────────
+    private static final String CORRELATION_ID_HEADER = "X-Correlation-Id";
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Object>> handleResourceNotFound(
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(
             ResourceNotFoundException ex, HttpServletRequest request) {
         log.warn("[{}] {} | URI: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
 
-        Map<String, String> detail = new HashMap<>();
-        if (ex.getResourceType() != null) detail.put("resourceType", ex.getResourceType());
-        if (ex.getIdentifier() != null) detail.put("identifier", ex.getIdentifier());
+        Map<String, Object> details = new LinkedHashMap<>();
+        if (ex.getResourceType() != null) {
+            details.put("resourceType", ex.getResourceType());
+        }
+        if (ex.getIdentifier() != null) {
+            details.put("identifier", ex.getIdentifier());
+        }
 
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(404, ex.getMessage(), detail.isEmpty() ? null : detail));
+        return response(HttpStatus.NOT_FOUND, ex.getErrorCode(), ex.getMessage(), request,
+                null, details.isEmpty() ? null : details);
     }
 
-    // ── 409 Conflict ────────────────────────────────────────────────────
-
     @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ApiResponse<Void>> handleConflict(
+    public ResponseEntity<ErrorResponse> handleConflict(
             ConflictException ex, HttpServletRequest request) {
         log.warn("[{}] {} | URI: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(409, ex.getMessage()));
+        return response(HttpStatus.CONFLICT, ex.getErrorCode(), ex.getMessage(), request, null, null);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
             ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
-        log.warn("[COMMON-008] Optimistic lock conflict | URI: {} | Entity: {}",
-                request.getRequestURI(), ex.getPersistentClassName());
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(409, ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getDefaultMessage()));
+        log.warn("[{}] Optimistic lock conflict | URI: {} | Entity: {}",
+                ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getCode(), request.getRequestURI(), ex.getPersistentClassName());
+        return response(HttpStatus.CONFLICT, ErrorCode.OPTIMISTIC_LOCK_CONFLICT,
+                ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getDefaultMessage(), request, null, null);
     }
-
-    // ── 401 Unauthorized ────────────────────────────────────────────────
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleUnauthorized(
+    public ResponseEntity<ErrorResponse> handleUnauthorized(
             UnauthorizedException ex, HttpServletRequest request) {
         log.warn("[{}] {} | URI: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error(401, ex.getMessage()));
+        return response(HttpStatus.UNAUTHORIZED, ex.getErrorCode(), ex.getMessage(), request, null, null);
     }
-
-    // ── 403 Forbidden ───────────────────────────────────────────────────
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ApiResponse<Void>> handleForbidden(
+    public ResponseEntity<ErrorResponse> handleForbidden(
             ForbiddenException ex, HttpServletRequest request) {
         log.warn("[{}] {} | URI: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error(403, ex.getMessage()));
+        return response(HttpStatus.FORBIDDEN, ex.getErrorCode(), ex.getMessage(), request, null, null);
     }
-
-    // ── 422 Unprocessable Entity (Business Rule) ────────────────────────
 
     @ExceptionHandler(BusinessRuleException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(
+    public ResponseEntity<ErrorResponse> handleBusinessRule(
             BusinessRuleException ex, HttpServletRequest request) {
         log.warn("[{}] {} | URI: {}", ex.getErrorCode().getCode(), ex.getMessage(), request.getRequestURI());
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(ApiResponse.error(422, ex.getMessage()));
+        return response(HttpStatus.UNPROCESSABLE_ENTITY, ex.getErrorCode(), ex.getMessage(), request, null, null);
     }
 
-    // ── 400 Bad Request (Validation) ────────────────────────────────────
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(
-            MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        log.warn("[COMMON-005] Validation failed: {}", errors);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.<Map<String, String>>builder()
-                        .status(400)
-                        .message("Validation failed")
-                        .data(errors)
-                        .build());
+    public ResponseEntity<ErrorResponse> handleValidation(
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
+        List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
+                .map(error -> FieldError.builder()
+                        .field(error.getField())
+                        .code(error.getCode())
+                        .message(error.getDefaultMessage())
+                        .build())
+                .toList();
+        log.warn("[{}] Validation failed: {}", ErrorCode.VALIDATION_ERROR.getCode(), fieldErrors);
+        return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR,
+                ErrorCode.VALIDATION_ERROR.getDefaultMessage(), request, fieldErrors, null);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMissingParam(
-            MissingServletRequestParameterException ex) {
-        log.warn("[COMMON-005] Missing parameter: {}", ex.getParameterName());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(400, "Missing required parameter: " + ex.getParameterName()));
+    public ResponseEntity<ErrorResponse> handleMissingParam(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+        String message = "Missing required parameter: " + ex.getParameterName();
+        log.warn("[{}] {}", ErrorCode.VALIDATION_ERROR.getCode(), message);
+        return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, message, request, null, null);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(
-            MethodArgumentTypeMismatchException ex) {
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         String message = String.format("Parameter '%s' must be of type %s",
                 ex.getName(), ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
-        log.warn("[COMMON-005] Type mismatch: {}", message);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(400, message));
+        log.warn("[{}] {}", ErrorCode.VALIDATION_ERROR.getCode(), message);
+        return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, message, request, null, null);
     }
 
-    // ── 500 Internal Server Error (Catch-all) ───────────────────────────
-
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneric(
-            Exception ex, HttpServletRequest request) {
-        log.error("[COMMON-006] Unexpected error at URI: {} | Error: {}",
-                request.getRequestURI(), ex.getMessage(), ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(500, "An unexpected error occurred. Please try again later."));
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
+        log.error("[{}] Unexpected error at URI: {} | Error: {}",
+                ErrorCode.INTERNAL_ERROR.getCode(), request.getRequestURI(), ex.getMessage(), ex);
+        return response(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR,
+                "An unexpected error occurred. Please try again later.", request, null, null);
+    }
+
+    private ResponseEntity<ErrorResponse> response(
+            HttpStatus status,
+            ErrorCode errorCode,
+            String message,
+            HttpServletRequest request,
+            List<FieldError> fieldErrors,
+            Map<String, Object> details) {
+        return ResponseEntity.status(status)
+                .body(ErrorResponse.builder()
+                        .status(status.value())
+                        .code(errorCode.getCode())
+                        .message(message)
+                        .traceId(request.getHeader(CORRELATION_ID_HEADER))
+                        .fieldErrors(fieldErrors)
+                        .details(details)
+                        .build());
     }
 }

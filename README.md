@@ -1,6 +1,6 @@
 # SportHub
 
-SportHub là đồ án tốt nghiệp xây dựng nền tảng Web tìm kiếm, đặt và quản lý sân thể thao. Repository hiện đã hoàn thành nền tảng Phase 0 về cấu trúc, cấu hình môi trường, hạ tầng local và quản lý OpenAPI contract. Các nghiệp vụ xác thực, facility CRUD, booking, payment, group booking, transfer marketplace và analytics chưa được triển khai trong Phase 0.
+SportHub là đồ án tốt nghiệp xây dựng nền tảng Web tìm kiếm, đặt và quản lý sân thể thao. Repository đã có baseline Phase 0 và nền tảng Phase 1 cho domain-event contract, API Gateway hardening và Identity OpenAPI contract. Các nghiệp vụ xác thực, facility CRUD, booking, payment, group booking, transfer marketplace và analytics vẫn chưa được triển khai.
 
 ## Trạng thái hiện tại
 
@@ -11,12 +11,15 @@ SportHub là đồ án tốt nghiệp xây dựng nền tảng Web tìm kiếm, 
 - Migration ban đầu cho identity và schedule
 - Docker Compose cho PostgreSQL, Redis, RabbitMQ, MinIO và Mailpit
 - OpenAPI v1 common schemas và script chuẩn bị code generation
+- Identity OpenAPI contract; generated code vẫn được regenerate và không commit mặc định
+- Gateway header sanitization, correlation ID, CORS, Redis rate-limiter configuration và authentication seam no-op
+- Domain-event envelope cùng convention retry, DLQ và idempotency
 
 Chưa có:
 
 - Business API hoàn chỉnh cho các use case
 - `facility-service` và `payment-service` runnable
-- Service-specific OpenAPI endpoint contracts
+- Service-specific OpenAPI contracts ngoài Identity
 - Tích hợp thật giữa frontend và backend
 - Transfer Service
 
@@ -103,7 +106,7 @@ Các module hiện tại là foundation/skeleton; không được hiểu là cá
 
 ## OpenAPI workflow
 
-Shared schemas nằm tại `contracts/openapi/v1/components/schemas.yaml`. Các contract service sẽ được thêm dưới tên `identity.yaml`, `facility.yaml`, `schedule.yaml`, `booking.yaml` và `payment.yaml`.
+Shared schemas nằm tại `contracts/openapi/v1/components/schemas.yaml`. Identity contract nằm tại `contracts/openapi/v1/identity.yaml`; facility, schedule, booking và payment contract sẽ được thêm ở các phase tương ứng.
 
 ```powershell
 .\scripts\openapi\openapi.ps1 -Action validate -Contract common
@@ -111,4 +114,6 @@ Shared schemas nằm tại `contracts/openapi/v1/components/schemas.yaml`. Các 
 .\scripts\openapi\openapi.ps1 -Action backend -Contract identity -ServiceDirectory identity-service
 ```
 
-Chi tiết convention nằm trong `contracts/openapi/README.md`. Không bắt đầu Phase 1 cho đến khi audit và các quyết định mở trong `docs/phase-0-audit.md` được xác nhận.
+Chi tiết convention nằm trong `contracts/openapi/README.md`.
+
+Các quyết định nghiệp vụ/kỹ thuật chưa chốt nằm trong `docs/open-decisions.md`. Phase 1 không triển khai controller/service Identity; contract `identity.yaml` là đầu vào cho Phase 2 sau khi các quyết định liên quan được xác nhận.

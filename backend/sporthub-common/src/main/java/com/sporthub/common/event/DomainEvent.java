@@ -1,109 +1,88 @@
 package com.sporthub.common.event;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
- * Base domain event following the CloudEvents v1.0 specification.
- * Used for all inter-service communication via RabbitMQ.
+ * Immutable technical envelope for inter-service domain events.
+ * Domain payload types remain owned by the producing service.
  *
- * <p>Key fields:</p>
- * <ul>
- *   <li>{@code type} — Event type using dot notation: {@code booking.created}, {@code payment.completed}</li>
- *   <li>{@code source} — Originating service: {@code /sporthub/booking-service}</li>
- *   <li>{@code correlationId} — Traces a business operation across services</li>
- *   <li>{@code causationId} — ID of the event that triggered this event (for event chains)</li>
- * </ul>
- *
- * @param <T> the type of the event data payload
+ * @param eventId immutable event identifier
+ * @param eventType stable lower-case name such as {@code booking.created}
+ * @param eventVersion schema version, starting at {@code 1}
+ * @param occurredAt event occurrence time in UTC
+ * @param producer producing service name
+ * @param correlationId identifier propagated across service boundaries
+ * @param aggregateId identifier of the aggregate that emitted the event
+ * @param payload service-owned event payload
+ * @param <T> payload type
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class DomainEvent<T> {
+public record DomainEvent<T>(
+        UUID eventId,
+        String eventType,
+        int eventVersion,
+        Instant occurredAt,
+        String producer,
+        String correlationId,
+        UUID aggregateId,
+        T payload) {
 
-    /** CloudEvents spec version */
-    @Builder.Default
-    private String specVersion = "1.0";
+    private static final Pattern EVENT_TYPE_PATTERN =
+            Pattern.compile("^[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)+$");
 
-    /** Unique event ID */
-    @Builder.Default
-    private String id = UUID.randomUUID().toString();
+    public DomainEvent {
+        Objects.requireNonNull(eventId, "eventId is required");
+        Objects.requireNonNull(occurredAt, "occurredAt is required");
+        Objects.requireNonNull(aggregateId, "aggregateId is required");
+        Objects.requireNonNull(payload, "payload is required");
 
-    /**
-     * Event type using dot notation.
-     * Examples: "booking.created", "payment.completed", "user.registered"
-     */
-    private String type;
-
-    /**
-     * Source service identifier.
-     * Examples: "/sporthub/identity-service", "/sporthub/booking-service"
-     */
-    private String source;
-
-    /** Event timestamp (UTC) */
-    @Builder.Default
-    private Instant time = Instant.now();
-
-    /** Content type for the data field */
-    @Builder.Default
-    private String dataContentType = "application/json";
-
-    /** Subject — the primary resource identifier (e.g., booking ID, user ID) */
-    private String subject;
-
-    /** Correlation ID — traces a business operation across multiple services */
-    private String correlationId;
-
-    /** Causation ID — the event that caused this event (for choreography chains) */
-    private String causationId;
-
-    /** Event payload */
-    private T data;
-
-    // ── Factory Methods ─────────────────────────────────────────────
-
-    /**
-     * Create a new event with auto-generated correlationId.
-     */
-    public static <T> DomainEvent<T> of(String type, String source, T data) {
-        return DomainEvent.<T>builder()
-                .type(type)
-                .source(source)
-                .data(data)
-                .correlationId(UUID.randomUUID().toString())
-                .build();
+        if (eventType == null || !EVENT_TYPE_PATTERN.matcher(eventType).matches()) {
+            throw new IllegalArgumentException(
+                    "eventType must use lower-case dot notation, for example booking.created");
+        }
+        if (eventVersion < 1) {
+            throw new IllegalArgumentException("eventVersion must be at least 1");
+        }
+        if (producer == null || producer.isBlank()) {
+            throw new IllegalArgumentException("producer is required");
+        }
+        if (correlationId == null || correlationId.isBlank()) {
+            throw new IllegalArgumentException("correlationId is required");
+        }
     }
 
-    /**
-     * Create a new event that continues an existing correlation chain.
-     */
-    public static <T> DomainEvent<T> of(String type, String source, T data, String correlationId) {
-        return DomainEvent.<T>builder()
-                .type(type)
-                .source(source)
-                .data(data)
-                .correlationId(correlationId)
-                .build();
+    public static <T> DomainEvent<T> create(
+            String eventType,
+            int eventVersion,
+            String producer,
+            String correlationId,
+            UUID aggregateId,
+            T payload) {
+        return new DomainEvent<>(
+                UUID.randomUUID(),
+                eventType,
+                eventVersion,
+                Instant.now(),
+                producer,
+                correlationId,
+                aggregateId,
+                payload);
     }
 
-    /**
-     * Create a new event caused by another event (choreography saga).
-     */
-    public static <T> DomainEvent<T> causedBy(String type, String source, T data, DomainEvent<?> cause) {
-        return DomainEvent.<T>builder()
-                .type(type)
-                .source(source)
-                .data(data)
-                .correlationId(cause.getCorrelationId())
-                .causationId(cause.getId())
-                .build();
+    public static <T> DomainEvent<T> create(
+            String eventType,
+            int eventVersion,
+            String producer,
+            UUID aggregateId,
+            T payload) {
+        return create(
+                eventType,
+                eventVersion,
+                producer,
+                UUID.randomUUID().toString(),
+                aggregateId,
+                payload);
     }
 }

@@ -16,10 +16,11 @@ Mỗi business service sở hữu database PostgreSQL riêng. Service không đ�
 - RabbitMQ cho domain event bất đồng bộ.
 - Redis cho cache, rate limit và coordination ngắn hạn; Redis không phải system of record.
 - MinIO cho object storage tương thích S3.
+- Môi trường local dùng image MinIO CE được build lại từ đúng upstream release và pin theo digest, do upstream hiện phân phối Community Edition dưới dạng source-only.
 - Mailpit cho email local development.
 - Docker Compose cho môi trường local.
 
-Phase hiện tại không đưa Kubernetes, Elasticsearch hoặc gRPC vào target architecture.
+Phase hiện tại không đưa Kubernetes, Elasticsearch hoặc gRPC vào target architecture. Domain event envelope, retry, DLQ và idempotency convention được quy định trong `docs/domain-events.md`.
 
 ## Authentication target
 
@@ -30,6 +31,8 @@ Phase hiện tại không đưa Kubernetes, Elasticsearch hoặc gRPC vào targe
 - Email verification gửi vào Mailpit khi chạy local.
 
 Đây là target contract, chưa phải hành vi đã hoàn chỉnh trong source hiện tại.
+
+API Gateway hiện strip toàn bộ `X-User-*` do client gửi, truyền correlation ID và cung cấp authentication resolver no-op. Gateway chưa xác thực JWT và chưa thêm trusted identity context; phần đó thuộc Phase 2. Downstream service không còn tự động dựng security context từ header bên ngoài trong `sporthub-common`.
 
 ## Contract ownership
 

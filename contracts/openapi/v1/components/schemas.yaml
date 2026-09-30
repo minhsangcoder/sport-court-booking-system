@@ -40,6 +40,10 @@ ErrorResponse:
       type: array
       items:
         $ref: '#/FieldError'
+    details:
+      type: object
+      additionalProperties: true
+      description: Optional non-sensitive technical context for the error.
 
 FieldError:
   type: object

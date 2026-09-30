@@ -59,7 +59,9 @@ services:
     networks: [sporthub]
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    # MinIO CE is source-only now; this multi-arch image is rebuilt from the
+    # corresponding upstream release and pinned by digest for reproducibility.
+    image: ghcr.io/coollabsio/minio:RELEASE.2025-04-22T22-12-26Z@sha256:a4938f37f1be1841b8e7b627ad0207b265345fd0d063e42d7410c78af0e63e68
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -70,6 +72,12 @@ services:
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks: [sporthub]
 
   mailpit:
@@ -78,6 +86,12 @@ services:
     ports:
       - "${MAILPIT_SMTP_PORT:-1025}:1025"
       - "${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks: [sporthub]
 
   api-gateway:
@@ -89,12 +103,22 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:3000}
+      GATEWAY_RATE_LIMIT_REPLENISH_RATE: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:-20}
+      GATEWAY_RATE_LIMIT_BURST_CAPACITY: ${GATEWAY_RATE_LIMIT_BURST_CAPACITY:-40}
       IDENTITY_SERVICE_URL: http://identity-service:8081
       SCHEDULE_SERVICE_URL: http://schedule-service:8083
       BOOKING_SERVICE_URL: http://booking-service:8084
     ports: ["8080:8080"]
-    depends_on: [redis, identity-service, schedule-service, booking-service]
+    depends_on:
+      redis:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+      schedule-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
     networks: [sporthub]
 
   identity-service:
@@ -114,7 +138,15 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
       MAIL_HOST: mailpit
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
-    depends_on: [postgres, redis, rabbitmq, mailpit]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
     networks: [sporthub]
 
   schedule-service:
@@ -132,7 +164,13 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
-    depends_on: [postgres, redis, rabbitmq]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks: [sporthub]
 
   booking-service:
@@ -150,7 +188,13 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
-    depends_on: [postgres, redis, rabbitmq]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks: [sporthub]
 
   frontend:
