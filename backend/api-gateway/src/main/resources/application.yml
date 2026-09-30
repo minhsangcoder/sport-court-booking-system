@@ -1,0 +1,79 @@
+# ═══════════════════════════════════════════════════════════════
+# SportHub API Gateway — Configuration
+# ═══════════════════════════════════════════════════════════════
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # ── Route Definitions ───────────────────────────────────────
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:3000"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      routes:
+        # ── Identity & Access Service ──────────────────────────
+        - id: identity-service
+          uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**, /api/v1/users/**, /api/v1/staff/**
+          filters:
+            - StripPrefix=0
+
+        # ── Schedule & Pricing Service ─────────────────────────
+        - id: schedule-service
+          uri: ${SCHEDULE_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/schedules/**, /api/v1/pricing/**, /api/v1/slots/**
+          filters:
+            - StripPrefix=0
+
+        # ── Booking & Reservation Service ──────────────────────
+        - id: booking-service
+          uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/bookings/**, /api/v1/groups/**
+          filters:
+            - StripPrefix=0
+
+  # ── Redis (for rate limiting & JWT blacklist) ───────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+
+# ── JWT Configuration ─────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration: 900000      # 15 minutes (ms)
+  refresh-token-expiration: 604800000  # 7 days (ms)
+
+# ── Actuator ──────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    gateway:
+      enabled: true
+
+# ── Logging ───────────────────────────────────────────────────
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.sporthub.gateway: DEBUG

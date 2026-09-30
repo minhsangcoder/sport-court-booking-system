@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: SportHub Common API Components
+  version: 1.0.0
+  description: Reusable transport schemas for SportHub v1 service contracts.
+paths: {}
+components:
+  schemas:
+    ApiResponse:
+      $ref: './components/schemas.yaml#/ApiResponse'
+    ErrorResponse:
+      $ref: './components/schemas.yaml#/ErrorResponse'
+    FieldError:
+      $ref: './components/schemas.yaml#/FieldError'
+    PaginationMetadata:
+      $ref: './components/schemas.yaml#/PaginationMetadata'

@@ -1,0 +1,78 @@
+ApiResponse:
+  type: object
+  required: [status, message, timestamp]
+  properties:
+    status:
+      type: integer
+      format: int32
+      minimum: 100
+      maximum: 599
+    message:
+      type: string
+    data:
+      description: Endpoint-specific response payload.
+    timestamp:
+      type: string
+      format: date-time
+    traceId:
+      type: string
+
+ErrorResponse:
+  type: object
+  required: [status, code, message, timestamp]
+  properties:
+    status:
+      type: integer
+      format: int32
+      minimum: 400
+      maximum: 599
+    code:
+      type: string
+      example: VALIDATION_ERROR
+    message:
+      type: string
+    timestamp:
+      type: string
+      format: date-time
+    traceId:
+      type: string
+    fieldErrors:
+      type: array
+      items:
+        $ref: '#/FieldError'
+
+FieldError:
+  type: object
+  required: [field, message]
+  properties:
+    field:
+      type: string
+    code:
+      type: string
+    message:
+      type: string
+
+PaginationMetadata:
+  type: object
+  required: [page, size, totalElements, totalPages, first, last]
+  properties:
+    page:
+      type: integer
+      format: int32
+      minimum: 0
+    size:
+      type: integer
+      format: int32
+      minimum: 1
+    totalElements:
+      type: integer
+      format: int64
+      minimum: 0
+    totalPages:
+      type: integer
+      format: int32
+      minimum: 0
+    first:
+      type: boolean
+    last:
+      type: boolean

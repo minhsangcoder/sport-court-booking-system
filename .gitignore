@@ -1,0 +1,67 @@
+# Environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Java and Maven
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Local generated/document helper files
+generate_uc5_uc6_uc8_docx.py
+
+# Split/internal design documents
+Document/Dac_Ta_UC3_UC4_UC7.docx
+Document/Dac_Ta_UC5_UC6_UC8.docx
+Document/Dac_Ta_UC5_UC6_UC8.pdf
+Document/SportHub_Microservices_Architecture.md
+
+# Internal AI/audit notes
+docs/phase-0-audit.md
+
+# Node.js and Next.js
+**/node_modules/
+**/.next/
+**/out/
+**/dist/
+**/build/
+**/.turbo/
+**/.vercel/
+**/.parcel-cache/
+**/.eslintcache
+*.tsbuildinfo
+coverage/
+
+# Generated OpenAPI output
+frontend/src/lib/api/generated/
+backend/**/target/generated-sources/openapi/
+
+# Temporary, cache, and generated document output
+.docx-build/
+.docx-review/
+tmp/
+temp/
+.tmp/
+.cache/
+__pycache__/
+*.py[cod]
+*.log
+logs/
+
+# IDE and operating system files
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+.DS_Store
+Thumbs.db
+Desktop.ini

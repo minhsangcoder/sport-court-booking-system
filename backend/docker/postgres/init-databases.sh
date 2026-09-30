@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+echo "SportHub: initializing service databases"
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE DATABASE identity_db WITH OWNER = $POSTGRES_USER ENCODING = 'UTF8';
+    CREATE DATABASE facility_db WITH OWNER = $POSTGRES_USER ENCODING = 'UTF8';
+    CREATE DATABASE schedule_db WITH OWNER = $POSTGRES_USER ENCODING = 'UTF8';
+    CREATE DATABASE booking_db WITH OWNER = $POSTGRES_USER ENCODING = 'UTF8';
+    CREATE DATABASE payment_db WITH OWNER = $POSTGRES_USER ENCODING = 'UTF8';
+
+    GRANT ALL PRIVILEGES ON DATABASE identity_db TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE facility_db TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE schedule_db TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE booking_db TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE payment_db TO $POSTGRES_USER;
+EOSQL
+
+echo "SportHub: identity_db, facility_db, schedule_db, booking_db and payment_db created"

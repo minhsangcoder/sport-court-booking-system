@@ -1,0 +1,10 @@
+pmOnFail: ignore
+
+minimumReleaseAgeExclude:
+  - '@next/*'
+  - next
+
+allowBuilds:
+  # Required by eslint-import-resolver-typescript; the version and integrity are
+  # pinned by pnpm-lock.yaml.
+  unrs-resolver: true
