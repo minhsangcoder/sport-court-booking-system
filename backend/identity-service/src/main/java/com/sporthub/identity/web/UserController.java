@@ -18,6 +18,19 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final ProfileService profileService;
 
+    @GetMapping("/me/contact-challenges")
+    public ApiResponse<java.util.List<ProfileService.ContactChallenge>> contactChallenges(
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        return ApiResponse.success(profileService.contactChallenges(principal.userId()));
+    }
+
+    @PostMapping("/me/contact-challenges/{channel}/resend")
+    public ApiResponse<ProfileService.ContactChallenge> resendContact(
+            @AuthenticationPrincipal AuthenticatedUser principal, @PathVariable String channel,
+            HttpServletRequest request) {
+        return ApiResponse.success(profileService.resendContact(principal.userId(), channel, RequestMetadata.from(request)));
+    }
+
     @GetMapping("/me")
     public ApiResponse<UserProfileView> me(@AuthenticationPrincipal AuthenticatedUser principal) {
         return ApiResponse.success(profileService.get(principal.userId()));

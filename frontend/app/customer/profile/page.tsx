@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { api, ApiError, type UserProfile } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import { RequireAuth } from '@/features/auth/require-auth'
@@ -16,6 +17,7 @@ export default function ProfilePage() {
     } catch(err) {setError(err instanceof ApiError ? err.message : 'Không thể lưu hồ sơ.')} finally{setBusy(false)}
   }
   return <RequireAuth><div className="mx-auto max-w-2xl px-5 py-10"><h1 className="text-3xl font-bold">Hồ sơ của tôi</h1><p className="mt-2 text-slate-500">{user?.email ?? user?.phone} · {user?.roles.join(', ')}</p>
+    <Link href="/customer/profile/contact" className="mt-5 inline-block font-medium text-emerald-700 hover:underline">Email và số điện thoại →</Link>
     <form onSubmit={save} className="mt-8 grid gap-5 rounded-2xl border bg-white p-6" key={user?.id}>
       <label className="grid gap-2 text-sm">Họ và tên<Input name="fullName" defaultValue={user?.fullName} minLength={2} maxLength={120} required disabled={busy}/></label>
       <label className="grid gap-2 text-sm">Ngày sinh<Input name="dateOfBirth" type="date" defaultValue={user?.dateOfBirth ?? ''} disabled={busy}/></label>

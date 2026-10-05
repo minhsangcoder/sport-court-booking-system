@@ -429,7 +429,7 @@
         },
         "responses": {
           "200": {
-            "description": "Updated profile and any pending contact verification state",
+            "description": "Current profile; contact changes remain pending until verified. Read contact-challenges for own OTP metadata.",
             "headers": {
               "X-Correlation-Id": {
                 "$ref": "#/components/headers/CorrelationId"
@@ -451,6 +451,9 @@
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "description": "Contact verification request cooldown"
           }
         }
       }
@@ -898,6 +901,89 @@
           }
         }
       }
+    },
+    "/users/me/contact-challenges": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "getOwnContactChallenges",
+        "summary": "List own pending email and phone verification requests",
+        "description": "Safe challenge metadata only. Existing login contact remains unchanged until verification succeeds. Expired requests stay visible for resend.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own contact verification state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChallengeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/me/contact-challenges/{channel}/resend": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "resendOwnContactChallenge",
+        "summary": "Resend verification for an own pending contact change",
+        "description": "At least 60 seconds between requests. Supersedes previous codes for the channel. No pending recipient can be supplied by the caller.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EMAIL",
+                "PHONE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own contact verification state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChallengeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "description": "Wait until resendAfter before requesting another code"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1182,7 +1268,8 @@
             "type": "string",
             "format": "email",
             "maxLength": 254,
-            "description": "A changed email remains pending until verified."
+            "description": "A changed email remains pending until verified.",
+            "minLength": 3
           },
           "phone": {
             "type": "string",
@@ -1876,6 +1963,75 @@
           "active",
           "permissions"
         ]
+      },
+      "ContactChallenge": {
+        "type": "object",
+        "required": [
+          "id",
+          "channel",
+          "recipient",
+          "expiresAt",
+          "resendAfter",
+          "usable"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "EMAIL",
+              "PHONE"
+            ]
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resendAfter": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ContactChallengeResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ContactChallenge"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ContactChallengeListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactChallenge"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
       }
     }
   }

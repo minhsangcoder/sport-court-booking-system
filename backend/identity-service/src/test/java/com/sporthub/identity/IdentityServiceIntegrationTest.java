@@ -249,6 +249,64 @@ class IdentityServiceIntegrationTest {
     }
 
     @Test
+    void contactChangeKeepsCurrentLoginUntilVerifiedAndResendInvalidatesTheOldCode() throws Exception {
+        var user = activate(uniqueEmail("contact-current"));
+        var other = activate(uniqueEmail("contact-other"));
+        String target = uniqueEmail("contact-new");
+        var token = authService.login(new LoginRequest(user.getEmail(), "Password123!"), metadata).response().accessToken();
+        profileService.update(user.getId(), new UpdateProfileRequest(null, target, null, null, null), metadata);
+        assertThat(profileService.get(user.getId()).email()).isEqualTo(user.getEmail());
+        var challenge = profileService.contactChallenges(user.getId()).getFirst();
+        assertThat(challenge.recipient()).isEqualTo(target);
+        assertThat(challenge.channel()).isEqualTo("EMAIL");
+        profileService.update(user.getId(), new UpdateProfileRequest(null, target, null, null, null), metadata);
+        assertThat(profileService.contactChallenges(user.getId())).hasSize(1);
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/users/me/contact-challenges")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data[0].id").value(challenge.id().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data[0].codeHash").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data[0].tokenHash").doesNotExist());
+        var otherToken = authService.login(new LoginRequest(other.getEmail(), "Password123!"), metadata).response().accessToken();
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/users/me/contact-challenges")
+                .header("Authorization", "Bearer " + otherToken))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data").isEmpty());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/users/me/contact-challenges/EMAIL/resend")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isTooManyRequests());
+        jdbc.update("UPDATE otp_codes SET created_at=NOW()-interval '61 seconds' WHERE id=?", challenge.id());
+        String originalCode = verificationCodes.get(target);
+        var replacement = profileService.resendContact(user.getId(), "EMAIL", metadata);
+        assertThat(replacement.id()).isNotEqualTo(challenge.id());
+        assertThatThrownBy(() -> authService.verify(new VerificationRequest(null, challenge.id(), originalCode), metadata))
+                .isInstanceOf(IdentityException.class).hasMessageContaining("already been used");
+        authService.verify(new VerificationRequest(null, replacement.id(), verificationCodes.get(target)), metadata);
+        assertThat(profileService.contactChallenges(user.getId())).isEmpty();
+        assertThat(authService.login(new LoginRequest(target, "Password123!"), metadata).response().user().emailVerified()).isTrue();
+        assertThatThrownBy(() -> authService.login(new LoginRequest(user.getEmail(), "Password123!"), metadata))
+                .isInstanceOf(IdentityException.class);
+    }
+
+    @Test
+    void phoneChallengeExpiryAndResendDoNotChangeContactBeforeSuccessfulVerification() {
+        var user = activate(uniqueEmail("phone-change"));
+        String phone = uniquePhone();
+        profileService.update(user.getId(), new UpdateProfileRequest(null, null, phone, null, null), metadata);
+        var challenge = profileService.contactChallenges(user.getId()).getFirst();
+        assertThat(challenge.channel()).isEqualTo("PHONE");
+        assertThat(profileService.get(user.getId()).phone()).isNull();
+        jdbc.update("UPDATE otp_codes SET expires_at=NOW()-interval '1 second',created_at=NOW()-interval '61 seconds' WHERE id=?", challenge.id());
+        assertThat(profileService.contactChallenges(user.getId()).getFirst().usable()).isFalse();
+        assertThatThrownBy(() -> authService.verify(new VerificationRequest(null, challenge.id(), verificationCodes.get(phone)), metadata))
+                .isInstanceOf(IdentityException.class).hasMessageContaining("expired");
+        var resent = profileService.resendContact(user.getId(), "PHONE", metadata);
+        authService.verify(new VerificationRequest(null, resent.id(), verificationCodes.get(phone)), metadata);
+        assertThat(profileService.get(user.getId()).phone()).isEqualTo(phone);
+        assertThat(authService.login(new LoginRequest(phone, "Password123!"), metadata).response().user().phoneVerified()).isTrue();
+        assertThat(profileService.get(user.getId()).roles()).containsExactly(Role.CUSTOMER);
+    }
+
+    @Test
     void adminLockAndRoleChangeRevokeEverySessionAndAuditCannotBeModified() {
         var admin=activate(uniqueEmail("admin-controls"));admin.getRoles().add(Role.ADMIN);userRepository.saveAndFlush(admin);
         var adminSession=authService.login(new LoginRequest(admin.getEmail(),"Password123!"),metadata);var actor=jwtService.parseAccessToken(adminSession.response().accessToken());
