@@ -40,7 +40,7 @@ import static org.mockito.Mockito.reset;
         "sporthub.identity.frontend-base-url=http://localhost:3000",
         "sporthub.identity.mail-from=no-reply@sporthub.local",
         "sporthub.identity.secure-cookie=false"
-        ,"sporthub.identity.notification-delay-ms=3600000","sporthub.identity.admin-expiry-delay-ms=3600000"
+        ,"sporthub.identity.notification-delay-ms=3600000","sporthub.identity.admin-expiry-delay-ms=3600000","spring.rabbitmq.listener.simple.auto-startup=false"
 })
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class IdentityServiceIntegrationTest {
@@ -80,6 +80,7 @@ class IdentityServiceIntegrationTest {
     @Autowired com.sporthub.identity.service.SessionValidationService sessionValidation;
     @Autowired com.sporthub.identity.security.JwtService jwtService;
     @Autowired AdminAccountService adminAccounts;
+    @Autowired FacilityNoticeConsumer facilityNotices;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockBean MailDeliveryService mailDelivery;
 
@@ -305,6 +306,14 @@ class IdentityServiceIntegrationTest {
 
     private RegisterRequest registration(String email, String phone) {
         return new RegisterRequest("SportHub Member", email, phone, "Password123!");
+    }
+
+    @Test void facilityDecisionsNotifyTheVerifiedOwnerOnceEvenWithBusinessReplay() {
+        var user=activate(uniqueEmail("facility-notice"));UUID review=UUID.randomUUID(),facility=UUID.randomUUID();var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var event=json.valueToTree(com.sporthub.common.event.DomainEvent.create("facility.reviewed",1,"facility-service",facility,Map.of("reviewId",review,"facilityId",facility,"ownerId",user.getId(),"facilityName","Controlled Facility","state","APPROVED","reason","Review approved")));
+        facilityNotices.apply(event);facilityNotices.apply(event);((com.fasterxml.jackson.databind.node.ObjectNode)event).put("eventId",UUID.randomUUID().toString());facilityNotices.apply(event);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM identity_notifications WHERE source_key=?",Integer.class,"facility-review:"+review)).isEqualTo(1);
+        ((com.fasterxml.jackson.databind.node.ObjectNode)event).put("producer","untrusted-service");assertThatThrownBy(()->facilityNotices.apply(event)).isInstanceOf(org.springframework.amqp.AmqpRejectAndDontRequeueException.class);
     }
 
     private String uniqueEmail(String prefix) {

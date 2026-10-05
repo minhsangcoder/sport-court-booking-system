@@ -25,7 +25,7 @@ public class ReliableOutbox {
         try {jdbc.update("INSERT INTO event_outbox(event_id,exchange,routing_key,body) VALUES(?,?,?,?::jsonb)",event.eventId(),exchange,event.eventType(),json.writeValueAsString(event));}
         catch(com.fasterxml.jackson.core.JsonProcessingException ex) {throw new IllegalStateException("Could not serialize domain event",ex);}
     }
-    @Scheduled(fixedDelayString="${sporthub.events.outbox.delay-ms:1000}")
+    @Scheduled(fixedDelayString="${sporthub.events.outbox.delay-ms:1000}",initialDelayString="${sporthub.events.outbox.delay-ms:1000}")
     public void publishPending() {
         for(int count=0;count<20;count++) {
             Boolean processed=tx.execute(status->{

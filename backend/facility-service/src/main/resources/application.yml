@@ -24,11 +24,16 @@ spring:
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:sporthub}
+    publisher-confirm-type: correlated
+    publisher-returns: true
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 11MB
 sporthub:
+  events:
+    outbox:
+      enabled: true
   media:
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
     access-key: ${MINIO_ACCESS_KEY}

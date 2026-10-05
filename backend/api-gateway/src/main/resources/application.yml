@@ -56,7 +56,7 @@ spring:
         - id: facility-service
           uri: ${FACILITY_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/api/v1/facilities/**, /api/v1/owner/facilities/**, /api/v1/owner/courts/**, /api/v1/owner/maintenance/**, /api/v1/sport-categories/**, /api/v1/admin/sport-categories/**
+            - Path=/api/v1/facilities/**, /api/v1/owner/facilities/**, /api/v1/owner/courts/**, /api/v1/owner/maintenance/**, /api/v1/sport-categories/**, /api/v1/admin/sport-categories/**, /api/v1/admin/facilities/**
         # ── Identity & Access Service ──────────────────────────
         - id: identity-service
           uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}

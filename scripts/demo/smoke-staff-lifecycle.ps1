@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param([string]$ApiBase='http://localhost:18080/api/v1')
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'get-demo-facility.ps1')
 $demoRoot=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $demoPassword=([IO.File]::ReadAllLines((Join-Path $demoRoot '.env')) | Where-Object {$_ -match '^DEMO_PASSWORD='}) -replace '^DEMO_PASSWORD=',''
 function Request($method,$path,$body=$null,$token=$null,$key=$null){$headers=@{};if($token){$headers.Authorization="Bearer $token"};if($key){$headers['Idempotency-Key']=$key};$args=@{Method=$method;Uri="$ApiBase$path";Headers=$headers};if($null -ne $body){$args.Body=($body|ConvertTo-Json -Depth 20 -Compress);$args.ContentType='application/json'};return (Invoke-RestMethod @args).data}
@@ -9,7 +10,7 @@ $owner=Request POST '/auth/login' @{identifier='owner@sporthub.local';password=$
 $staff=Request POST '/auth/login' @{identifier='staff@sporthub.local';password=$demoPassword}
 $customer=Request POST '/auth/login' @{identifier='customer@sporthub.local';password=$demoPassword}
 try {
- $facility=@(Request GET '/facilities')[0];$category=@(Request GET '/sport-categories' | Where-Object active)[0]
+ $facility=Get-DemoFacility $ApiBase;$category=@(Request GET '/sport-categories' | Where-Object active)[0]
  $tag=[Guid]::NewGuid().ToString('N').Substring(0,8)
  $court=Request POST "/owner/facilities/$($facility.id)/courts" @{code="QA-$tag";name="Staff lifecycle QA $tag";sportCategoryId=$category.id;enabled=$true} $owner.accessToken
  $zone=[TimeZoneInfo]::FindSystemTimeZoneById('SE Asia Standard Time')

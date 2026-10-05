@@ -28,12 +28,12 @@ public class MediaService {
     }
     public record ImageView(UUID id,UUID courtId,String objectKey,String url,String contentType,long sizeBytes){}
     public List<ImageView> list(UUID facilityId,Caller caller){
-        if(caller==null)facilities.publicDetail(facilityId);else facilities.ownedDetail(facilityId,caller);
+        if(caller==null)facilities.publicDetail(facilityId);else if(caller.hasRole("ADMIN")){facilities.find(facilityId);jdbc.update("INSERT INTO facility_audit(id,actor_id,facility_id,action) VALUES(?,?,?,'ADMIN_IMAGES_VIEWED')",UUID.randomUUID(),caller.id(),facilityId);}else facilities.ownedDetail(facilityId,caller);
         return jdbc.query("SELECT * FROM facility_images WHERE facility_id=? ORDER BY created_at",(rs,n)->image(
                 rs.getObject("id",UUID.class),rs.getObject("court_id",UUID.class),rs.getString("object_key"),rs.getString("content_type"),rs.getLong("size_bytes")),facilityId);
     }
     public ImageView upload(UUID facilityId,UUID courtId,MultipartFile file,Caller caller){
-        facilities.ownedDetail(facilityId,caller);
+        facilities.mutableOwnedEntity(facilityId,caller);
         if(courtId!=null && !facilities.ownedCourt(courtId,caller).facilityId().equals(facilityId))
             throw new IllegalArgumentException("Court does not belong to facility");
         if(file.isEmpty() || file.getSize()>10*1024*1024) throw new IllegalArgumentException("Image must be between 1 byte and 10 MB (demo technical limit)");
@@ -44,22 +44,18 @@ public class MediaService {
             try(var stream=file.getInputStream()){
                 storage.putObject(PutObjectArgs.builder().bucket(bucket).object(key).contentType(type).stream(stream,file.getSize(),-1).build());
             }
-            try{jdbc.update("INSERT INTO facility_images(id,facility_id,court_id,object_key,content_type,size_bytes) VALUES(?,?,?,?,?,?)",id,facilityId,courtId,key,type,file.getSize());}
+            try{transactions.executeWithoutResult(status->{facilities.mutableOwnedEntity(facilityId,caller);jdbc.update("INSERT INTO facility_images(id,facility_id,court_id,object_key,content_type,size_bytes) VALUES(?,?,?,?,?,?)",id,facilityId,courtId,key,type,file.getSize());});}
             catch(RuntimeException ex){storage.removeObject(RemoveObjectArgs.builder().bucket(bucket).object(key).build());throw ex;}
             return image(id,courtId,key,type,file.getSize());
         }catch(IllegalArgumentException ex){throw ex;}
         catch(Exception ex){throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_GATEWAY,"Object storage is unavailable",ex);}
     }
     public void delete(UUID facilityId,UUID imageId,Caller caller){
-        facilities.ownedDetail(facilityId,caller);
-        var keys=jdbc.queryForList("SELECT object_key FROM facility_images WHERE id=? AND facility_id=?",String.class,imageId,facilityId);
-        if(keys.isEmpty())throw new ResourceNotFoundException("Image not found");
-        try{storage.removeObject(RemoveObjectArgs.builder().bucket(bucket).object(keys.getFirst()).build());}
-        catch(Exception ex){throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_GATEWAY,"Image could not be removed",ex);}
-        jdbc.update("DELETE FROM facility_images WHERE id=? AND facility_id=?",imageId,facilityId);
+        facilities.mutableOwnedEntity(facilityId,caller);
+        transactions.executeWithoutResult(status->{facilities.mutableOwnedEntity(facilityId,caller);var keys=jdbc.queryForList("SELECT object_key FROM facility_images WHERE id=? AND facility_id=? FOR UPDATE",String.class,imageId,facilityId);if(keys.isEmpty())throw new ResourceNotFoundException("Image not found");jdbc.update("INSERT INTO media_cleanup(object_key) VALUES(?) ON CONFLICT DO NOTHING",keys.getFirst());jdbc.update("DELETE FROM facility_images WHERE id=? AND facility_id=?",imageId,facilityId);});
     }
     public ImageView replace(UUID facilityId,UUID imageId,MultipartFile file,Caller caller){
-        facilities.ownedDetail(facilityId,caller);
+        facilities.mutableOwnedEntity(facilityId,caller);
         if(jdbc.queryForObject("SELECT count(*) FROM facility_images WHERE id=? AND facility_id=?",Integer.class,imageId,facilityId)==0)
             throw new ResourceNotFoundException("Image not found");
         if(file.isEmpty()||file.getSize()>10*1024*1024)throw new IllegalArgumentException("Image must be between 1 byte and 10 MB");
@@ -68,6 +64,7 @@ public class MediaService {
             ensureBucket();try(var stream=file.getInputStream()){storage.putObject(PutObjectArgs.builder().bucket(bucket).object(key).contentType(type).stream(stream,file.getSize(),-1).build());}
             UUID court;
             try {court=transactions.execute(status->{
+                facilities.mutableOwnedEntity(facilityId,caller);
                 var rows=jdbc.queryForList("SELECT object_key,court_id FROM facility_images WHERE id=? AND facility_id=? FOR UPDATE",imageId,facilityId);
                 if(rows.isEmpty())throw new ResourceNotFoundException("Image not found");var old=rows.getFirst();
                 jdbc.update("UPDATE facility_images SET object_key=?,content_type=?,size_bytes=? WHERE id=?",key,type,file.getSize(),imageId);

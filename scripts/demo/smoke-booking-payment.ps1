@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param([string]$ApiBase='http://localhost:18080/api/v1')
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'get-demo-facility.ps1')
 $demoRoot=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $demoPassword=([IO.File]::ReadAllLines((Join-Path $demoRoot '.env')) | Where-Object { $_ -match '^DEMO_PASSWORD=' }) -replace '^DEMO_PASSWORD=',''
 function Request($method,$path,$body=$null,$token=$null,$key=$null){$headers=@{};if($token){$headers.Authorization="Bearer $token"};if($key){$headers['Idempotency-Key']=$key};$args=@{Method=$method;Uri="$ApiBase$path";Headers=$headers};if($null -ne $body){$args.Body=($body|ConvertTo-Json -Depth 20 -Compress);$args.ContentType='application/json'};return (Invoke-RestMethod @args).data}
@@ -10,7 +11,7 @@ $other=Request POST '/auth/login' @{identifier='customer2@sporthub.local';passwo
 $owner=Request POST '/auth/login' @{identifier='owner@sporthub.local';password=$demoPassword}
 $staff=Request POST '/auth/login' @{identifier='staff@sporthub.local';password=$demoPassword}
 try {
- $facility=@(Request GET '/facilities')[0];$court=@(Request GET "/facilities/$($facility.id)/courts" | Where-Object name -eq 'Sân Pickleball 1')[0]
+ $facility=Get-DemoFacility $ApiBase;$court=@(Request GET "/facilities/$($facility.id)/courts" | Where-Object name -eq 'Sân Pickleball 1')[0]
  $date=(Get-Date).AddDays(3).ToString('yyyy-MM-dd');$preview=Request GET "/bookings/availability?courtId=$($court.id)&date=$date"
  $slot=@($preview.slots|Where-Object state -eq 'AVAILABLE')[0];if(!$slot){throw 'No available demo slot'}
  $input=@{courtId=$court.id;startsAt=$slot.startsAt;endsAt=$slot.endsAt;expectedAmount=$slot.amount}
