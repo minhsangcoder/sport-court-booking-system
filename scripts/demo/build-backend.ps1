@@ -10,7 +10,7 @@ if($StopDemoServices){
 }
 if($UseExternalTestDatabase){
  if(!$env:SPORTHUB_TEST_DB_USER -or !$env:SPORTHUB_TEST_DB_PASSWORD){throw 'Set SPORTHUB_TEST_DB_USER and SPORTHUB_TEST_DB_PASSWORD for the dedicated test container.'}
- foreach($demoTestService in 'IDENTITY','FACILITY','SCHEDULE','BOOKING','PAYMENT'){
+ foreach($demoTestService in 'IDENTITY','FACILITY','SCHEDULE','BOOKING','PAYMENT','TRANSFER'){
   [Environment]::SetEnvironmentVariable("SPORTHUB_${demoTestService}_TEST_DB_URL","jdbc:postgresql://localhost:$TestPort/$($demoTestService.ToLower())_test",'Process')
  }
  $env:SPORTHUB_TEST_DB_URL=$env:SPORTHUB_IDENTITY_TEST_DB_URL

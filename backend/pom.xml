@@ -29,11 +29,7 @@
         <module>schedule-service</module>
         <module>booking-service</module>
         <module>payment-service</module>
-        <!-- Phase 3+ modules (uncomment when ready):
-        <module>facility-service</module>
-        <module>payment-service</module>
         <module>transfer-service</module>
-        -->
     </modules>
 
     <!-- ═══════════════════════════════════════════════════════════════

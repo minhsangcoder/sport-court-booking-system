@@ -5,7 +5,7 @@ $demoRoot=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $migrationUser=([IO.File]::ReadAllLines((Join-Path $demoRoot '.env'))|Where-Object {$_ -match '^POSTGRES_USER='}) -replace '^POSTGRES_USER=',''
 Push-Location $demoRoot
 try {
- foreach($migrationService in 'identity','facility','schedule','booking','payment'){
+ foreach($migrationService in 'identity','facility','schedule','booking','payment','transfer'){
   $migrationFiles=Get-ChildItem -LiteralPath (Join-Path $demoRoot "backend/$migrationService-service/src/main/resources/db/migration") -Filter 'V*__*.sql'
   $migrationExpected=($migrationFiles|ForEach-Object {if($_.Name -match '^V([0-9]+)__'){[int]$Matches[1]}}|Measure-Object -Maximum).Maximum
   $migrationSql='SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1;'

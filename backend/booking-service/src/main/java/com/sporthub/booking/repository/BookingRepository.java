@@ -17,7 +17,7 @@ public class BookingRepository {
     public void lock(UUID id){jdbc.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?,0))",Object.class,id.toString());}
     public Hold hold(UUID id) {return jdbc.query("SELECT * FROM slot_reservations WHERE id=?",(r,n)->new Hold(id,uuid(r,"court_id"),uuid(r,"facility_id"),uuid(r,"holder_id"),instant(r,"starts_at"),instant(r,"ends_at"),instant(r,"expires_at"),r.getString("state"),read(r.getString("quote"))),id).stream().findFirst().orElseThrow(()->new ResourceNotFoundException("Hold not found"));}
     public Booking find(UUID id) {return list("SELECT * FROM bookings WHERE id=?",id).stream().findFirst().orElseThrow(()->new ResourceNotFoundException("Booking not found"));}
-    public List<Booking> mine(UUID id){return list("SELECT * FROM bookings WHERE current_holder_id=? OR customer_id=? ORDER BY starts_at DESC LIMIT 200",id,id);}
+    public List<Booking> mine(UUID id){return list("SELECT * FROM bookings WHERE current_holder_id=? OR customer_id=? OR created_by=? ORDER BY starts_at DESC LIMIT 200",id,id,id);}
     public List<Booking> facility(UUID id){return list("SELECT * FROM bookings WHERE facility_id=? ORDER BY starts_at DESC LIMIT 500",id);}
     public List<Booking> list(String sql,Object... args) {return jdbc.query(sql,mapper(),args);}
     public List<History> history(UUID id) {return jdbc.query("SELECT * FROM booking_history WHERE booking_id=? ORDER BY created_at,id",(r,n)->new History(uuid(r,"id"),r.getString("action"),uuid(r,"actor_id"),read(r.getString("details")),instant(r,"created_at")),id);}

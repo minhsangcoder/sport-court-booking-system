@@ -7,11 +7,13 @@ x-backend-env: &backend-env
   RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
   RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
   JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+  SERVICE_CALL_SECRET: ${SERVICE_CALL_SECRET:?Set a separate private service call secret}
   IDENTITY_SERVICE_URL: http://identity-service:8081
   FACILITY_SERVICE_URL: http://facility-service:8082
   SCHEDULE_SERVICE_URL: http://schedule-service:8083
   BOOKING_SERVICE_URL: http://booking-service:8084
   PAYMENT_SERVICE_URL: http://payment-service:8085
+  TRANSFER_SERVICE_URL: http://transfer-service:8086
   SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
   DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
   DEMO_PASSWORD: ${DEMO_PASSWORD:-}
@@ -263,6 +265,35 @@ services:
       start_period: 60s
     networks: [sporthub]
 
+  transfer-service:
+    profiles: [apps]
+    build:
+      context: ./backend
+      args:
+        SERVICE: transfer-service
+    environment:
+      <<: *backend-env
+      TRANSFER_DB_URL: jdbc:postgresql://postgres:5432/transfer_db
+      TRANSFER_ACQUISITION_SECONDS: ${TRANSFER_ACQUISITION_SECONDS:-600}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
+      facility-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8086/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks: [sporthub]
+
   api-gateway:
     profiles: [apps]
     build:
@@ -287,6 +318,8 @@ services:
       booking-service:
         condition: service_healthy
       payment-service:
+        condition: service_healthy
+      transfer-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]

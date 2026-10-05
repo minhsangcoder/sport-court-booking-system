@@ -490,11 +490,17 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "acquisitionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
           "bookingId"
-        ]
+        ],
+        "description": "memberId and acquisitionId are mutually exclusive. Amount and payer are always resolved from the owning service payable endpoint."
       },
       "Payment": {
         "type": "object",
@@ -547,6 +553,16 @@
           "paidAt": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          },
+          "acquisitionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "sellerId": {
+            "type": "string",
+            "format": "uuid",
             "nullable": true
           }
         },

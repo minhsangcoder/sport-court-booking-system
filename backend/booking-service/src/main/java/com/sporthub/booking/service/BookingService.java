@@ -65,7 +65,7 @@ public class BookingService {
     public List<Booking> mine(Caller caller){return repo.mine(caller.id());}
     public List<Booking> facility(UUID id,Caller caller,String token){dependencies.facilityPermission(id,caller,token,"BOOKING_READ");return repo.facility(id);}
     public Detail detail(UUID id,Caller caller,String token) {
-        var b=repo.find(id);if(!b.currentHolderId().equals(caller.id())&&!b.customerId().equals(caller.id()))dependencies.facilityPermission(b.facilityId(),caller,token,"BOOKING_READ");
+        var b=repo.find(id);if(!b.currentHolderId().equals(caller.id())&&!b.customerId().equals(caller.id())&&!b.createdBy().equals(caller.id()))dependencies.facilityPermission(b.facilityId(),caller,token,"BOOKING_READ");
         String checkin=b.status().equals("CONFIRMED")&&b.currentHolderId().equals(caller.id())?checkinToken(b):null;
         return new Detail(b,repo.history(id),checkin,checkin==null?null:qr.svg(checkin));
     }
@@ -90,9 +90,11 @@ public class BookingService {
     public Booking checkin(UUID id,CheckinInput input,Caller caller,String token) {
         var b=repo.find(id);repo.lock(b.courtId());b=repo.find(id);dependencies.facilityPermission(b.facilityId(),caller,token,"BOOKING_CHECK_IN");
         if(!b.status().equals("CONFIRMED"))throw new ConflictException("Only a confirmed booking may check in once");
+        if(repo.jdbc().queryForObject("SELECT count(*) FROM transfer_leases WHERE booking_id=? AND state='LOCKED' AND expires_at>?",Integer.class,id,Timestamp.from(clock.instant()))>0)throw new ConflictException("Booking is locked by an ongoing transfer acquisition");
         Instant now=clock.instant();if(now.isBefore(b.startsAt().minusSeconds(1800))||!now.isBefore(b.endsAt()))throw new ConflictException("Check-in is permitted from 30 minutes before play until the booking ends");
         if(!validCheckin(b,input.token(),now))throw new ForbiddenException("Check-in code expired, is invalid or belongs to a previous usage holder");
         repo.jdbc().update("UPDATE bookings SET status='CHECKED_IN',checked_in_at=?,version=version+1,updated_at=NOW() WHERE id=?",Timestamp.from(now),id);
+        repo.jdbc().update("UPDATE transfer_leases SET state='RELEASED' WHERE booking_id=? AND state IN ('ACTIVE','LOCKED')",id);
         repo.history(id,caller.id(),"CHECKED_IN",Map.of());return repo.find(id);
     }
     @Transactional

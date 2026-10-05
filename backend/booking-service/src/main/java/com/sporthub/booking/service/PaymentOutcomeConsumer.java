@@ -27,7 +27,7 @@ public class PaymentOutcomeConsumer {
     @Transactional
     public void apply(JsonNode event) {
         if(!event.path("eventType").asText().equals("payment.completed")||event.path("eventVersion").asInt()!=1||!event.path("producer").asText().equals("payment-service"))throw new AmqpRejectAndDontRequeueException("Unsupported payment envelope");
-        var payload=event.path("payload");UUID eventId,bookingId,paymentId,payer;
+        var payload=event.path("payload");if(payload.path("purpose").asText().equals("TRANSFER"))return;UUID eventId,bookingId,paymentId,payer;
         try {eventId=UUID.fromString(event.path("eventId").asText());bookingId=UUID.fromString(payload.path("bookingId").asText());paymentId=UUID.fromString(payload.path("paymentId").asText());payer=UUID.fromString(payload.path("payerId").asText());}
         catch(Exception ex){throw new AmqpRejectAndDontRequeueException("Invalid payment payload",ex);}
         var booking=repo.find(bookingId);repo.lock(booking.courtId());booking=repo.find(bookingId);

@@ -49,8 +49,14 @@ Dead-letter messages require observable alerts and an explicit replay procedure.
 
 ## Implemented payment integration
 
-`payment.completed` v1 is produced by Payment Service after a verified provider callback. Its payload contains `paymentId`, `bookingId`, `payerId`, nullable `memberId`, `purpose` (`BOOKING` or `GROUP_CONTRIBUTION`), `amount`, `currency`, `status`, `paidAt`, and `transactionId`. Booking validates the booking/group allocation, purpose, payer, amount and deadline inside its court-locked inbox transaction. A mismatch records reconciliation without granting a booking.
+`payment.completed` v1 is produced by Payment Service after a verified provider callback. Its payload contains `paymentId`, `bookingId`, `payerId`, nullable `memberId` and `acquisitionId`, `purpose` (`BOOKING`, `GROUP_CONTRIBUTION` or `TRANSFER`), `amount`, `currency`, `status`, `paidAt`, and `transactionId`. Booking validates individual/group outcomes in its court-locked inbox and ignores Transfer outcomes. Transfer validates its own acquisition, buyer, amount and deadline through a separate inbox. A mismatch records reconciliation without granting usage rights.
 
 `booking.group.refund.requested` v1 records that a group contribution requires refund review after timeout or a rejected late/duplicate payment. Its payload contains `bookingId`, `paymentId`, the original `payerId`, `reason`, and `policyState=BLOCKED_RULE`. Payment consumes it through its own inbox and persists an idempotent refund request. It does not choose a refund percentage or execute financial movement while the policy is unresolved.
 
 Both services use durable queues with dead-letter routing and three bounded delivery attempts. Outbox publication waits for a correlated broker confirmation and checks mandatory returns before marking an event published. Repeated event IDs and repeated provider transactions cannot repeat the domain side effects.
+
+## Transfer handoff and escrow
+
+Transfer persists REGISTER/EDIT/LOCK/UNLOCK/WITHDRAW/HANDOFF commands before calling Booking's signed private REST endpoints. Booking owns the transfer lease, serializes it with check-in under the court lock, and changes holder/customer plus QR version in one local transaction. REST retries use listing/acquisition/payment identities; a lost response cannot hand off twice. A transient error leaves the command durable for retry. A deterministic handoff rejection becomes PENDING_AUDIT.
+
+`transfer.refund.review.requested` v1 contains `paymentId`, `bookingId`, the original `payerId`, and `reason`. Payment validates the referenced successful Transfer order, persists a BLOCKED_RULE refund request through its inbox, and marks escrow REFUND_REVIEW. Successful Transfer payments create an immutable amount/payer/seller escrow record in HELD_POLICY_BLOCKED. No payout or refund amount is selected while release/eligibility rules remain unresolved.

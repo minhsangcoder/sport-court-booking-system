@@ -45,6 +45,10 @@ spring:
             maxAge: 3600
 
       routes:
+        - id: transfer-service
+          uri: ${TRANSFER_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/v1/transfers/**
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
           predicates:

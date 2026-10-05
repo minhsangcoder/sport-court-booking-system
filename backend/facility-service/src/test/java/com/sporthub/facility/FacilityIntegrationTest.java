@@ -30,9 +30,15 @@ class FacilityIntegrationTest {
  @Autowired FacilityService service;
  @Autowired MediaService media;
  @MockBean RemoteIdentity identity;
+ @Autowired com.sporthub.facility.web.TransferPolicyController policies;
  private Caller owner(){return new Caller(UUID.randomUUID(),"Owner",Set.of("OWNER","CUSTOMER"),Map.of());}
  private FacilityInput input(String name){return new FacilityInput(name,"+84901234567","Address","Province","District","Ward","Description","Asia/Ho_Chi_Minh",null,null,Set.of("Parking"));}
 
+ @Test void transferPolicyRequiresOwnerAndHasNoImplicitDefault(){
+  var owner=owner();var facility=service.create(input("Policy "+UUID.randomUUID()),owner);var request=new org.springframework.mock.web.MockHttpServletRequest();org.mockito.Mockito.when(identity.current(request)).thenReturn(owner);
+  assertThat(policies.ownPolicy(facility.id(),request).getData().configured()).isFalse();var result=policies.update(facility.id(),new com.sporthub.facility.web.TransferPolicyController.PolicyInput(true,3600),request).getData();assertThat(result.configured()).isTrue();assertThat(result.minLeadSeconds()).isEqualTo(3600);
+  org.mockito.Mockito.when(identity.current(request)).thenReturn(owner());assertThatThrownBy(()->policies.update(facility.id(),new com.sporthub.facility.web.TransferPolicyController.PolicyInput(false,0),request)).isInstanceOf(ForbiddenException.class);
+ }
  @Test void facilityCrudRemainsDraftAndOwnerScoped(){
   var owner=owner();var facility=service.create(input("Facility "+UUID.randomUUID()),owner);
   assertThat(facility.status()).isEqualTo("DRAFT");

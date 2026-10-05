@@ -1,0 +1,35 @@
+server:
+  port: 8086
+spring:
+  application:
+    name: transfer-service
+  datasource:
+    url: ${TRANSFER_DB_URL:jdbc:postgresql://localhost:5432/transfer_db}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST:sporthub}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2
+sporthub:
+  events:
+    outbox:
+      enabled: true
+management:
+  endpoints.web.exposure.include: health,info

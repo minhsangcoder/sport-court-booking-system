@@ -13,6 +13,7 @@ export function AppHeader() {
     <Link className="text-2xl font-black tracking-tight text-emerald-700" href="/">SportHub<span className="text-amber-500">.</span></Link>
     <nav aria-label="Điều hướng chính" className="flex flex-wrap items-center gap-4 text-sm font-medium">
       <Link href="/search">Tìm sân</Link>
+      {user?.roles.includes('CUSTOMER')&&<Link href="/transfers">Chuyển nhượng</Link>}
       {user && <><Link href="/customer/bookings">Lịch đặt</Link><Link href="/customer/groups">Nhóm</Link><Link href="/customer/profile">{user.fullName}</Link></>}
       {user?.roles.includes('OWNER') && <Link href="/owner/facilities">Cơ sở của tôi</Link>}
       {user?.roles.includes('STAFF') && <><Link href="/staff/bookings">Vận hành</Link><Link href="/staff/schedule">Lịch và giá</Link></>}

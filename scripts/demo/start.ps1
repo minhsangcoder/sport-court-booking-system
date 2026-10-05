@@ -7,8 +7,8 @@ if(!$SkipInfrastructure){Push-Location $demoRoot;try{& docker compose up -d --wa
 $demoLogRoot=Join-Path $demoRoot 'tmp/demo';[IO.Directory]::CreateDirectory($demoLogRoot)|Out-Null
 $demoShell=(Get-Process -Id $PID).Path
 $demoScript=Join-Path $PSScriptRoot 'run-service.ps1'
-$demoServices=@{'identity-service'=18081;'facility-service'=18082;'schedule-service'=18083;'booking-service'=18084;'payment-service'=18085;'api-gateway'=18080}
-foreach($demoService in 'identity-service','facility-service','schedule-service','booking-service','payment-service','api-gateway'){
+$demoServices=@{'identity-service'=18081;'facility-service'=18082;'schedule-service'=18083;'booking-service'=18084;'payment-service'=18085;'transfer-service'=18086;'api-gateway'=18080}
+foreach($demoService in 'identity-service','facility-service','schedule-service','booking-service','payment-service','transfer-service','api-gateway'){
  $demoJar=Join-Path $demoRoot "backend/$demoService/target/$demoService-0.0.1-SNAPSHOT.jar"
  if(!(Test-Path -LiteralPath $demoJar)){throw "Missing JAR for $demoService; run scripts/demo/build-backend.ps1 first."}
  $demoExisting=@(Get-CimInstance Win32_Process -Filter "name='java.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($demoJar) })

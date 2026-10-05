@@ -23,7 +23,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 @SpringBootTest(properties={"spring.rabbitmq.username=test","spring.rabbitmq.password=test","spring.rabbitmq.listener.simple.auto-startup=false",
- "spring.data.redis.password=test","JWT_SECRET=test-signing-key-longer-than-thirty-two-characters","sporthub.events.outbox.enabled=false","booking.expiry-delay-ms=3600000"})
+ "spring.data.redis.password=test","SERVICE_CALL_SECRET=test-service-call-key-longer-than-thirty-two-characters","JWT_SECRET=test-signing-key-longer-than-thirty-two-characters","sporthub.events.outbox.enabled=false","booking.expiry-delay-ms=3600000"})
 class BookingIntegrationTest {
  static PostgreSQLContainer<?> postgres;
  @DynamicPropertySource static void db(DynamicPropertyRegistry p){String url=System.getenv("SPORTHUB_BOOKING_TEST_DB_URL");if(url!=null){p.add("spring.datasource.url",()->url);p.add("spring.datasource.username",()->System.getenv("SPORTHUB_TEST_DB_USER"));p.add("spring.datasource.password",()->System.getenv("SPORTHUB_TEST_DB_PASSWORD"));}else{postgres=new PostgreSQLContainer<>("postgres:16-alpine");postgres.start();p.add("spring.datasource.url",postgres::getJdbcUrl);p.add("spring.datasource.username",postgres::getUsername);p.add("spring.datasource.password",postgres::getPassword);}}
@@ -32,6 +32,7 @@ class BookingIntegrationTest {
  @MockBean BookingDependencies dependencies;@MockBean Clock clock;
  @MockBean ReliableOutbox outbox;
  @Autowired GroupService groups;
+ @Autowired TransferLeaseService transfers;
  Instant now=Instant.parse("2026-10-05T00:00:00Z"),start=now.plusSeconds(3600),end=now.plusSeconds(7200);
  UUID court,facility;Caller user;JsonNode quote;
  @BeforeEach void setup(){court=UUID.randomUUID();facility=UUID.randomUUID();user=customer();when(clock.instant()).thenReturn(now);when(clock.getZone()).thenReturn(ZoneOffset.UTC);
@@ -41,6 +42,18 @@ class BookingIntegrationTest {
  HoldInput input(){return new HoldInput(court,start,end,new BigDecimal("150000"));}
  String key(){return UUID.randomUUID().toString();}
  com.fasterxml.jackson.databind.JsonNode success(Booking b,UUID payment){return json.valueToTree(DomainEvent.create("payment.completed",1,"payment-service",payment,Map.of("bookingId",b.id(),"paymentId",payment,"payerId",user.id(),"amount",b.amount(),"currency","VND","status","SUCCESS","paidAt",now,"purpose","BOOKING")));}
+ @Test void transferLeasePreservesSnapshotAndRevokesPreviousQrExactlyOnce(){
+  var h=service.hold(input(),key(),user,"token",false);var b=service.create(new CreateInput(h.id(),null,null),key(),user,"token",false);consumer.apply(success(b,UUID.randomUUID()));
+  when(clock.instant()).thenReturn(start.minusSeconds(600));String oldQr=service.detail(b.id(),user,"token").checkinToken();UUID listing=UUID.randomUUID(),acquisition=UUID.randomUUID();var buyer=customer();
+  var registration=new TransferLeaseService.Command(listing,b.id(),user.id(),new BigDecimal("100000"),start,null,null,null,null,null,null);transfers.command("register",registration);transfers.command("register",registration);
+  var lock=new TransferLeaseService.Command(listing,b.id(),user.id(),null,null,acquisition,buyer.id(),start.minusSeconds(300),null,null,null);transfers.command("lock",lock);
+  assertThat(repo.find(b.id()).currentHolderId()).isEqualTo(user.id());
+  var staff=new Caller(UUID.randomUUID(),"Staff",Set.of("STAFF"),Map.of());UUID id=b.id();assertThatThrownBy(()->service.checkin(id,new CheckinInput(oldQr),staff,"token")).isInstanceOf(ConflictException.class);
+  UUID payment=UUID.randomUUID();var paid=new TransferLeaseService.Command(listing,b.id(),user.id(),new BigDecimal("100000"),start,acquisition,buyer.id(),start.minusSeconds(300),payment,clock.instant(),"VND");transfers.command("complete",paid);transfers.command("complete",paid);
+  var result=repo.find(id);assertThat(result.currentHolderId()).isEqualTo(buyer.id());assertThat(result.customerId()).isEqualTo(buyer.id());assertThat(result.createdBy()).isEqualTo(user.id());assertThat(result.amount()).isEqualByComparingTo("150000");assertThat(result.priceSnapshot()).isEqualTo(b.priceSnapshot());
+  assertThat(service.detail(id,user,"token").checkinToken()).isNull();assertThatThrownBy(()->service.checkin(id,new CheckinInput(oldQr),staff,"token")).isInstanceOf(ForbiddenException.class);
+  assertThat(repo.history(id).stream().filter(x->x.action().equals("TRANSFER_COMPLETED"))).hasSize(1);assertThat(service.checkin(id,new CheckinInput(service.detail(id,buyer,"token").checkinToken()),staff,"token").status()).isEqualTo("CHECKED_IN");
+ }
  @Test void databasePreventsConcurrentHoldsAndIdempotencyReusesResource()throws Exception{
   var ready=new CountDownLatch(2);var go=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
   try{var futures=new ArrayList<Future<Boolean>>();for(int n=0;n<2;n++){var actor=customer();futures.add(pool.submit(()->{ready.countDown();go.await();try{service.hold(input(),key(),actor,"token",false);return true;}catch(ConflictException ex){return false;}}));}ready.await(5,TimeUnit.SECONDS);go.countDown();int winners=0;for(var f:futures)if(f.get(10,TimeUnit.SECONDS))winners++;assertThat(winners).isEqualTo(1);}finally{pool.shutdownNow();}

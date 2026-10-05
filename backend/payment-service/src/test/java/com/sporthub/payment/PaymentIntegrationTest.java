@@ -28,11 +28,17 @@ class PaymentIntegrationTest {
  @AfterAll static void stop(){if(postgres!=null)postgres.stop();}
  @Autowired PaymentService service;@Autowired PaymentRepository repo;@Autowired DemoPaymentProvider provider;@Autowired ObjectMapper json;
  @Autowired GroupRefundConsumer refunds;
+ @Autowired TransferRefundConsumer transferRefunds;
  @MockBean PayableClient payable;@MockBean ReliableOutbox outbox;
  Caller user;UUID booking;
  @BeforeEach void setup(){user=new Caller(UUID.randomUUID(),"Customer",Set.of("CUSTOMER"),Map.of());booking=UUID.randomUUID();when(payable.payable(eq(booking),isNull(),any())).thenReturn(json.valueToTree(Map.of("bookingId",booking,"payerId",user.id(),"amount",150000,"currency","VND","expiresAt",Instant.now().plusSeconds(600),"purpose","BOOKING")));}
  String key(){return UUID.randomUUID().toString();}
  Callback callback(Payment p,String status){return new Callback(p.id(),p.providerReference(),"TX-"+p.id(),p.amount(),p.currency(),status,Instant.now().getEpochSecond());}
+ @Test void transferPaymentEscrowAndRefundReviewRetainVerifiedPayer(){
+  UUID acquisition=UUID.randomUUID(),seller=UUID.randomUUID();when(payable.transfer(eq(acquisition),any())).thenReturn(json.valueToTree(Map.of("bookingId",booking,"payerId",user.id(),"sellerId",seller,"acquisitionId",acquisition,"amount",100000,"currency","VND","expiresAt",Instant.now().plusSeconds(600),"purpose","TRANSFER")));
+  String key=key();var input=new CreatePayment(booking,null,acquisition);var p=service.create(input,key,user,"token");assertThat(service.create(input,key,user,"token").id()).isEqualTo(p.id());var c=callback(p,"SUCCESS");service.callback(c,provider.sign(c));service.callback(c,provider.sign(c));var escrow=repo.jdbc().queryForList("SELECT * FROM transfer_escrow WHERE payment_id=?",p.id());assertThat(escrow).hasSize(1);assertThat(escrow.get(0).get("state")).isEqualTo("HELD_POLICY_BLOCKED");assertThat(escrow.get(0).get("seller_id")).isEqualTo(seller);
+  var event=json.valueToTree(com.sporthub.common.event.DomainEvent.create("transfer.refund.review.requested",1,"transfer-service",booking,Map.of("bookingId",booking,"paymentId",p.id(),"payerId",user.id(),"reason","LATE_PAYMENT")));transferRefunds.apply(event);transferRefunds.apply(event);assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM refunds WHERE payment_id=?",Integer.class,p.id())).isEqualTo(1);assertThat(repo.jdbc().queryForObject("SELECT state FROM transfer_escrow WHERE payment_id=?",String.class,p.id())).isEqualTo("REFUND_REVIEW");
+ }
  @Test void createAndSignedCallbackAreIdempotent(){String key=key();var p=service.create(new CreatePayment(booking,null),key,user,"token");assertThat(service.create(new CreatePayment(booking,null),key,user,"token").id()).isEqualTo(p.id());var callback=callback(p,"SUCCESS");service.callback(callback,provider.sign(callback));service.callback(callback,provider.sign(callback));assertThat(repo.find(p.id()).status()).isEqualTo("SUCCESS");assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM provider_callbacks WHERE payment_id=?",Integer.class,p.id())).isEqualTo(1);verify(outbox,times(1)).record(any(),any());}
  @Test void alternateCreateKeyKeepsItsResultAfterCallbackAndAdminCannotSimulate(){
   var input=new CreatePayment(booking,null);var p=service.create(input,key(),user,"token");String alias=key();
