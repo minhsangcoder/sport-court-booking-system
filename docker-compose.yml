@@ -127,8 +127,8 @@ services:
       IDENTITY_DB_URL: jdbc:postgresql://postgres:5432/identity_db
       MAIL_HOST: mailpit
       DEMO_SMS_ENABLED: ${DEMO_SMS_ENABLED:-false}
-        FRONTEND_BASE_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
-        OWNER_APPLICATION_DATA_KEY: ${OWNER_APPLICATION_DATA_KEY:?Set a separate Base64 owner application data key}
+      FRONTEND_BASE_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
+      OWNER_APPLICATION_DATA_KEY: ${OWNER_APPLICATION_DATA_KEY:?Set a separate Base64 owner application data key}
     depends_on:
       postgres:
         condition: service_healthy
