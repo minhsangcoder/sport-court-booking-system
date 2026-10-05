@@ -8,7 +8,7 @@ The primary thesis text states that a paid cancellation receives no refund, whil
 
 ## Staff permission catalog
 
-Requirements confirm facility-scoped Staff permissions but do not define one final stable vocabulary. The Identity contract therefore validates the permission-name format without inventing a closed enum. The permission catalog and authorization matrix must be approved before Phase 2 authorization is implemented.
+Resolved by explicit user approval on 2026-10-05: `BOOKING_READ`, `BOOKING_CREATE_COUNTER`, `BOOKING_CHECK_IN`, `BOOKING_COMPLETE`, `SCHEDULE_READ`. Owner grants each capability within a specific facility. Backend must require both an active binding and the matching permission. These names do not grant pricing write access.
 
 ## Owner application orchestration
 
@@ -16,7 +16,7 @@ The requirements treat the first facility profile as part of an Owner applicatio
 
 ## Identity role persistence
 
-The current V1 migration stores one `role` value on `users`, while requirements and the public contract allow an account to hold multiple roles. Phase 2 must either introduce a service-owned role-assignment table through a new migration or explicitly narrow the contract after product confirmation. Existing committed migrations must not be edited after they have been applied.
+Resolved by the required multi-role implementation: Identity V2 introduces `user_roles` and profiles; V3 supports independent email/phone registration and verification. Existing V1 is preserved. Only CUSTOMER, OWNER, STAFF and ADMIN are used.
 
 ## MinIO Community Edition image provenance
 

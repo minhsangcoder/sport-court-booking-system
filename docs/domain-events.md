@@ -1,6 +1,6 @@
 # SportHub domain event conventions
 
-This document defines the technical contract for asynchronous communication between SportHub services. It does not define business events or implement event-driven workflows.
+This document records the technical envelope and implemented cross-service event contracts. Business payloads remain owned by their producer.
 
 ## Envelope
 
@@ -47,6 +47,10 @@ Validation failures, unsupported versions and deterministic business rejections 
 
 Dead-letter messages require observable alerts and an explicit replay procedure. Replay must pass through the same idempotency check as normal delivery.
 
-## Scope of Phase 1
+## Implemented payment integration
 
-Phase 1 establishes the envelope and conventions only. It does not publish `booking.created`, `payment.completed` or any other business event. Queue topology, retry values and payload contracts are introduced with the owning service in later phases.
+`payment.completed` v1 is produced by Payment Service after a verified provider callback. Its payload contains `paymentId`, `bookingId`, `payerId`, nullable `memberId`, `purpose` (`BOOKING` or `GROUP_CONTRIBUTION`), `amount`, `currency`, `status`, `paidAt`, and `transactionId`. Booking validates the booking/group allocation, purpose, payer, amount and deadline inside its court-locked inbox transaction. A mismatch records reconciliation without granting a booking.
+
+`booking.group.refund.requested` v1 records that a group contribution requires refund review after timeout or a rejected late/duplicate payment. Its payload contains `bookingId`, `paymentId`, the original `payerId`, `reason`, and `policyState=BLOCKED_RULE`. Payment consumes it through its own inbox and persists an idempotent refund request. It does not choose a refund percentage or execute financial movement while the policy is unresolved.
+
+Both services use durable queues with dead-letter routing and three bounded delivery attempts. Outbox publication waits for a correlated broker confirmation and checks mandatory returns before marking an event published. Repeated event IDs and repeated provider transactions cannot repeat the domain side effects.

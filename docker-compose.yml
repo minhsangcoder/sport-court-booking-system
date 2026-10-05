@@ -1,4 +1,24 @@
-name: sporthub
+x-backend-env: &backend-env
+  POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+  REDIS_HOST: redis
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
+  RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+  IDENTITY_SERVICE_URL: http://identity-service:8081
+  FACILITY_SERVICE_URL: http://facility-service:8082
+  SCHEDULE_SERVICE_URL: http://schedule-service:8083
+  BOOKING_SERVICE_URL: http://booking-service:8084
+  PAYMENT_SERVICE_URL: http://payment-service:8085
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+  DEMO_SEED_ENABLED: ${DEMO_SEED_ENABLED:-false}
+  DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+  MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: 'true'
+  JAVA_TOOL_OPTIONS: -Xmx256m
+
+name: ${COMPOSE_PROJECT_NAME:-sporthub}
 
 services:
   postgres:
@@ -94,33 +114,6 @@ services:
       start_period: 10s
     networks: [sporthub]
 
-  api-gateway:
-    profiles: [apps]
-    build:
-      context: ./backend
-      args:
-        SERVICE: api-gateway
-    environment:
-      REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
-      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:3000}
-      GATEWAY_RATE_LIMIT_REPLENISH_RATE: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:-20}
-      GATEWAY_RATE_LIMIT_BURST_CAPACITY: ${GATEWAY_RATE_LIMIT_BURST_CAPACITY:-40}
-      IDENTITY_SERVICE_URL: http://identity-service:8081
-      SCHEDULE_SERVICE_URL: http://schedule-service:8083
-      BOOKING_SERVICE_URL: http://booking-service:8084
-    ports: ["8080:8080"]
-    depends_on:
-      redis:
-        condition: service_healthy
-      identity-service:
-        condition: service_started
-      schedule-service:
-        condition: service_started
-      booking-service:
-        condition: service_started
-    networks: [sporthub]
-
   identity-service:
     profiles: [apps]
     build:
@@ -128,16 +121,10 @@ services:
       args:
         SERVICE: identity-service
     environment:
+      <<: *backend-env
       IDENTITY_DB_URL: jdbc:postgresql://postgres:5432/identity_db
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
-      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
       MAIL_HOST: mailpit
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      DEMO_SMS_ENABLED: ${DEMO_SMS_ENABLED:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,6 +134,44 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8081/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks: [sporthub]
+
+  facility-service:
+    profiles: [apps]
+    build:
+      context: ./backend
+      args:
+        SERVICE: facility-service
+    environment:
+      <<: *backend-env
+      FACILITY_DB_URL: jdbc:postgresql://postgres:5432/facility_db
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8082/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
     networks: [sporthub]
 
   schedule-service:
@@ -156,14 +181,8 @@ services:
       args:
         SERVICE: schedule-service
     environment:
+      <<: *backend-env
       SCHEDULE_DB_URL: jdbc:postgresql://postgres:5432/schedule_db
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
-      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,6 +190,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      facility-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8083/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
     networks: [sporthub]
 
   booking-service:
@@ -180,14 +209,11 @@ services:
       args:
         SERVICE: booking-service
     environment:
+      <<: *backend-env
       BOOKING_DB_URL: jdbc:postgresql://postgres:5432/booking_db
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:?Set RABBITMQ_DEFAULT_USER in .env}
-      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:?Set RABBITMQ_DEFAULT_PASS in .env}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
+      GROUP_PAYMENT_DEADLINE_SECONDS: ${GROUP_PAYMENT_DEADLINE_SECONDS:-1800}
+      GROUP_MIN_LEAD_SECONDS: ${GROUP_MIN_LEAD_SECONDS:-7200}
     depends_on:
       postgres:
         condition: service_healthy
@@ -195,15 +221,92 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      facility-service:
+        condition: service_healthy
+      schedule-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8084/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks: [sporthub]
+
+  payment-service:
+    profiles: [apps]
+    build:
+      context: ./backend
+      args:
+        SERVICE: payment-service
+    environment:
+      <<: *backend-env
+      PAYMENT_DB_URL: jdbc:postgresql://postgres:5432/payment_db
+      DEMO_PAYMENT_CALLBACK_SECRET: ${DEMO_PAYMENT_CALLBACK_SECRET:?Set a separate demo callback secret}
+      DEMO_PAYMENT_CALLBACK_URL: http://payment-service:8085/api/v1/payments/providers/demo/callback
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8085/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks: [sporthub]
+
+  api-gateway:
+    profiles: [apps]
+    build:
+      context: ./backend
+      args:
+        SERVICE: api-gateway
+    environment:
+      <<: *backend-env
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:3000}
+      GATEWAY_RATE_LIMIT_REPLENISH_RATE: ${GATEWAY_RATE_LIMIT_REPLENISH_RATE:-20}
+      GATEWAY_RATE_LIMIT_BURST_CAPACITY: ${GATEWAY_RATE_LIMIT_BURST_CAPACITY:-40}
+    ports: ["${GATEWAY_PORT:-8080}:8080"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+      facility-service:
+        condition: service_healthy
+      schedule-service:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
     networks: [sporthub]
 
   frontend:
     profiles: [apps]
-    build: ./frontend
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
-    ports: ["3000:3000"]
-    depends_on: [api-gateway]
+    build:
+      context: ./frontend
+      args:
+        GATEWAY_URL: http://api-gateway:8080
+        NEXT_PUBLIC_DEMO_MAILPIT_URL: ${NEXT_PUBLIC_DEMO_MAILPIT_URL:-}
+    ports: ["${FRONTEND_PORT:-3000}:3000"]
+    depends_on:
+      api-gateway:
+        condition: service_healthy
     networks: [sporthub]
 
 networks:
