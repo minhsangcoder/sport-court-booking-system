@@ -30,6 +30,8 @@ class BookingIntegrationTest {
  @AfterAll static void stop(){if(postgres!=null)postgres.stop();}
  @Autowired BookingService service;@Autowired BookingRepository repo;@Autowired PaymentOutcomeConsumer consumer;@Autowired ObjectMapper json;
  @MockBean BookingDependencies dependencies;@MockBean Clock clock;
+ @MockBean DiscoveryDependencies discoveryDependencies;
+ @Autowired DiscoveryService discovery;
  @MockBean com.sporthub.common.security.RemoteIdentity identity;
  @MockBean ReliableOutbox outbox;
  @Autowired GroupService groups;
@@ -43,6 +45,34 @@ class BookingIntegrationTest {
  Caller customer(){return new Caller(UUID.randomUUID(),"Customer",Set.of("CUSTOMER"),Map.of());}
  HoldInput input(){return new HoldInput(court,start,end,new BigDecimal("150000"));}
  String key(){return UUID.randomUUID().toString();}
+
+ @Test void discoveryUsesRealReservationExclusionsAndPublicSummaries() {
+  UUID category=UUID.randomUUID();String day=now.atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDate().toString();
+  when(discoveryDependencies.categories()).thenReturn(json.valueToTree(List.of(Map.of("id",category,"name","Pickleball","active",true))));
+  when(discoveryDependencies.facilities(any(),any(),any(),any())).thenReturn(json.valueToTree(List.of(Map.of("id",facility,"ownerId",user.id(),"name","Search Court Center","province","Hà Nội","district","Cầu Giấy","addressLine","Public address","timezone","Asia/Ho_Chi_Minh","latitude",21,"longitude",105,"amenities",List.of("Parking")))));
+  when(discoveryDependencies.courts(facility)).thenReturn(json.valueToTree(List.of(Map.of("id",court,"name","Enabled court","sportCategoryId",category,"enabled",true),Map.of("id",UUID.randomUUID(),"name","Disabled court","sportCategoryId",category,"enabled",false))));
+  var preview=json.createObjectNode();preview.put("timezone","Asia/Ho_Chi_Minh");var slots=preview.putArray("slots");
+  slots.addObject().put("startsAt",start.toString()).put("endsAt",end.toString()).put("amount",150000).put("currency","VND").put("state","ELIGIBLE");
+  slots.addObject().put("startsAt",end.toString()).put("endsAt",end.plusSeconds(3600).toString()).put("amount",100000).put("currency","VND").put("state","ELIGIBLE");
+  slots.addObject().put("startsAt",end.plusSeconds(3600).toString()).put("endsAt",end.plusSeconds(7200).toString()).put("amount",1).put("currency","VND").put("state","BLOCKED").put("reason","MAINTENANCE");
+  when(dependencies.preview(court,day)).thenReturn(preview);
+  var criteria=new DiscoveryService.Criteria("Search",null,null,category,day,null,null,null,null,21d,105d,1d,"DISTANCE");
+  var first=discovery.search(criteria);assertThat(first.items()).hasSize(1);assertThat(first.items().getFirst().availableSlots()).isEqualTo(2);assertThat(first.items().getFirst().fromPrice()).isEqualByComparingTo("100000");assertThat(first.items().getFirst().distanceKm()).isZero();
+  assertThat(json.valueToTree(first).toString()).doesNotContain("ownerId","phone","email","customerId","checkinToken");
+  service.hold(input(),key(),user,"token",false);
+  var held=discovery.search(criteria).items().getFirst();assertThat(held.availableSlots()).isEqualTo(1);assertThat(held.firstStartsAt()).isEqualTo(end);
+  assertThat(discovery.search(new DiscoveryService.Criteria(null,null,null,null,day,null,null,null,new BigDecimal("99999"),null,null,null,"PRICE_ASC")).items()).isEmpty();
+  assertThat(discovery.search(new DiscoveryService.Criteria(null,null,null,null,day,"08:00","09:00",null,null,null,null,null,null)).items()).isEmpty();
+  assertThat(discovery.search(new DiscoveryService.Criteria(null,null,null,null,day,null,null,null,null,0d,0d,1d,"DISTANCE")).items()).isEmpty();
+ }
+ @Test void discoveryRejectsInvalidCriteriaAndReportsDependencyFailure() {
+  assertThatThrownBy(()->discovery.search(new DiscoveryService.Criteria(null,null,null,null,"invalid",null,null,null,null,null,null,null,null))).isInstanceOf(IllegalArgumentException.class);
+  assertThatThrownBy(()->discovery.search(new DiscoveryService.Criteria(null,null,null,null,null,"20:00","06:00",null,null,null,null,null,null))).isInstanceOf(IllegalArgumentException.class);
+  assertThatThrownBy(()->discovery.search(new DiscoveryService.Criteria(null,null,null,null,null,null,null,new BigDecimal("200"),new BigDecimal("100"),null,null,null,null))).isInstanceOf(IllegalArgumentException.class);
+  assertThatThrownBy(()->discovery.search(new DiscoveryService.Criteria(null,null,null,null,null,null,null,null,null,21d,null,1d,"DISTANCE"))).isInstanceOf(IllegalArgumentException.class);
+  when(discoveryDependencies.categories()).thenThrow(new org.springframework.web.client.ResourceAccessException("Unreachable private service"));
+  assertThatThrownBy(()->discovery.search(new DiscoveryService.Criteria(null,null,null,null,null,null,null,null,null,null,null,null,null))).isInstanceOf(org.springframework.web.server.ResponseStatusException.class).hasMessageContaining("503");
+ }
  com.fasterxml.jackson.databind.JsonNode success(Booking b,UUID payment){return json.valueToTree(DomainEvent.create("payment.completed",1,"payment-service",payment,Map.of("bookingId",b.id(),"paymentId",payment,"payerId",user.id(),"amount",b.amount(),"currency","VND","status","SUCCESS","paidAt",now,"purpose","BOOKING")));}
  @Test void adminMonitoringReportsRealDataWithoutGrantingUsageAndRejectsCustomers(){
   var h=service.hold(input(),key(),user,"token",false);var b=service.create(new CreateInput(h.id(),null,null),key(),user,"token",false);consumer.apply(success(b,UUID.randomUUID()));var request=new org.springframework.mock.web.MockHttpServletRequest();when(identity.current(request)).thenReturn(user);assertThatThrownBy(()->monitoring.list(b.id(),null,null,request)).isInstanceOf(ForbiddenException.class);

@@ -1438,6 +1438,157 @@
           }
         ]
       }
+    },
+    "/bookings/search": {
+      "get": {
+        "tags": [
+          "Booking"
+        ],
+        "operationId": "searchPublicCourtAvailability",
+        "summary": "Search approved enabled courts using real available slots and prices",
+        "description": "Read-only aggregation: Facility owns location/category metadata; Schedule owns hours/pricing; Booking excludes reservations. AND filters. Returns 503 when a dependency is unavailable rather than false empty results. No holds or price snapshots are created.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          {
+            "name": "sportCategoryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Defaults to today in Asia/Ho_Chi_Minh; within configured booking.advance-days."
+          },
+          {
+            "name": "opensAfter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+            },
+            "description": "Whole available slots inside the local facility time window; not a reservation."
+          },
+          {
+            "name": "closesBefore",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+            },
+            "description": "Whole available slots inside the local facility time window; not a reservation."
+          },
+          {
+            "name": "minPrice",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "description": "Price for each matching slot in VND, not a total multi-slot quote."
+          },
+          {
+            "name": "maxPrice",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "description": "Price for each matching slot in VND, not a total multi-slot quote."
+          },
+          {
+            "name": "latitude",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            }
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          },
+          {
+            "name": "radiusKm",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NAME",
+                "PRICE_ASC",
+                "PRICE_DESC",
+                "DISTANCE"
+              ],
+              "default": "NAME"
+            },
+            "description": "Distance requires both origin coordinates."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available courts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverySearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid text/date/time/price/coordinate/sort criteria"
+          },
+          "503": {
+            "description": "Upstream search or availability data temporarily unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2144,6 +2295,158 @@
               "$ref": "#/components/schemas/GroupAllocation"
             },
             "nullable": true
+          }
+        }
+      },
+      "DiscoveryFacilitySummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "addressLine",
+          "province",
+          "district",
+          "ward",
+          "timezone",
+          "latitude",
+          "longitude",
+          "amenities"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "ward": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "number",
+            "nullable": true
+          },
+          "amenities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Only public facility fields; no owner/staff/customer identifiers or personal contacts."
+      },
+      "DiscoveryResult": {
+        "type": "object",
+        "required": [
+          "facility",
+          "courtId",
+          "courtName",
+          "sportCategoryId",
+          "sportName",
+          "date",
+          "fromPrice",
+          "currency",
+          "availableSlots",
+          "firstStartsAt",
+          "firstEndsAt",
+          "distanceKm"
+        ],
+        "properties": {
+          "facility": {
+            "$ref": "#/components/schemas/DiscoveryFacilitySummary"
+          },
+          "courtId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courtName": {
+            "type": "string"
+          },
+          "sportCategoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sportName": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "fromPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string"
+          },
+          "availableSlots": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "firstStartsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstEndsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "distanceKm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          }
+        }
+      },
+      "DiscoverySearchResult": {
+        "type": "object",
+        "required": [
+          "items",
+          "truncated"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/DiscoveryResult"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "A scan/display limit was reached. Narrow the filters."
+          }
+        }
+      },
+      "DiscoverySearchResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DiscoverySearchResult"
+          },
+          "message": {
+            "type": "string"
           }
         }
       }

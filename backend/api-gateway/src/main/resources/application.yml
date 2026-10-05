@@ -104,6 +104,7 @@ sporthub:
         - /api/v1/sport-categories
         - /api/v1/schedules/public/**
         - /api/v1/bookings/availability
+        - /api/v1/bookings/search
         - /api/v1/payments/providers/demo/callback
         - /actuator/health/**
 

@@ -84,6 +84,15 @@ class FacilityIntegrationTest {
   assertThatThrownBy(()->service.ownedDetail(facility.id(),owner())).isInstanceOf(ForbiddenException.class);
   assertThat(service.update(facility.id(),input("Updated Facility"),owner).name()).isEqualTo("Updated Facility");
  }
+ @Test void publicSearchCombinesFiltersAndExcludesDraftDisabledAndInactiveSports(){
+  var owner=owner();var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());var sport=service.createCategory(new CategoryInput("Search sport "+UUID.randomUUID(),true),admin);String name="Search "+UUID.randomUUID();var f=service.create(input(name),owner);
+  var court=service.createCourt(f.id(),new CourtInput("SEARCH","Search court",sport.id(),null,true),owner);
+  assertThat(service.search(name,null,null,sport.id())).isEmpty();jdbc.update("UPDATE facilities SET status='ACTIVE' WHERE id=?",f.id());
+  assertThat(service.search(name,"Province","District",sport.id())).extracting(FacilityView::id).containsExactly(f.id());
+  assertThat(service.search(name,"Other Province",null,sport.id())).isEmpty();assertThat(service.search(name,null,"Other District",sport.id())).isEmpty();assertThat(service.search("%",null,null,null)).isEmpty();
+  service.updateCourt(court.id(),new CourtInput("SEARCH","Search court",sport.id(),null,false),owner);assertThat(service.search(name,null,null,sport.id())).isEmpty();
+  service.updateCourt(court.id(),new CourtInput("SEARCH","Search court",sport.id(),null,true),owner);jdbc.update("UPDATE sport_categories SET active=false WHERE id=?",sport.id());assertThat(service.search(name,null,null,sport.id())).isEmpty();
+ }
  @Test void courtUniquenessMaintenanceAndImageValidationArePersistent(){
   var owner=owner();var facility=service.create(input("Courts "+UUID.randomUUID()),owner);
   var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());

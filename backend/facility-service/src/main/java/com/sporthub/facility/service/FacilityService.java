@@ -18,7 +18,18 @@ public class FacilityService {
  public Facility ownedEntity(UUID id,Caller caller){var facility=find(id);if(!caller.hasRole("OWNER") || !facility.getOwnerId().equals(caller.id()))throw new ForbiddenException("Facility is outside your ownership");return facility;}
  @Transactional public Facility mutableOwnedEntity(UUID id,Caller caller){jdbc.queryForList("SELECT id FROM facilities WHERE id=? FOR UPDATE",UUID.class,id);var f=ownedEntity(id,caller);if(Set.of("PENDING_APPROVAL","REJECTED").contains(f.getStatus()))throw new ConflictException("Submitted/rejected facility profile cannot be edited; await a supplement decision or create a new draft");return f;}
  public Facility find(UUID id){return facilities.findById(id).orElseThrow(()->new ResourceNotFoundException("Facility not found"));}
- public List<FacilityView> search(String query){String q=query==null?"":query.toLowerCase(Locale.ROOT);return facilities.findByStatusOrderByNameAsc("ACTIVE").stream().filter(f->(f.getName()+" "+f.getAddressLine()+" "+f.getProvince()).toLowerCase(Locale.ROOT).contains(q)).map(this::view).toList();}
+ public List<FacilityView> search(String query){return search(query,null,null,null);}
+ public List<FacilityView> search(String query,String province,String district,UUID category){
+  return jdbc.queryForList("""
+   SELECT f.id FROM facilities f WHERE f.status='ACTIVE'
+    AND lower(concat_ws(' ',f.name,f.address_line,f.province,f.district,f.ward)) LIKE ?
+    AND lower(f.province) LIKE ? AND lower(f.district) LIKE ?
+    AND EXISTS(SELECT 1 FROM courts c JOIN sport_categories s ON s.id=c.sport_category_id
+      WHERE c.facility_id=f.id AND c.enabled AND s.active AND (?::uuid IS NULL OR c.sport_category_id=?::uuid))
+   ORDER BY f.name,f.id LIMIT 200
+   """,UUID.class,pattern(query),pattern(province),pattern(district),category,category).stream().map(id->view(find(id))).toList();
+ }
+ private String pattern(String value){if(value!=null && value.length()>180)throw new IllegalArgumentException("Search text must not exceed 180 characters");return "%"+(value==null?"":value.trim().toLowerCase(Locale.ROOT).replace("\\","\\\\").replace("%","\\%").replace("_","\\_"))+"%";}
  public FacilityView publicDetail(UUID id){var f=find(id);if(!f.getStatus().equals("ACTIVE"))throw new ResourceNotFoundException("Facility is not publicly available");return view(f);}
  @Transactional public FacilityView create(FacilityInput input,Caller caller){caller.requireRole("OWNER");var f=new Facility();f.setOwnerId(caller.id());assign(f,input);facilities.saveAndFlush(f);audit(f,caller,"FACILITY_CREATED");return view(f);}
  @Transactional public FacilityView update(UUID id,FacilityInput input,Caller caller){var f=mutableOwnedEntity(id,caller);assign(f,input);facilities.saveAndFlush(f);audit(f,caller,"FACILITY_UPDATED");return view(f);}

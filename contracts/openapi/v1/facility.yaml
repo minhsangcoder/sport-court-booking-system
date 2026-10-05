@@ -3,7 +3,7 @@
   "info": {
     "title": "SportHub Facility API",
     "version": "1.0.0",
-    "description": "Owner-scoped CRUD, court operations, maintenance and S3 media. Approval remains a separate BLOCKED_RULE workflow. No implicit activation on CRUD."
+    "description": "Owner-scoped facility/court/media/maintenance operations, additional-facility review with retained private legal documents, and public discovery metadata. No implicit activation on CRUD. First-facility Owner application remains a separate pending capability."
   },
   "servers": [
     {
@@ -1253,6 +1253,30 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          {
+            "name": "sportCategoryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -1344,7 +1368,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Only ACTIVE facilities with at least one enabled court in an active sport category. Text criteria combine with AND; wildcard characters in user text are literal. Public availability and per-slot price filtering are aggregated by Booking /bookings/search."
       }
     },
     "/facilities/{id}": {

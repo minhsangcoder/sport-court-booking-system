@@ -11,9 +11,9 @@ import type { Facility,Court } from '@/features/facility/types'
 import { type Preview,type Slot,money } from '@/features/schedule/types'
 import type { Hold } from '@/features/booking/types'
 const reasons:Record<string,string>={MAINTENANCE:'Bảo trì',CLOSED_EXCEPTION:'Đóng cửa',PRICE_NOT_CONFIGURED:'Chưa có giá',AMBIGUOUS_PRICE:'Giá cần được kiểm tra',COURT_DISABLED:'Sân tạm ngừng',PAST_SLOT:'Đã qua giờ',HELD:'Đang giữ chỗ',BOOKED:'Đã được đặt'}
-export function AvailabilityPage({facilityId,courtId,counter=false}:{facilityId:string;courtId:string;counter?:boolean}){
+export function AvailabilityPage({facilityId,courtId,counter=false,initialDate}:{facilityId:string;courtId:string;counter?:boolean;initialDate?:string}){
  const router=useRouter();const {user}=useAuth();const facility=useApi<Facility>(`/facilities/${facilityId}`);const courts=useApi<Court[]>(`/facilities/${facilityId}/courts`)
- const [date,setDate]=useState(new Date().toLocaleDateString('en-CA'));const resource=useApi<Preview>(`/bookings/availability?courtId=${courtId}&date=${date}`);const [selection,setSelection]=useState<Slot[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('')
+ const [date,setDate]=useState(initialDate??new Date().toLocaleDateString('en-CA'));const resource=useApi<Preview>(`/bookings/availability?courtId=${courtId}&date=${date}`);const [selection,setSelection]=useState<Slot[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('')
  const court=courts.data?.find(c=>c.id===courtId);const total=selection.reduce((v,s)=>v+(s.amount||0),0)
  function select(slot:Slot){setError('');setSelection(current=>current.some(s=>s.startsAt===slot.startsAt)?current.filter(s=>s.startsAt!==slot.startsAt):[...current,slot].sort((a,b)=>a.startsAt.localeCompare(b.startsAt)))}
  async function hold(){if(busy||selection.length===0)return;if(!user){router.push(`/login?next=${encodeURIComponent(`/facilities/${facilityId}/courts/${courtId}`)}`);return}setBusy(true);setError('')

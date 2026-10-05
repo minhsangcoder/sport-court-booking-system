@@ -24,7 +24,7 @@ public class FacilityController {
  @GetMapping("/owner/courts/{id}/maintenance") public ApiResponse<List<MaintenanceView>> windows(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.windows(id,identity.current(r)));}
  @PostMapping("/owner/courts/{id}/maintenance") @ResponseStatus(org.springframework.http.HttpStatus.CREATED) public ApiResponse<MaintenanceView> maintenance(@PathVariable UUID id,@Valid @RequestBody MaintenanceInput i,HttpServletRequest r){return ApiResponse.created(service.addWindow(id,i,identity.current(r)));}
  @DeleteMapping("/owner/maintenance/{id}") @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT) public void cancelWindow(@PathVariable UUID id,HttpServletRequest r){service.cancelWindow(id,identity.current(r));}
- @GetMapping("/facilities") public ApiResponse<List<FacilityView>> search(@RequestParam(required=false) String q){return ApiResponse.success(service.search(q));}
+ @GetMapping("/facilities") public ApiResponse<List<FacilityView>> search(@RequestParam(required=false) String q,@RequestParam(required=false) String province,@RequestParam(required=false) String district,@RequestParam(required=false) UUID sportCategoryId){return ApiResponse.success(service.search(q,province,district,sportCategoryId));}
  @GetMapping("/facilities/{id}") public ApiResponse<FacilityView> publicDetail(@PathVariable UUID id){return ApiResponse.success(service.publicDetail(id));}
  @GetMapping("/facilities/{id}/courts") public ApiResponse<List<CourtView>> publicCourts(@PathVariable UUID id){return ApiResponse.success(service.publicCourts(id));}
  @GetMapping("/sport-categories") public ApiResponse<List<CategoryView>> categories(){return ApiResponse.success(service.categories());}
