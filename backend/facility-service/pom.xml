@@ -10,9 +10,9 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>schedule-service</artifactId>
-    <name>SportHub Schedule &amp; Dynamic Pricing Service</name>
-    <description>Operating hours, exception calendar, maintenance windows, dynamic pricing, slot availability matrix</description>
+    <artifactId>facility-service</artifactId>
+    <name>SportHub Facility Service</name>
+    <description>Slot hold, booking lifecycle FSM, price snapshotting, group booking, QR check-in</description>
 
     <dependencies>
         <dependency><groupId>com.sporthub</groupId><artifactId>sporthub-common</artifactId></dependency>
@@ -28,8 +28,9 @@
         <dependency><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><optional>true</optional></dependency>
         <dependency><groupId>org.mapstruct</groupId><artifactId>mapstruct</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
-        <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><version>${testcontainers.version}</version><scope>test</scope></dependency>
-        <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><version>${testcontainers.version}</version><scope>test</scope></dependency>
+        <dependency><groupId>io.minio</groupId><artifactId>minio</artifactId><version>8.5.17</version></dependency>
+        <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><scope>test</scope></dependency>
     </dependencies>
 
     <build>

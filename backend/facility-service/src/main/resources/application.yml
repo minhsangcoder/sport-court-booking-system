@@ -1,0 +1,43 @@
+server:
+  port: ${SERVER_PORT:8082}
+spring:
+  application:
+    name: facility-service
+  datasource:
+    url: ${FACILITY_DB_URL:jdbc:postgresql://localhost:5432/facility_db}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VHOST:sporthub}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+sporthub:
+  media:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY}
+    secret-key: ${MINIO_SECRET_KEY}
+    bucket: ${MINIO_BUCKET:sporthub-media}
+  demo:
+    seed-enabled: ${DEMO_SEED_ENABLED:false}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

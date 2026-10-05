@@ -1,0 +1,1259 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SportHub Schedule and Pricing",
+    "version": "1.0.0",
+    "description": "Facility ownership is checked through REST. Preview evaluates schedule eligibility only; Booking owns occupancy. Configuration history is retained; equal price precedence blocks quoting."
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "paths": {
+    "/schedules/facilities/{id}/hours": {
+      "get": {
+        "operationId": "getOperatingHours",
+        "summary": "getOperatingHours",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Hours"
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceOperatingHours",
+        "summary": "replaceOperatingHours",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Hours"
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoursInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedules/facilities/{id}/exceptions": {
+      "get": {
+        "operationId": "getScheduleExceptions",
+        "summary": "getScheduleExceptions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ExceptionView"
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createScheduleException",
+        "summary": "createScheduleException",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ExceptionView"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExceptionInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedules/facilities/{id}/exceptions/{exceptionId}": {
+      "delete": {
+        "operationId": "removeScheduleException",
+        "summary": "removeScheduleException",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "exceptionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        }
+      }
+    },
+    "/schedules/facilities/{id}/pricing": {
+      "get": {
+        "operationId": "getPriceRules",
+        "summary": "getPriceRules",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PriceRule"
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPriceRule",
+        "summary": "createPriceRule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PriceRule"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedules/facilities/{id}/pricing/{ruleId}": {
+      "delete": {
+        "operationId": "disablePriceRule",
+        "summary": "disablePriceRule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "ruleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        }
+      }
+    },
+    "/schedules/facilities/{id}/preview": {
+      "get": {
+        "operationId": "previewOwnerSchedule",
+        "summary": "previewOwnerSchedule",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "courtId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Preview"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        }
+      }
+    },
+    "/schedules/public/courts/{id}": {
+      "get": {
+        "operationId": "previewPublicEligibility",
+        "summary": "previewPublicEligibility",
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Preview"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        }
+      }
+    },
+    "/schedules/public/quote": {
+      "post": {
+        "operationId": "quoteEligibleInterval",
+        "summary": "quoteEligibleInterval",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Quote"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed"
+          },
+          "401": {
+            "description": "Session invalid"
+          },
+          "403": {
+            "description": "Outside ownership"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflicting or ineligible configuration"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteInput"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Interval": {
+        "type": "object",
+        "properties": {
+          "dayOfWeek": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "slotMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 720
+          }
+        },
+        "required": [
+          "dayOfWeek",
+          "opensAt",
+          "closesAt",
+          "slotMinutes"
+        ]
+      },
+      "HoursInput": {
+        "type": "object",
+        "properties": {
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "intervals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interval"
+            }
+          }
+        },
+        "required": [
+          "intervals"
+        ]
+      },
+      "Hours": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "dayOfWeek": {
+            "type": "integer"
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "slotMinutes": {
+            "type": "integer"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "facilityId",
+          "courtId",
+          "dayOfWeek",
+          "opensAt",
+          "closesAt",
+          "slotMinutes",
+          "version"
+        ]
+      },
+      "ExceptionInput": {
+        "type": "object",
+        "properties": {
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CLOSED",
+              "SPECIAL_HOURS"
+            ]
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "time",
+            "nullable": true
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "time",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "type",
+          "reason"
+        ]
+      },
+      "ExceptionView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CLOSED",
+              "SPECIAL_HOURS"
+            ]
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "time",
+            "nullable": true
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "time",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "facilityId",
+          "courtId",
+          "date",
+          "type",
+          "opensAt",
+          "closesAt",
+          "reason"
+        ]
+      },
+      "PriceInput": {
+        "type": "object",
+        "properties": {
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "sportCategoryId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "dayOfWeek": {
+            "type": "integer",
+            "nullable": true
+          },
+          "specificDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "pricePerSlot": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "VND"
+            ]
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt",
+          "pricePerSlot",
+          "priority",
+          "label",
+          "effectiveFrom",
+          "currency"
+        ]
+      },
+      "PriceRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courtId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "sportCategoryId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "dayOfWeek": {
+            "type": "integer",
+            "nullable": true
+          },
+          "specificDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "time"
+          },
+          "pricePerSlot": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "VND"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "facilityId",
+          "courtId",
+          "sportCategoryId",
+          "dayOfWeek",
+          "specificDate",
+          "startsAt",
+          "endsAt",
+          "pricePerSlot",
+          "priority",
+          "label",
+          "effectiveFrom",
+          "effectiveTo",
+          "currency",
+          "active",
+          "version"
+        ]
+      },
+      "QuoteInput": {
+        "type": "object",
+        "properties": {
+          "courtId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "courtId",
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "Slot": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ELIGIBLE",
+              "BLOCKED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "nullable": true
+          },
+          "currency": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "ruleVersion": {
+            "type": "integer"
+          },
+          "ruleLabel": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt",
+          "state",
+          "reason",
+          "amount",
+          "currency",
+          "ruleId",
+          "ruleVersion",
+          "ruleLabel"
+        ]
+      },
+      "Preview": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courtId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Slot"
+            }
+          }
+        },
+        "required": [
+          "facilityId",
+          "courtId",
+          "date",
+          "timezone",
+          "slots"
+        ]
+      },
+      "Quote": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courtId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "exclusiveMinimum": true
+          },
+          "currency": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Slot"
+            }
+          }
+        },
+        "required": [
+          "facilityId",
+          "courtId",
+          "startsAt",
+          "endsAt",
+          "amount",
+          "currency",
+          "timezone",
+          "segments"
+        ]
+      }
+    }
+  }
+}

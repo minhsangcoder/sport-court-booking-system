@@ -11,6 +11,7 @@ spring:
     hikari:
       maximum-pool-size: 10
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
