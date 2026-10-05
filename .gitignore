@@ -27,6 +27,7 @@ Document/SportHub_Microservices_Architecture.md
 docs/phase-0-audit.md
 
 # Node.js and Next.js
+.pnpm-store/
 **/node_modules/
 **/.next/
 **/out/

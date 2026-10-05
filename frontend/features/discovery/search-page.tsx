@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { MapPin,ArrowRight,SlidersHorizontal } from 'lucide-react'
@@ -8,18 +9,21 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import type { Category } from '@/features/facility/types'
 import { money } from '@/features/schedule/types'
-type Result={facility:{id:string;name:string;addressLine:string;province:string;district:string;ward:string;timezone:string;amenities:string[];latitude:number|null;longitude:number|null};courtId:string;courtName:string;sportCategoryId:string;sportName:string;date:string;fromPrice:number;currency:string;availableSlots:number;firstStartsAt:string;firstEndsAt:string;distanceKm:number|null}
+import type { DiscoveryResult } from './types'
+const SearchMap=dynamic(()=>import('./search-map').then(module=>module.SearchMap),{ssr:false,loading:()=> <p role="status" className="mt-6">Đang mở bản đồ…</p>})
 const fields=['q','sportCategoryId','province','district','date','opensAfter','closesBefore','minPrice','maxPrice','latitude','longitude','radiusKm','sort']
 const selectStyle='h-12 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-900'
 export function SearchPage({initial,today}:{initial:Record<string,string>;today:string}){
  const router=useRouter();const filters=Object.fromEntries(fields.map(name=>[name,initial[name]??(name==='date'?today:name==='sort'?'NAME':'')]))
+ const mapView=initial.view==='map'
  const pastDate=Boolean(/^\d{4}-\d{2}-\d{2}$/.test(filters.date)&&filters.date<today);if(pastDate)filters.date=today
  const [categoryId,setCategoryId]=useState(filters.sportCategoryId)
  const [position,setPosition]=useState({latitude:filters.latitude,longitude:filters.longitude});const [locating,setLocating]=useState(false);const [locationMessage,setLocationMessage]=useState('')
  function locate(){if(!navigator.geolocation){setLocationMessage('Trình duyệt không hỗ trợ vị trí. Bạn vẫn có thể tìm theo khu vực.');return}setLocating(true);setLocationMessage('');navigator.geolocation.getCurrentPosition(value=>{setPosition({latitude:String(value.coords.latitude),longitude:String(value.coords.longitude)});setLocationMessage('Đã chọn vị trí hiện tại làm điểm tìm kiếm.');setLocating(false)},()=>{setLocationMessage('Không thể lấy vị trí. Hãy tìm theo khu vực hoặc nhập điểm tìm kiếm.');setLocating(false)},{timeout:10000,maximumAge:60000})}
  const params=new URLSearchParams(Object.entries(filters).filter(([,value])=>value!==''))
- const resource=useApi<{items:Result[];truncated:boolean}>(`/bookings/search?${params}`);const categories=useApi<Category[]>('/sport-categories')
- function search(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);const query=new URLSearchParams();for(const name of fields){const value=String(form.get(name)??'').trim();if(value)query.set(name,value)}router.push(`/search?${query}`)}
+ const resource=useApi<{items:DiscoveryResult[];truncated:boolean}>(`/bookings/search?${params}`);const categories=useApi<Category[]>('/sport-categories')
+ function search(event:React.FormEvent<HTMLFormElement>){event.preventDefault();const form=new FormData(event.currentTarget);const query=new URLSearchParams();for(const name of fields){const value=String(form.get(name)??'').trim();if(value)query.set(name,value)}if(mapView)query.set('view','map');router.push(`/search?${query}`)}
+ function viewHref(map:boolean){const query=new URLSearchParams(params);if(map)query.set('view','map');return `/search?${query}`}
  const time=(value:string,zone:string)=>new Date(value).toLocaleTimeString('vi-VN',{timeZone:zone,hour:'2-digit',minute:'2-digit'})
  return <main className="mx-auto max-w-6xl px-5 py-10">
   <div className="rounded-3xl bg-emerald-900 p-7 text-white sm:p-10"><p className="text-sm font-semibold uppercase tracking-widest text-emerald-300">Lịch chơi bắt đầu tại đây</p><h1 className="mt-3 text-3xl font-black sm:text-4xl">Tìm sân cho buổi chơi tiếp theo</h1><p className="mt-4 max-w-xl text-emerald-100">Chọn bộ môn và ngày chơi để xem sân còn trống cùng mức giá thực tế.</p>
@@ -42,9 +46,14 @@ export function SearchPage({initial,today}:{initial:Record<string,string>;today:
   {categories.error&&<p role="alert" className="mt-5 text-sm text-red-700">Không thể tải bộ môn. <button onClick={categories.reload} className="underline">Thử lại</button></p>}
   {pastDate&&<p role="status" className="mt-5 text-sm text-amber-700">Ngày tìm kiếm đã qua. Đã chuyển sang ngày hôm nay.</p>}
   <div className="mt-8 flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">{filters.q?`Kết quả cho “${filters.q}”`:'Sân còn trống cho ngày đã chọn'}</h2>{resource.data&&<p className="text-sm text-slate-500">{resource.data.items.length} sân · {filters.date}</p>}</div>
+  <nav aria-label="Cách xem kết quả" className="mt-5 flex w-fit gap-1 rounded-xl bg-slate-100 p-1">
+   <Link href={viewHref(false)} scroll={false} aria-current={!mapView?'page':undefined} className={`rounded-lg px-4 py-2 text-sm font-semibold ${!mapView?'bg-white text-emerald-800 shadow-sm':'text-slate-600 hover:text-emerald-800'}`}>Danh sách</Link>
+   <Link href={viewHref(true)} scroll={false} aria-current={mapView?'page':undefined} className={`rounded-lg px-4 py-2 text-sm font-semibold ${mapView?'bg-white text-emerald-800 shadow-sm':'text-slate-600 hover:text-emerald-800'}`}>Bản đồ</Link>
+  </nav>
   {resource.loading&&<p role="status" className="mt-6">Đang kiểm tra sân, giá và lịch trống…</p>}{resource.error&&<p role="alert" className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">{resource.error}<button className="ml-3 underline" onClick={resource.reload}>Thử lại</button></p>}
   {resource.data?.truncated&&<p className="mt-5 text-sm text-amber-700">Đang hiển thị tối đa 100 kết quả. Hãy thêm khu vực hoặc bộ môn để thu hẹp tìm kiếm.</p>}{resource.data?.items.length===0&&<div className="my-8 rounded-2xl border p-8"><h3 className="font-bold">Chưa tìm thấy sân phù hợp</h3><p className="mt-2 text-slate-500">Thử mở rộng khu vực, khoảng giá hoặc chọn ngày và khung giờ khác.</p></div>}
-  <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{resource.data?.items.map(result=>{const f=result.facility;return <article key={result.courtId} className="flex flex-col rounded-2xl border bg-white p-6 shadow-sm"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><MapPin size={24}/></div><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">{result.sportName}</p><h3 className="mt-2 text-xl font-bold">{result.courtName}</h3><Link href={`/facilities/${f.id}`} className="mt-1 text-sm font-medium hover:underline">{f.name}</Link><p className="mt-2 text-sm text-slate-500">{f.addressLine} · {f.district}, {f.province}</p>
-   {result.distanceKm!==null&&<p className="mt-2 text-sm text-slate-500">Cách điểm tìm kiếm {result.distanceKm.toFixed(1)} km</p>}<div className="my-4 flex flex-wrap gap-2">{f.amenities.map(a=><span className="rounded-full bg-slate-100 px-3 py-1 text-xs" key={a}>{a}</span>)}</div><p className="text-xl font-bold text-emerald-800">Từ {money(result.fromPrice,result.currency)} <span className="text-xs font-normal text-slate-500">/ slot</span></p><p className="mt-2 text-sm text-slate-500">{result.availableSlots} slot phù hợp · Sớm nhất {time(result.firstStartsAt,f.timezone)}–{time(result.firstEndsAt,f.timezone)}</p><Link href={`/facilities/${f.id}/courts/${result.courtId}?date=${result.date}`} className="mt-5 flex items-center justify-between border-t pt-4 text-sm font-semibold text-emerald-700">Chọn giờ chơi<ArrowRight size={18}/></Link></article>})}</div>
+  {mapView&&resource.data&&resource.data.items.length>0&&<SearchMap results={resource.data.items}/>}
+  {!mapView&&<div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{resource.data?.items.map(result=>{const f=result.facility;return <article key={result.courtId} className="flex flex-col rounded-2xl border bg-white p-6 shadow-sm"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><MapPin size={24}/></div><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">{result.sportName}</p><h3 className="mt-2 text-xl font-bold">{result.courtName}</h3><Link href={`/facilities/${f.id}`} className="mt-1 text-sm font-medium hover:underline">{f.name}</Link><p className="mt-2 text-sm text-slate-500">{f.addressLine} · {f.district}, {f.province}</p>
+   {result.distanceKm!==null&&<p className="mt-2 text-sm text-slate-500">Cách điểm tìm kiếm {result.distanceKm.toFixed(1)} km</p>}<div className="my-4 flex flex-wrap gap-2">{f.amenities.map(a=><span className="rounded-full bg-slate-100 px-3 py-1 text-xs" key={a}>{a}</span>)}</div><p className="text-xl font-bold text-emerald-800">Từ {money(result.fromPrice,result.currency)} <span className="text-xs font-normal text-slate-500">/ slot</span></p><p className="mt-2 text-sm text-slate-500">{result.availableSlots} slot phù hợp · Sớm nhất {time(result.firstStartsAt,f.timezone)}–{time(result.firstEndsAt,f.timezone)}</p><Link href={`/facilities/${f.id}/courts/${result.courtId}?date=${result.date}`} className="mt-5 flex items-center justify-between border-t pt-4 text-sm font-semibold text-emerald-700">Chọn giờ chơi<ArrowRight size={18}/></Link></article>})}</div>}
  </main>
 }

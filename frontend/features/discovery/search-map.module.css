@@ -1,0 +1,36 @@
+.canvas {
+  isolation: isolate;
+  z-index: 0;
+  height: 440px;
+  width: 100%;
+  border-radius: 1rem;
+  background: #ecfdf5;
+}
+
+.marker {
+  display: grid;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 50% 50% 50% 6px;
+  background: #047857;
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 3px 12px rgb(15 23 42 / 25%);
+}
+
+.selected {
+  background: #fbbf24;
+  color: #064e3b;
+}
+
+.marker:focus-visible {
+  outline: 3px solid #0f172a;
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .canvas {
+    height: 320px;
+  }
+}
