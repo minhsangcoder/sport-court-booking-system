@@ -1,0 +1,6 @@
+import type { Quote } from '@/features/schedule/types'
+export type Hold={id:string;courtId:string;facilityId:string;holderId:string;startsAt:string;endsAt:string;expiresAt:string;state:string;quote:Quote}
+export type Booking={id:string;facilityId:string;courtId:string;customerId:string;currentHolderId:string;createdBy:string;startsAt:string;endsAt:string;status:string;source:string;guestName:string|null;guestPhone:string|null;amount:number;currency:string;priceSnapshot:Quote;holdExpiresAt:string;paymentId:string|null;paidAt:string|null;checkedInAt:string|null;completedAt:string|null;version:number}
+export type BookingDetail={booking:Booking;history:{id:string;action:string;actorId:string|null;details:unknown;createdAt:string}[];checkinToken:string|null;checkinQrSvg?:string|null}
+export type Payment={id:string;bookingId:string;payerId:string;memberId:string|null;purpose:string;amount:number;currency:string;provider:string;providerReference:string;status:string;expiresAt:string;paidAt:string|null}
+export const statusLabels:Record<string,string>={PENDING:'Chờ thanh toán',CONFIRMED:'Đã xác nhận',CHECKED_IN:'Đang chơi',COMPLETED:'Hoàn tất',CANCELLED:'Đã hủy',EXPIRED:'Hết hạn'}
