@@ -110,6 +110,21 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, message, request, null, null);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, ex.getMessage(), request, null, null);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataConflict(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, ErrorCode.CONFLICT, "A resource with these values already exists or is referenced", request, null, null);
+    }
+
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleHttpFailure(org.springframework.web.server.ResponseStatusException ex, HttpServletRequest request) {
+        return response(HttpStatus.valueOf(ex.getStatusCode().value()), ErrorCode.INTERNAL_ERROR, ex.getReason(), request, null, null);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
         log.error("[{}] Unexpected error at URI: {} | Error: {}",

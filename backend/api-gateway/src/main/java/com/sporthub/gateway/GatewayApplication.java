@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 import com.sporthub.gateway.config.GatewaySecurityProperties;
+import com.sporthub.gateway.config.GatewayJwtProperties;
 
 /**
  * SportHub API Gateway — Entry point for all client requests.
@@ -23,7 +24,7 @@ import com.sporthub.gateway.config.GatewaySecurityProperties;
  * It does NOT depend on sporthub-common (which is servlet-based).</p>
  */
 @SpringBootApplication
-@EnableConfigurationProperties(GatewaySecurityProperties.class)
+@EnableConfigurationProperties({GatewaySecurityProperties.class, GatewayJwtProperties.class})
 public class GatewayApplication {
 
     public static void main(String[] args) {

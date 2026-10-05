@@ -38,12 +38,21 @@ spring:
               - Authorization
               - Content-Type
               - X-Correlation-Id
+              - Idempotency-Key
             exposedHeaders:
               - X-Correlation-Id
             allowCredentials: true
             maxAge: 3600
 
       routes:
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/payments/**
+        - id: facility-service
+          uri: ${FACILITY_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/facilities/**, /api/v1/owner/facilities/**, /api/v1/owner/courts/**, /api/v1/owner/maintenance/**, /api/v1/sport-categories/**, /api/v1/admin/sport-categories/**
         # ── Identity & Access Service ──────────────────────────
         - id: identity-service
           uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
@@ -78,7 +87,7 @@ spring:
 sporthub:
   gateway:
     security:
-      # Phase 1 documents public routes; Phase 2 will use this list during JWT validation.
+      # Only these routes bypass Phase 2A JWT authentication.
       public-paths:
         - /api/v1/auth/register
         - /api/v1/auth/verify
@@ -86,7 +95,16 @@ sporthub:
         - /api/v1/auth/refresh
         - /api/v1/auth/forgot-password
         - /api/v1/auth/reset-password
+        - /api/v1/auth/logout
+        - /api/v1/facilities/**
+        - /api/v1/sport-categories
+        - /api/v1/schedules/public/**
+        - /api/v1/bookings/availability
+        - /api/v1/payments/providers/demo/callback
         - /actuator/health/**
+
+jwt:
+  secret: ${JWT_SECRET}
 
 # ── Actuator ──────────────────────────────────────────────────
 management:

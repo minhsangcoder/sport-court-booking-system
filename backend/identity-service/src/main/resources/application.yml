@@ -22,6 +22,7 @@ spring:
 
   # ── JPA / Hibernate ─────────────────────────────────────────
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     show-sql: false
@@ -56,6 +57,18 @@ spring:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
 
+sporthub:
+  identity:
+    verification-expiration-minutes: ${VERIFICATION_EXPIRATION_MINUTES:15}
+    password-reset-expiration-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:15}
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+    mail-from: ${MAIL_FROM:no-reply@sporthub.local}
+    secure-cookie: ${SECURE_COOKIE:false}
+    demo-sms-enabled: ${DEMO_SMS_ENABLED:false}
+  demo:
+    seed-enabled: ${DEMO_SEED_ENABLED:false}
+    password: ${DEMO_PASSWORD:}
+
 # ── JWT Configuration ─────────────────────────────────────────
 jwt:
   secret: ${JWT_SECRET}
@@ -75,7 +88,6 @@ management:
 # ── Logging ───────────────────────────────────────────────────
 logging:
   level:
-    com.sporthub: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.security: DEBUG
+    com.sporthub: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: INFO

@@ -36,6 +36,6 @@ public class CorrelationIdGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return Ordered.HIGHEST_PRECEDENCE + 20;
+        return Ordered.HIGHEST_PRECEDENCE + 5;
     }
 }
