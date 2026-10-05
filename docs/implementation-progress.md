@@ -15,7 +15,7 @@ Technical tracking only. `Document/` remains read-only and authoritative for bus
 - DONE — Additional facility review: Owner submission, frozen pending profile, immutable snapshots, supplement/resubmit/approve/reject, private legal documents, retained submitted originals, audited Admin reads/decisions, duplicate-address hints, public availability after approval and durable owner notices. Separate Owner review/document and Admin review routes call real APIs. First-facility Owner applications remain a separate pending workflow.
 - DONE — Profile contact verification: separate contact route, safe own challenge metadata, email/phone OTP, resend cooldown and invalidated superseded codes. Existing contact stays current until successful verification; roles stay unchanged. Database/API tests, Gateway email/demo-SMS smoke and browser OTP submission pass.
 - DONE — Discovery filters core: public court results combine Facility category/location, Schedule opening/pricing and actual Booking reservations. Date/time/price/radius/sort filters, real empty/error/loading states and dated links to court availability replace the prototype. Map presentation remains a separate UI capability.
-- IN_PROGRESS — First-facility Owner application: partial Identity coordinator/encrypted legal payload, scoped applicant workspace, private Facility commands/publication gate, Schedule access guard and zero-balance Payment wallet initialization. Source and test sources compile; business tests, contracts, frontend, deployment key configuration and live verification have not been implemented/verified. This is a checkpoint, not a completed vertical slice.
+- IN_PROGRESS — First-facility Owner application: backend lifecycle, retry leases, encrypted legal data, applicant/Owner publication guards and zero-balance wallet initialization pass targeted PostgreSQL tests. Identity V6, Facility V7, Schedule V3 and Payment V5 pass empty-schema installation and previous-version upgrade tests. Environment key wiring is implemented. Contracts, frontend and runtime/E2E verification remain pending; this is not yet a completed vertical slice.
 - IN_PROGRESS — Frontend: replace prototype workflows incrementally with routes and typed API calls.
 - IN_PROGRESS — Infrastructure: reproducible Compose, local-only controlled demo seed, build/test/runtime smoke scripts.
 
@@ -29,6 +29,8 @@ Technical tracking only. `Document/` remains read-only and authoritative for bus
 - Additional role/permission labels from detailed Admin UCs: do not add beyond approved CUSTOMER/OWNER/STAFF/ADMIN.
 
 ## Verification
+
+- Owner onboarding backend resume: full `mvn -o package` PASS, 76 tests, zero failures/errors/skips (Identity 19 lifecycle/security/race tests; Facility 9; Schedule 5; Payment 8; four additional migration tests; existing Common/Gateway/Booking/Transfer regressions). Each of Identity V6, Facility V7, Schedule V3 and Payment V5 passes installation in an empty dedicated schema, upgrade from its previous version, Flyway validate and zero failed history. Demo databases are not changed by these tests. Runtime images and Owner frontend verification are still pending.
 
 - Baseline checkout: `0fa3181ba42e150c35fc63a07b42f8c435e1924a`.
 - Verification commands and results will be recorded per milestone; no feature is DONE from code existence alone.
@@ -50,6 +52,8 @@ Technical tracking only. `Document/` remains read-only and authoritative for bus
 ## Safe stop checkpoint — 2026-10-05
 
 User explicitly requested stopping implementation after preserving progress. No additional feature work follows this checkpoint.
+
+Historical checkpoint below. Implementation resumed by explicit user request on 2026-10-05 from the same `29cdc89` HEAD. The externally renamed `feature/sporthub-demo-e2e` branch was preserved; `codex/sporthub-demo-e2e` was created at that HEAD without resetting or discarding work.
 
 - Branch: `codex/sporthub-demo-e2e`; no detached HEAD or merge conflicts. `Document/` has no changes.
 - Completed commits this run: `d128c83` facility review/document retention; `cbadfef` own contact OTP route; `f1ccc8b` real Discovery filters/date propagation; `b29cccf` verified container demo.

@@ -18,12 +18,30 @@ public class ScheduleService {
     private final ScheduleRepository repo;
     private final FacilityClient facilities;
     private final ObjectMapper json;
+    @org.springframework.beans.factory.annotation.Value("${SERVICE_CALL_SECRET:}") private String serviceSecret;
+    @org.springframework.beans.factory.annotation.Value("${IDENTITY_SERVICE_URL:http://localhost:8081}") private String identityUrl;
     public ScheduleService(ScheduleRepository repo,FacilityClient facilities,ObjectMapper json) {
         this.repo=repo;this.facilities=facilities;this.json=json;
     }
     public List<Hours> hours(UUID facility,Caller caller,String token) {reader(facility,caller,token);return repo.hours(facility);}
     public List<ExceptionView> exceptions(UUID facility,Caller caller,String token) {reader(facility,caller,token);return repo.exceptions(facility);}
     public List<PriceRule> rules(UUID facility,Caller caller,String token) {reader(facility,caller,token);return repo.rules(facility);}
+    @Transactional public Map<String,Object> freezeApplication(UUID facility,UUID application,List<FacilityClient.Context> contexts){
+        repo.lock(facility);var hours=repo.hours(facility);var prices=repo.rules(facility);
+        if(hours.isEmpty()||prices.isEmpty())throw new ConflictException("Configure operating hours and prices before submitting");
+        boolean playable=false;
+        for(var context:contexts){if(!facility.equals(context.facilityId()))throw new ForbiddenException("Foreign court context");if(!context.enabled())continue;var today=LocalDate.now(context.timezone());
+            for(int day=0;day<=7;day++)for(var slot:preview(context,today.plusDays(day)).slots()){
+                if(Set.of("PRICE_NOT_CONFIGURED","AMBIGUOUS_PRICE").contains(Objects.toString(slot.reason(),"")))throw new ConflictException("Configured slots must have an unambiguous price");
+                if(slot.state().equals("ELIGIBLE")&&slot.startsAt().isAfter(Instant.now()))playable=true;
+            }
+        }
+        if(!playable)throw new ConflictException("Configure a future playable slot before submitting");
+        int bound=repo.jdbc().update("INSERT INTO application_configuration_freeze(facility_id,application_id,frozen) VALUES(?,?,true) ON CONFLICT(facility_id) DO UPDATE SET frozen=true WHERE application_configuration_freeze.application_id=EXCLUDED.application_id",facility,application);
+        if(bound!=1)throw new ConflictException("Configuration belongs to another Owner application");
+        return Map.of("hours",hours,"prices",prices,"exceptions",repo.exceptions(facility));
+    }
+    @Transactional public Map<String,Object> releaseApplication(UUID facility,UUID application){repo.lock(facility);repo.jdbc().update("UPDATE application_configuration_freeze SET frozen=false WHERE facility_id=? AND application_id=?",facility,application);return Map.of("released",true);}
 
     @Transactional
     public List<Hours> replaceHours(UUID facility,HoursInput input,Caller caller,String token) {
@@ -157,7 +175,7 @@ public class ScheduleService {
     private record Rank(boolean specific,int qualifiers,int priority) implements Comparable<Rank> {
         public int compareTo(Rank other) {int value=Boolean.compare(specific,other.specific);if(value==0)value=Integer.compare(qualifiers,other.qualifiers);if(value==0)value=Integer.compare(priority,other.priority);return value;}
     }
-    private void owner(UUID facility,Caller caller,String token) {if(!caller.hasRole("OWNER")&&!caller.facilityBindings().getOrDefault(facility,Set.of()).contains("APPLICATION_EDIT"))throw new ForbiddenException("Owner or editable application workspace required");facilities.requireOwner(facility,token);}
+    private void owner(UUID facility,Caller caller,String token) {if(!caller.hasRole("OWNER")&&!caller.facilityBindings().getOrDefault(facility,Set.of()).contains("APPLICATION_EDIT"))throw new ForbiddenException("Owner or editable application workspace required");repo.lock(facility);var pending=repo.jdbc().queryForList("SELECT application_id FROM application_configuration_freeze WHERE facility_id=? AND frozen",UUID.class,facility);if(!pending.isEmpty()&&!facilities.applicationCommitted(pending.getFirst(),serviceSecret,identityUrl))throw new ConflictException("Application schedule is frozen during review");facilities.requireOwner(facility,token);}
     private void courtScope(UUID facility,UUID court,String token) {if(court!=null)checkFacility(facility,facilities.context(court,token));}
     private void checkFacility(UUID facility,FacilityClient.Context context) {if(!facility.equals(context.facilityId()))throw new ForbiddenException("Court is outside the facility");}
     private boolean overlap(LocalTime a,LocalTime b,LocalTime c,LocalTime d) {return a.isBefore(d)&&b.isAfter(c);}

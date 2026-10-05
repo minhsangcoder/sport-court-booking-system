@@ -15,6 +15,7 @@ import java.util.*;
 public class OwnerApplicationController {
  private final OwnerApplicationService service;private final String secret;private final ObjectMapper json;
  public OwnerApplicationController(OwnerApplicationService service,@Value("${SERVICE_CALL_SECRET:}") String secret,ObjectMapper json){this.service=service;this.secret=secret;this.json=json;}
+ @ModelAttribute public void preventCaching(jakarta.servlet.http.HttpServletResponse response){response.setHeader("Cache-Control","no-store");}
  @GetMapping("/owner-applications") public ApiResponse<List<Summary>> own(@AuthenticationPrincipal AuthenticatedUser actor){return ApiResponse.success(service.own(actor));}
  @PostMapping("/owner-applications") @ResponseStatus(org.springframework.http.HttpStatus.CREATED) public ApiResponse<Summary> create(@Valid @RequestBody Create input,@AuthenticationPrincipal AuthenticatedUser actor){return ApiResponse.created(service.create(input,actor));}
  @GetMapping("/owner-applications/{id}") public ApiResponse<Detail> detail(@PathVariable UUID id,@AuthenticationPrincipal AuthenticatedUser actor){return ApiResponse.success(service.detail(id,actor,false));}

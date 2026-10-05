@@ -3,13 +3,19 @@ param()
 $ErrorActionPreference='Stop'
 $demoRoot=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $demoPath=Join-Path $demoRoot '.env'
-if(Test-Path -LiteralPath $demoPath){Write-Output '.env already exists; its values were preserved.';return}
+if(Test-Path -LiteralPath $demoPath){
+ if(!([IO.File]::ReadAllLines($demoPath)|Where-Object {$_ -match '^OWNER_APPLICATION_DATA_KEY='})){
+  [IO.File]::AppendAllText($demoPath,[Environment]::NewLine+'OWNER_APPLICATION_DATA_KEY='+[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))+[Environment]::NewLine)
+ }
+ Write-Output '.env values preserved; missing application encryption key initialized without printing it.';return
+}
 function New-DemoSecret { [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48)) }
 $demoValues=[ordered]@{
  COMPOSE_PROJECT_NAME='sporthub-demo';POSTGRES_USER='sporthub_demo';POSTGRES_PASSWORD=(New-DemoSecret)
  REDIS_PASSWORD=(New-DemoSecret);RABBITMQ_DEFAULT_USER='sporthub_demo';RABBITMQ_DEFAULT_PASS=(New-DemoSecret)
  MINIO_ROOT_USER='sporthub_demo';MINIO_ROOT_PASSWORD=(New-DemoSecret);JWT_SECRET=(New-DemoSecret)
  DEMO_PAYMENT_CALLBACK_SECRET=(New-DemoSecret);SERVICE_CALL_SECRET=(New-DemoSecret);DEMO_PASSWORD=('Demo!'+(New-DemoSecret))
+ OWNER_APPLICATION_DATA_KEY=[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
  POSTGRES_PORT='15432';REDIS_PORT='16379';RABBITMQ_PORT='15682';RABBITMQ_MANAGEMENT_PORT='25672'
  MINIO_API_PORT='19000';MINIO_CONSOLE_PORT='19001';MAILPIT_SMTP_PORT='11025';MAILPIT_UI_PORT='18025'
  GATEWAY_PORT='18080';FRONTEND_PORT='13000';SPRING_PROFILES_ACTIVE='local';DEMO_SEED_ENABLED='true';DEMO_SMS_ENABLED='true'

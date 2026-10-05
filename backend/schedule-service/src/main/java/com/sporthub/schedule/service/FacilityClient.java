@@ -22,6 +22,10 @@ public class FacilityClient {
         read("/api/v1/owner/facilities/"+facilityId+"/write-access",token);
     }
     public void requireReader(UUID facilityId,String token){read("/api/v1/owner/facilities/"+facilityId,token);}
+    public boolean applicationCommitted(UUID application,String secret,String identityUrl){
+        String path="/api/v1/internal/owner-applications/committed";String body="{\"applicationIds\":[\""+application+"\"]}";long now=Instant.now().getEpochSecond();
+        var result=client.post().uri(identityUrl+path).contentType(org.springframework.http.MediaType.APPLICATION_JSON).header("X-Service-Time",String.valueOf(now)).header("X-Service-Signature",com.sporthub.common.security.ServiceCalls.sign(secret,"POST",path,now,body)).body(body).retrieve().body(JsonNode.class);return result!=null&&result.path("data").size()==1;
+    }
     public Context context(UUID courtId,String ownerToken) {
         var data=read(ownerToken==null?"/api/v1/facilities/courts/"+courtId+"/context":
             "/api/v1/owner/courts/"+courtId+"/context",ownerToken);

@@ -4,7 +4,7 @@ CREATE TABLE owner_applications (
  business_name VARCHAR(180) NOT NULL, facility_name VARCHAR(180) NOT NULL,
  private_payload TEXT NOT NULL, initial_facility JSONB NOT NULL,
  submitted_at TIMESTAMPTZ, reviewed_at TIMESTAMPTZ, reviewed_by UUID REFERENCES users(id),
- reason VARCHAR(1200), decision_action VARCHAR(30), commission_percent NUMERIC(5,2) CHECK(commission_percent BETWEEN 0 AND 100),
+ reason VARCHAR(1200), decision_action VARCHAR(30), submission_origin VARCHAR(30), commission_percent NUMERIC(5,2) CHECK(commission_percent BETWEEN 0 AND 100),
  next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), lease_until TIMESTAMPTZ,
  lease_token UUID, last_error VARCHAR(300), created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

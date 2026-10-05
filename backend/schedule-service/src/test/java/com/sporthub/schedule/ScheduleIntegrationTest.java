@@ -39,6 +39,17 @@ class ScheduleIntegrationTest {
     private void hours() {service.replaceHours(facilityId,new HoursInput(null,List.of(new Interval(day.getDayOfWeek().getValue(),LocalTime.of(6,0),LocalTime.of(11,0),60),new Interval(day.getDayOfWeek().getValue(),LocalTime.of(13,0),LocalTime.of(22,0),60))),owner,"token");}
     private PriceInput price(UUID court,UUID category,LocalDate date,int priority,String amount) {return new PriceInput(court,category,date==null?day.getDayOfWeek().getValue():null,date,LocalTime.of(6,0),LocalTime.of(11,0),new BigDecimal(amount),priority,"Rule",day.minusDays(1),day.plusDays(30),"VND");}
     private Instant at(int hour) {return day.atTime(hour,0).atZone(context.timezone()).toInstant();}
+    @Test void applicationSnapshotSerializesConfigurationAndOnlyCommittedOwnerCanWrite(){
+        hours();
+        for(var interval:List.of(new int[]{6,11},new int[]{13,22}))service.addPrice(facilityId,new PriceInput(null,null,day.getDayOfWeek().getValue(),null,LocalTime.of(interval[0],0),LocalTime.of(interval[1],0),new BigDecimal("100000"),0,"First application price",day.minusDays(10),day.plusDays(30),"VND"),owner,"token");
+        UUID application=UUID.randomUUID();var snapshot=service.freezeApplication(facilityId,application,List.of(context));assertThat(snapshot).containsKeys("hours","prices");
+        var applicant=new Caller(owner.id(),"Applicant",Set.of("CUSTOMER"),Map.of(facilityId,Set.of("APPLICATION_READ","APPLICATION_EDIT")));
+        assertThat(service.hours(facilityId,applicant,"token")).hasSize(2);
+        assertThatThrownBy(()->service.replaceHours(facilityId,new HoursInput(null,List.of()),applicant,"token")).isInstanceOf(ConflictException.class);
+        assertThatThrownBy(()->service.replaceHours(facilityId,new HoursInput(null,List.of()),owner,"token")).isInstanceOf(ConflictException.class);
+        when(facility.applicationCommitted(eq(application),anyString(),anyString())).thenReturn(true);
+        service.replaceHours(facilityId,new HoursInput(null,List.of()),owner,"token");assertThat(service.hours(facilityId,owner,"token")).isEmpty();
+    }
     @Test void multipleIntervalsAndSnapshotTraceArePersistent() {
         hours();var rule=service.addPrice(facilityId,price(null,null,null,0,"100000"),owner,"token");
         var quote=service.quote(new QuoteInput(courtId,at(6),at(8)));

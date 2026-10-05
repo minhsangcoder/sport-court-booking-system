@@ -25,12 +25,11 @@ public class FacilityReviewService {
  }
  @Transactional public Review submitFirst(UUID id,Caller actor,String token){return submitInternal(id,actor,token,true);}
  private Review submitInternal(UUID id,Caller actor,String token,boolean first){
-  if(first&&facilities.find(id).getStatus().equals("PENDING_APPROVAL"))return reviews(id).stream().filter(r->r.state().equals("PENDING_APPROVAL")).findFirst().orElseThrow();
-  lock(id);var f=facilities.ownedEntity(id,actor);if(!f.getStatus().equals("DRAFT"))throw new ConflictException("Only a DRAFT facility can be submitted");
+  lock(id);var f=facilities.ownedEntity(id,actor);if(first&&f.getStatus().equals("PENDING_APPROVAL"))return reviews(id).stream().filter(r->r.state().equals("PENDING_APPROVAL")).findFirst().orElseThrow();if(!f.getStatus().equals("DRAFT"))throw new ConflictException("Only a DRAFT facility can be submitted");
   var courts=facilities.ownedCourts(id,actor);if(courts.stream().noneMatch(CourtView::enabled))throw new ConflictException("Add at least one enabled court before submitting");
-  JsonNode hours;try{hours=dependencies.hours(id,token);}catch(org.springframework.web.client.HttpClientErrorException ex){throw new ConflictException("Operating hours could not be verified");}
+  JsonNode configuration=first?firstSnapshot(id,actor):null;JsonNode hours;try{hours=first?configuration.path("hours"):dependencies.hours(id,token);}catch(org.springframework.web.client.HttpClientErrorException ex){throw new ConflictException("Operating hours could not be verified");}
   if(!hours.isArray()||hours.isEmpty())throw new ConflictException("Configure operating hours before submitting");
-  JsonNode prices=json.createArrayNode();if(first){if(jdbc.queryForObject("SELECT count(*) FROM facility_documents WHERE facility_id=? AND NOT archived",Integer.class,id)<2)throw new ConflictException("Attach identity and location legal documents before submitting");if(jdbc.queryForObject("SELECT count(*) FROM facility_images WHERE facility_id=?",Integer.class,id)<1)throw new ConflictException("Attach a real facility image before submitting");prices=dependencies.prices(id,token);if(!prices.isArray()||prices.isEmpty())throw new ConflictException("Configure prices before submitting");var today=java.time.LocalDate.now(java.time.ZoneId.of(f.getTimezone()));boolean playable=false;for(var court:courts.stream().filter(CourtView::enabled).toList())for(int day=0;day<7;day++){var preview=dependencies.preview(id,court.id(),today.plusDays(day),token);for(var slot:preview.path("slots")){if(!slot.path("state").asText().equals("ELIGIBLE"))throw new ConflictException("Every configured slot must have an unambiguous price and be ready for play");playable=true;}}if(!playable)throw new ConflictException("Configure at least one playable slot in the coming week");}
+  JsonNode prices=first?configuration.path("prices"):json.createArrayNode();
   UUID review=UUID.randomUUID();var snapshot=json.valueToTree(Map.of("facility",facilities.view(f),"courts",courts,"hours",hours,"documents",jdbc.queryForList("SELECT id,name,content_type,size_bytes FROM facility_documents WHERE facility_id=? AND NOT archived ORDER BY created_at",id),"images",jdbc.queryForList("SELECT id,court_id,content_type,size_bytes FROM facility_images WHERE facility_id=? ORDER BY created_at",id)));
   ((com.fasterxml.jackson.databind.node.ObjectNode)snapshot).set("prices",prices);jdbc.update("INSERT INTO facility_reviews(id,facility_id,owner_id,snapshot) VALUES(?,?,?,?::jsonb)",review,id,actor.id(),snapshot.toString());f.setStatus("PENDING_APPROVAL");audit(f,actor,"FACILITY_SUBMITTED",Map.of("reviewId",review));return reviews(id).stream().filter(r->r.id().equals(review)).findFirst().orElseThrow();
  }
@@ -41,7 +40,7 @@ public class FacilityReviewService {
  @Transactional public FacilityView decide(UUID id,String action,String reason,Caller actor){
   if(facilities.applicationId(id)!=null)throw new ConflictException("Decide the linked Owner application instead");return decideInternal(id,action,reason,actor,false);
  }
- @Transactional public FacilityView decideFirst(UUID id,String action,String reason,Caller actor){if(action.equals("APPROVE")&&facilities.find(id).getStatus().equals("ACTIVE"))return facilities.view(facilities.find(id));if(action.equals("SUPPLEMENT_REQUIRED")&&facilities.find(id).getStatus().equals("DRAFT"))return facilities.view(facilities.find(id));if(action.equals("REJECT")&&facilities.find(id).getStatus().equals("REJECTED"))return facilities.view(facilities.find(id));return decideInternal(id,action,reason,actor,true);}
+ @Transactional public FacilityView decideFirst(UUID id,String action,String reason,Caller actor){actor.requireRole("ADMIN");lock(id);var f=facilities.find(id);if(action.equals("APPROVE")&&f.getStatus().equals("ACTIVE"))return facilities.view(f);if(action.equals("SUPPLEMENT_REQUIRED")&&f.getStatus().equals("DRAFT"))return facilities.view(f);if(action.equals("REJECT")&&f.getStatus().equals("REJECTED"))return facilities.view(f);if(action.equals("APPROVE"))firstSnapshot(id,new Caller(f.getOwnerId(),"Applicant",Set.of("CUSTOMER"),Map.of(id,Set.of("APPLICATION_READ"))));else dependencies.applicationSnapshot(facilities.applicationId(id),id,f.getTimezone(),List.of(),true);return decideInternal(id,action,reason,actor,true);}
  private FacilityView decideInternal(UUID id,String action,String reason,Caller actor,boolean first){
   actor.requireRole("ADMIN");lock(id);var f=facilities.find(id);String before=f.getStatus();String state;
   switch(action){
@@ -49,6 +48,12 @@ public class FacilityReviewService {
    default->throw new IllegalArgumentException("Unsupported review action");
   }
   f.setStatus(state);audit(f,actor,"ADMIN_FACILITY_"+action,Map.of("before",before,"after",state,"reason",reason));return facilities.view(f);
+ }
+ private JsonNode firstSnapshot(UUID id,Caller actor){
+  var f=facilities.ownedEntity(id,actor);if(jdbc.queryForObject("SELECT count(*) FROM facility_documents WHERE facility_id=? AND NOT archived",Integer.class,id)<2)throw new ConflictException("Attach identity and location legal documents before submitting");
+  if(jdbc.queryForObject("SELECT count(*) FROM facility_images WHERE facility_id=?",Integer.class,id)<1)throw new ConflictException("Attach a facility image before submitting");
+  var contexts=facilities.ownedCourts(id,actor).stream().map(c->{var context=facilities.context(c.id(),actor);return Map.<String,Object>of("courtId",c.id(),"sportCategoryId",c.sportCategoryId(),"enabled",c.enabled(),"maintenance",context.maintenance());}).toList();
+  return dependencies.applicationSnapshot(facilities.applicationId(id),id,f.getTimezone(),contexts,false);
  }
  private void lock(UUID id){if(jdbc.queryForList("SELECT id FROM facilities WHERE id=? FOR UPDATE",UUID.class,id).isEmpty())throw new ResourceNotFoundException("Facility not found");}
  private void audit(Facility f,Caller actor,String action,Object details){jdbc.update("INSERT INTO facility_audit(id,actor_id,facility_id,action,details) VALUES(?,?,?,?,?)",UUID.randomUUID(),actor.id(),f.getId(),action,json.valueToTree(details).toString());}

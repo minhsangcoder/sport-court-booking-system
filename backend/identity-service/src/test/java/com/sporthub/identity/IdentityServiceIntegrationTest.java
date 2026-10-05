@@ -40,14 +40,16 @@ import static org.mockito.Mockito.reset;
         "sporthub.identity.frontend-base-url=http://localhost:3000",
         "sporthub.identity.mail-from=no-reply@sporthub.local",
         "sporthub.identity.secure-cookie=false"
-        ,"sporthub.identity.notification-delay-ms=3600000","sporthub.identity.admin-expiry-delay-ms=3600000","spring.rabbitmq.listener.simple.auto-startup=false"
+        ,"sporthub.identity.notification-delay-ms=3600000","sporthub.identity.admin-expiry-delay-ms=3600000","sporthub.identity.application-delay-ms=3600000","spring.rabbitmq.listener.simple.auto-startup=false"
 })
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class IdentityServiceIntegrationTest {
     static PostgreSQLContainer<?> postgres;
+    static final String applicationTestKey=java.util.Base64.getEncoder().encodeToString(new java.security.SecureRandom().generateSeed(32));
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
+        registry.add("OWNER_APPLICATION_DATA_KEY",()->applicationTestKey);
         String externalUrl = System.getenv("SPORTHUB_TEST_DB_URL");
         if (externalUrl != null && !externalUrl.isBlank()) {
             registry.add("spring.datasource.url", () -> externalUrl);
@@ -83,6 +85,9 @@ class IdentityServiceIntegrationTest {
     @Autowired FacilityNoticeConsumer facilityNotices;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockBean MailDeliveryService mailDelivery;
+    @MockBean OwnerApplicationDependencies applicationDependencies;
+    @Autowired OwnerApplicationService applications;
+    @Autowired OwnerApplicationCipher applicationCipher;
 
     private final Map<String, String> verificationCodes = new ConcurrentHashMap<>();
     private final Map<String, String> resetCodes = new ConcurrentHashMap<>();
@@ -91,6 +96,11 @@ class IdentityServiceIntegrationTest {
     @BeforeEach
     void captureOutboundCodes() {
         reset(mailDelivery);
+        reset(applicationDependencies);
+        var applicationJson=new com.fasterxml.jackson.databind.ObjectMapper();
+        org.mockito.Mockito.when(applicationDependencies.facility(any(UUID.class),anyString(),anyMap(),any())).thenAnswer(invocation->{
+            String command=invocation.getArgument(1);return command.equals("submit")?applicationJson.readTree("{\"snapshot\":{\"facility\":{\"name\":\"First facility\"},\"hours\":[],\"prices\":[]}}"):applicationJson.createObjectNode();
+        });
         verificationCodes.clear();
         resetCodes.clear();
         doAnswer(invocation -> {
@@ -382,4 +392,104 @@ class IdentityServiceIntegrationTest {
         long digits = Math.floorMod(UUID.randomUUID().getMostSignificantBits(), 1_000_000_000L);
         return "+84" + String.format("%09d", digits);
     }
+
+    private com.sporthub.identity.security.AuthenticatedUser applicant(User user){return new com.sporthub.identity.security.AuthenticatedUser(user.getId(),user.getEmail(),java.util.Set.copyOf(user.getRoles()),UUID.randomUUID());}
+    private com.sporthub.identity.security.AuthenticatedUser applicationAdmin(){var u=activate(uniqueEmail("application-admin"));u.getRoles().add(Role.ADMIN);userRepository.saveAndFlush(u);return applicant(u);}
+    private OwnerApplicationDtos.Create applicationInput(){return new OwnerApplicationDtos.Create(applicationLegal(),new OwnerApplicationDtos.Facility("First facility","+84901234567","Demo address","Ha Noi","Cau Giay","Demo ward",null,"Asia/Ho_Chi_Minh",new java.math.BigDecimal("21.03"),new java.math.BigDecimal("105.78"),java.util.Set.of()));}
+    private OwnerApplicationDtos.Legal applicationLegal(){return new OwnerApplicationDtos.Legal("Demo representative","TEST-IDENTITY-PRIVATE","Demo business",null,null,"Demo bank","Demo representative","TEST-BANK-PRIVATE");}
+    private OwnerApplicationDtos.Decision approval(){return new OwnerApplicationDtos.Decision("APPROVE","Application reviewed and accepted",new java.math.BigDecimal("5.00"));}
+
+    @Test void ownerApplicationApprovalIsIdempotentAuditedPrivateAndRevokesOldSessions() throws Exception {
+        var user=activate(uniqueEmail("application"));var actor=applicant(user);var admin=applicationAdmin();
+        var session=authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata);var oldPrincipal=jwtService.parseAccessToken(session.response().accessToken());
+        var draft=applications.create(applicationInput(),actor);
+        assertThat(jdbc.queryForObject("SELECT private_payload FROM owner_applications WHERE id=?",String.class,draft.id())).doesNotContain("TEST-IDENTITY-PRIVATE","TEST-BANK-PRIVATE");
+        assertThatThrownBy(()->applications.detail(draft.id(),applicationAdmin(),false)).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(()->applications.decide(draft.id(),approval(),actor)).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(()->applications.decide(draft.id(),approval(),admin)).isInstanceOf(IdentityException.class);
+        assertThat(applications.submit(draft.id(),actor,null).state()).isEqualTo("PENDING_APPROVAL");
+        assertThat(applications.submit(draft.id(),actor,null).state()).isEqualTo("PENDING_APPROVAL");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_application_submissions WHERE application_id=?",Integer.class,draft.id())).isEqualTo(1);
+        assertThatThrownBy(()->applications.save(draft.id(),applicationLegal(),actor)).isInstanceOf(IdentityException.class);
+        assertThat(applications.detail(draft.id(),admin,true).legal().identityNumber()).isEqualTo("TEST-IDENTITY-PRIVATE");
+        assertThat(applications.committed(java.util.List.of(draft.id()))).isEmpty();
+        assertThat(applications.decide(draft.id(),approval(),admin).state()).isEqualTo("APPROVED");
+        assertThat(applications.decide(draft.id(),approval(),admin).state()).isEqualTo("APPROVED");
+        applications.process(draft.id());
+        assertThat(profileService.get(user.getId()).roles()).contains(Role.CUSTOMER,Role.OWNER);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM user_roles WHERE user_id=? AND role='OWNER'",Integer.class,user.getId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE entity_id=? AND action='OWNER_APPLICATION_APPROVED'",Integer.class,draft.id())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM identity_notifications WHERE user_id=?",Integer.class,user.getId())).isEqualTo(1);
+        assertThatThrownBy(()->sessionValidation.validate(oldPrincipal)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata).response().user().roles()).contains(Role.OWNER);
+        assertThat(applications.committed(java.util.List.of(draft.id(),draft.id()))).containsExactly(draft.id());
+        org.mockito.Mockito.verify(applicationDependencies,org.mockito.Mockito.times(1)).wallet(draft.id(),user.getId(),new java.math.BigDecimal("5.00"));
+        String audit=jdbc.queryForObject("SELECT new_value::text FROM audit_log WHERE entity_id=? AND action='OWNER_APPLICATION_APPROVED'",String.class,draft.id());
+        assertThat(audit).doesNotContain("TEST-IDENTITY-PRIVATE","TEST-BANK-PRIVATE");
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/admin/owner-applications").header("Authorization","Bearer "+session.response().accessToken())).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+    }
+    @Test void ownerApplicationSupplementResubmitAndRejectionPreserveSnapshotsAndNeverGrantOwner(){
+        var user=activate(uniqueEmail("application-supplement"));var actor=applicant(user);var admin=applicationAdmin();var draft=applications.create(applicationInput(),actor);
+        applications.submit(draft.id(),actor,null);
+        assertThatThrownBy(()->applications.decide(draft.id(),new OwnerApplicationDtos.Decision("REJECT","short",null),admin)).isInstanceOf(IdentityException.class);
+        var supplement=new OwnerApplicationDtos.Decision("SUPPLEMENT_REQUIRED","Please attach clearer identity and lease documents",null);
+        assertThat(applications.decide(draft.id(),supplement,admin).state()).isEqualTo("SUPPLEMENT_REQUIRED");
+        applications.save(draft.id(),new OwnerApplicationDtos.Legal("Updated","UPDATED-PRIVATE","Updated business",null,null,"Bank","Updated","UPDATED-BANK"),actor);
+        applications.submit(draft.id(),actor,null);
+        assertThat(applications.detail(draft.id(),admin,true).history()).hasSize(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_application_submissions WHERE application_id=?",Integer.class,draft.id())).isEqualTo(2);
+        assertThatThrownBy(()->jdbc.update("UPDATE owner_application_submissions SET private_snapshot='changed' WHERE application_id=?",draft.id())).isInstanceOf(org.springframework.dao.DataAccessException.class);
+        var rejection=new OwnerApplicationDtos.Decision("REJECT","Application location documents are not valid",null);
+        assertThat(applications.decide(draft.id(),rejection,admin).state()).isEqualTo("REJECTED");
+        assertThat(applications.decide(draft.id(),rejection,admin).state()).isEqualTo("REJECTED");
+        assertThatThrownBy(()->applications.submit(draft.id(),actor,null)).isInstanceOf(IdentityException.class);
+        assertThat(profileService.get(user.getId()).roles()).containsExactly(Role.CUSTOMER);
+        assertThat(applications.create(applicationInput(),actor).id()).isNotEqualTo(draft.id());
+    }
+    @Test void ownerApplicationConcurrentSubmitUsesOneLeaseAndRecoversAfterDependencyFailure() throws Exception {
+        var user=activate(uniqueEmail("application-race"));var actor=applicant(user);var draft=applications.create(applicationInput(),actor);
+        var entered=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);
+        org.mockito.Mockito.when(applicationDependencies.facility(org.mockito.ArgumentMatchers.eq(draft.id()),org.mockito.ArgumentMatchers.eq("submit"),anyMap(),any())).thenAnswer(invocation->{entered.countDown();if(!release.await(10,java.util.concurrent.TimeUnit.SECONDS))throw new IllegalStateException("Test timed out");return new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"snapshot\":{\"facility\":{\"name\":\"Race facility\"}}}");});
+        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){var first=pool.submit(()->applications.submit(draft.id(),actor,null));assertThat(entered.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();assertThat(applications.submit(draft.id(),actor,null).state()).isEqualTo("SUBMITTING");release.countDown();assertThat(first.get(10,java.util.concurrent.TimeUnit.SECONDS).state()).isEqualTo("PENDING_APPROVAL");}finally{release.countDown();}
+        org.mockito.Mockito.verify(applicationDependencies,org.mockito.Mockito.times(1)).facility(org.mockito.ArgumentMatchers.eq(draft.id()),org.mockito.ArgumentMatchers.eq("submit"),anyMap(),any());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_application_submissions WHERE application_id=?",Integer.class,draft.id())).isEqualTo(1);
+        var second=activate(uniqueEmail("application-retry"));var secondActor=applicant(second);var next=applications.create(applicationInput(),secondActor);
+        org.mockito.Mockito.when(applicationDependencies.facility(org.mockito.ArgumentMatchers.eq(next.id()),org.mockito.ArgumentMatchers.eq("submit"),anyMap(),any())).thenThrow(new org.springframework.web.client.ResourceAccessException("Test dependency unavailable")).thenReturn(new com.fasterxml.jackson.databind.ObjectMapper().readTree("{\"snapshot\":{\"facility\":{\"name\":\"Recovered\"}}}"));
+        assertThat(applications.submit(next.id(),secondActor,null).state()).isEqualTo("SUBMITTING");
+        jdbc.update("UPDATE owner_applications SET lease_until=NOW()-INTERVAL '1 second',lease_token=?,next_attempt_at=NOW() WHERE id=?",UUID.randomUUID(),next.id());
+        applications.reconcile();assertThat(applications.own(secondActor).getFirst().state()).isEqualTo("PENDING_APPROVAL");
+    }
+    @Test void ownerApplicationLockedApplicantBlocksApprovalAndLockedDuringActivationCannotPublish(){
+        var user=activate(uniqueEmail("application-lock"));var actor=applicant(user);var admin=applicationAdmin();var draft=applications.create(applicationInput(),actor);applications.submit(draft.id(),actor,null);
+        jdbc.update("UPDATE users SET status='LOCKED' WHERE id=?",user.getId());
+        assertThatThrownBy(()->applications.decide(draft.id(),approval(),admin)).isInstanceOf(IdentityException.class).hasMessageContaining("locked");
+        jdbc.update("UPDATE users SET status='ACTIVE' WHERE id=?",user.getId());
+        org.mockito.Mockito.when(applicationDependencies.wallet(draft.id(),user.getId(),new java.math.BigDecimal("5.00"))).thenAnswer(invocation->{jdbc.update("UPDATE users SET status='LOCKED' WHERE id=?",user.getId());return null;});
+        assertThat(applications.decide(draft.id(),approval(),admin).state()).isEqualTo("APPROVING");
+        assertThat(applications.committed(java.util.List.of(draft.id()))).isEmpty();assertThat(profileService.get(user.getId()).roles()).doesNotContain(Role.OWNER);
+        org.mockito.Mockito.doReturn(null).when(applicationDependencies).wallet(draft.id(),user.getId(),new java.math.BigDecimal("5.00"));jdbc.update("UPDATE users SET status='ACTIVE' WHERE id=?",user.getId());
+        assertThat(applications.retry(draft.id(),admin).state()).isEqualTo("APPROVED");
+    }
+    @Test void concurrentApprovalKeepsOneDecisionAndRejectsCompetingRejection() throws Exception {
+        var user=activate(uniqueEmail("application-approval-race"));var actor=applicant(user);var firstAdmin=applicationAdmin();var otherAdmin=applicationAdmin();var draft=applications.create(applicationInput(),actor);applications.submit(draft.id(),actor,null);
+        var entered=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);
+        org.mockito.Mockito.when(applicationDependencies.wallet(draft.id(),user.getId(),new java.math.BigDecimal("5.00"))).thenAnswer(invocation->{entered.countDown();if(!release.await(10,java.util.concurrent.TimeUnit.SECONDS))throw new IllegalStateException("Test timed out");return null;});
+        try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){
+            var first=pool.submit(()->applications.decide(draft.id(),approval(),firstAdmin));assertThat(entered.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(applications.decide(draft.id(),approval(),otherAdmin).state()).isEqualTo("APPROVING");
+            assertThatThrownBy(()->applications.decide(draft.id(),new OwnerApplicationDtos.Decision("REJECT","A competing rejection must not overwrite approval",null),otherAdmin)).isInstanceOf(IdentityException.class);
+            assertThat(applications.committed(java.util.List.of(draft.id()))).isEmpty();release.countDown();assertThat(first.get(10,java.util.concurrent.TimeUnit.SECONDS).state()).isEqualTo("APPROVED");
+        }finally{release.countDown();}
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE entity_id=? AND action='OWNER_APPLICATION_DECISION_REQUESTED'",Integer.class,draft.id())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT reviewed_by FROM owner_applications WHERE id=?",UUID.class,draft.id())).isEqualTo(firstAdmin.userId());
+        org.mockito.Mockito.verify(applicationDependencies,org.mockito.Mockito.times(1)).wallet(draft.id(),user.getId(),new java.math.BigDecimal("5.00"));
+    }
+    @Test void applicationEncryptionRejectsMissingKeyTamperingAndDifferentApplication(){
+        UUID id=UUID.randomUUID();String first=applicationCipher.seal("Private synthetic data",id),second=applicationCipher.seal("Private synthetic data",id);
+        assertThat(first).isNotEqualTo(second);assertThat(applicationCipher.open(first,id)).isEqualTo("Private synthetic data");
+        assertThatThrownBy(()->applicationCipher.open(first,UUID.randomUUID())).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(()->new OwnerApplicationCipher("").seal("Data",id)).isInstanceOf(IdentityException.class);
+        assertThatThrownBy(()->applicationCipher.open(first.substring(0,first.length()-4)+"AAAA",id)).isInstanceOf(IllegalStateException.class);
+    }
+
 }

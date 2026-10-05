@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.*;
 
 @SpringBootTest(properties={"spring.profiles.active=local","DEMO_SEED_ENABLED=false","spring.rabbitmq.username=test","spring.rabbitmq.password=test",
- "spring.rabbitmq.listener.simple.auto-startup=false",
+ "spring.rabbitmq.listener.simple.auto-startup=false","SERVICE_CALL_SECRET=synthetic-wallet-test-key-over-thirty-two-characters",
  "sporthub.payment.demo.callback-secret=local-callback-key-longer-than-thirty-two-characters"})
 class PaymentIntegrationTest {
  static PostgreSQLContainer<?> postgres;
@@ -29,6 +29,7 @@ class PaymentIntegrationTest {
  @Autowired PaymentService service;@Autowired PaymentRepository repo;@Autowired DemoPaymentProvider provider;@Autowired ObjectMapper json;
  @Autowired GroupRefundConsumer refunds;
  @Autowired TransferRefundConsumer transferRefunds;
+ @Autowired com.sporthub.payment.web.InternalOwnerWalletController wallets;
  @Autowired com.sporthub.payment.web.PaymentMonitoringController monitoring;
  @MockBean com.sporthub.common.security.RemoteIdentity identity;
  @MockBean PayableClient payable;@MockBean ReliableOutbox outbox;
@@ -36,6 +37,19 @@ class PaymentIntegrationTest {
  @BeforeEach void setup(){user=new Caller(UUID.randomUUID(),"Customer",Set.of("CUSTOMER"),Map.of());booking=UUID.randomUUID();when(payable.payable(eq(booking),isNull(),any())).thenReturn(json.valueToTree(Map.of("bookingId",booking,"payerId",user.id(),"amount",150000,"currency","VND","expiresAt",Instant.now().plusSeconds(600),"purpose","BOOKING")));}
  String key(){return UUID.randomUUID().toString();}
  Callback callback(Payment p,String status){return new Callback(p.id(),p.providerReference(),"TX-"+p.id(),p.amount(),p.currency(),status,Instant.now().getEpochSecond());}
+ private org.springframework.mock.web.MockHttpServletRequest walletRequest(String body,boolean valid){
+  var r=new org.springframework.mock.web.MockHttpServletRequest("POST","/api/v1/internal/owner-wallets/prepare");long time=Instant.now().getEpochSecond();r.addHeader("X-Service-Time",Long.toString(time));r.addHeader("X-Service-Signature",valid?com.sporthub.common.security.ServiceCalls.sign("synthetic-wallet-test-key-over-thirty-two-characters",r.getMethod(),r.getRequestURI(),time,body):"forged");return r;
+ }
+ @Test void walletPreparationIsSignedConcurrentIdempotentAndDoesNotCreatePaymentOrPayout() throws Exception {
+  UUID owner=UUID.randomUUID(),application=UUID.randomUUID();String body=json.writeValueAsString(Map.of("applicationId",application,"userId",owner,"commissionPercent","5.00"));
+  assertThatThrownBy(()->wallets.prepare(body,walletRequest(body,false))).isInstanceOf(ForbiddenException.class);
+  try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){var first=pool.submit(()->wallets.prepare(body,walletRequest(body,true)));var second=pool.submit(()->wallets.prepare(body,walletRequest(body,true)));assertThat(first.get(10,java.util.concurrent.TimeUnit.SECONDS).getData().get("initialized")).isEqualTo(true);assertThat(second.get(10,java.util.concurrent.TimeUnit.SECONDS).getData().get("initialized")).isEqualTo(true);}
+  assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM owner_wallets WHERE owner_id=?",Integer.class,owner)).isEqualTo(1);
+  assertThat(repo.jdbc().queryForObject("SELECT available_balance FROM owner_wallets WHERE owner_id=?",BigDecimal.class,owner)).isEqualByComparingTo("0");
+  assertThat(repo.jdbc().queryForObject("SELECT currency FROM owner_wallets WHERE owner_id=?",String.class,owner)).isEqualTo("VND");
+  String different=json.writeValueAsString(Map.of("applicationId",application,"userId",owner,"commissionPercent","6.00"));assertThatThrownBy(()->wallets.prepare(different,walletRequest(different,true))).isInstanceOf(ConflictException.class);
+  verify(outbox,never()).record(any(),any());
+ }
  @Test void monitoringRequiresAdminAndShowsVerifiedCallbackAndActualAggregates(){
   var p=service.create(new CreatePayment(booking,null),key(),user,"token");var c=callback(p,"SUCCESS");service.callback(c,provider.sign(c));var request=new org.springframework.mock.web.MockHttpServletRequest();when(identity.current(request)).thenReturn(user);assertThatThrownBy(()->monitoring.detail(p.id(),request)).isInstanceOf(ForbiddenException.class);
   when(identity.current(request)).thenReturn(new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of()));assertThat(monitoring.list(p.id().toString(),"SUCCESS",null,request).getData()).hasSize(1);assertThat((List<?>)monitoring.detail(p.id(),request).getData().get("callbacks")).hasSize(1);assertThat(monitoring.statistics(null,null,request).getData().get("orders")).isInstanceOf(List.class);

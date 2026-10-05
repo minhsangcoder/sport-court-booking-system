@@ -12,7 +12,7 @@ Resolved by explicit user approval on 2026-10-05: `BOOKING_READ`, `BOOKING_CREAT
 
 ## Owner application orchestration
 
-The requirements treat the first facility profile as part of an Owner application, while target architecture assigns facility data to Facility Service. Before implementation, the team must decide whether Identity orchestrates the application, a dedicated application workflow owns it, or the services coordinate through an explicit saga. No cross-service database access is permitted.
+Resolved technically for UC 8.2–8.4: Identity owns a durable, leased coordinator. Signed private REST commands prepare the first Facility and a zero-balance Payment wallet idempotently. Identity's final transaction grants OWNER, stores APPROVED, revokes old sessions and records the decision/notification. Facility publication and privileged writes check the committed application through Identity's private API. Prepared resources remain private if a dependency fails or the applicant is locked; retries resume without repeating the decision. Schedule serializes configuration snapshots and writes with its own database lock. Each service reads only its own database. Commission is an explicit Admin input; this does not resolve settlement/refund policies.
 
 ## Admin account hierarchy
 

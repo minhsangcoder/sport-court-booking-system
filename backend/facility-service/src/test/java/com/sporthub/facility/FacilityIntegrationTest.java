@@ -32,9 +32,35 @@ class FacilityIntegrationTest {
  @Autowired FacilityReviewService reviews;
  @Autowired FacilityDocumentService documents;
  @MockBean FacilityReviewDependencies reviewDependencies;
+ @MockBean OwnerApplicationGate applicationGate;
  @MockBean RemoteIdentity identity;
  @Autowired com.sporthub.facility.web.TransferPolicyController policies;
  private Caller owner(){return new Caller(UUID.randomUUID(),"Owner",Set.of("OWNER","CUSTOMER"),Map.of());}
+ @Test void firstFacilityIsScopedFrozenAndHiddenUntilIdentityCommitsEvenAfterLocalPreparation() throws Exception {
+  UUID application=UUID.randomUUID(),facility=UUID.randomUUID(),user=UUID.randomUUID();var customer=new Caller(user,"Applicant",Set.of("CUSTOMER"),Map.of(facility,Set.of("APPLICATION_READ","APPLICATION_EDIT")));var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());
+  service.createFirst(application,facility,user,input("First facility"));service.createFirst(application,facility,user,input("Ignored repeat"));
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM first_facility_applications WHERE application_id=?",Integer.class,application)).isEqualTo(1);
+  assertThatThrownBy(()->service.create(input("No Owner grant"),customer)).isInstanceOf(ForbiddenException.class);
+  assertThatThrownBy(()->service.ownedDetail(facility,new Caller(user,"No binding",Set.of("CUSTOMER"),Map.of()))).isInstanceOf(ForbiddenException.class);
+  assertThatThrownBy(()->service.ownedDetail(facility,new Caller(UUID.randomUUID(),"Foreign applicant",Set.of("CUSTOMER"),customer.facilityBindings()))).isInstanceOf(ForbiddenException.class);
+  var category=service.createCategory(new CategoryInput("First sport "+application,true),admin);service.createCourt(facility,new CourtInput("FIRST","First court",category.id(),null,true),customer);
+  for(int n=0;n<2;n++)jdbc.update("INSERT INTO facility_documents(id,facility_id,name,object_key,content_type,size_bytes) VALUES(?,?,?,?,'application/pdf',100)",UUID.randomUUID(),facility,"Synthetic legal "+n,"private/first/"+UUID.randomUUID());
+  jdbc.update("INSERT INTO facility_images(id,facility_id,object_key,content_type,size_bytes) VALUES(?,?,?,'image/png',100)",UUID.randomUUID(),facility,"first/"+UUID.randomUUID());
+  var json=new com.fasterxml.jackson.databind.ObjectMapper();org.mockito.Mockito.when(reviewDependencies.applicationSnapshot(org.mockito.ArgumentMatchers.eq(application),org.mockito.ArgumentMatchers.eq(facility),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyList(),org.mockito.ArgumentMatchers.eq(false))).thenReturn(json.readTree("{\"hours\":[{}],\"prices\":[{}],\"exceptions\":[]}"));
+  reviews.submitFirst(facility,customer,null);reviews.submitFirst(facility,customer,null);
+  assertThat(reviews.reviews(facility)).hasSize(1);
+  assertThatThrownBy(()->service.writeAccess(facility,customer)).isInstanceOf(ConflictException.class);
+  assertThatThrownBy(()->service.update(facility,input("Frozen"),customer)).isInstanceOf(ConflictException.class);
+  assertThatThrownBy(()->reviews.decide(facility,"APPROVE","Wrong review channel",admin)).isInstanceOf(ConflictException.class);
+  reviews.decideFirst(facility,"APPROVE","Reviewed first facility",admin);reviews.decideFirst(facility,"APPROVE","Repeated",admin);
+  assertThatThrownBy(()->service.publicDetail(facility)).isInstanceOf(ResourceNotFoundException.class);
+  assertThat(service.search("First facility")).noneMatch(f->f.id().equals(facility));
+  org.mockito.Mockito.when(applicationGate.approved(org.mockito.ArgumentMatchers.anyCollection())).thenReturn(Set.of(application));
+  assertThat(service.publicDetail(facility).status()).isEqualTo("ACTIVE");
+  var approvedOwner=new Caller(user,"Owner",Set.of("CUSTOMER","OWNER"),Map.of());assertThat(service.writeAccess(facility,approvedOwner).id()).isEqualTo(facility);
+  assertThat(service.search("First facility")).anyMatch(f->f.id().equals(facility));
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM facility_audit WHERE facility_id=? AND action='ADMIN_FACILITY_APPROVE'",Integer.class,facility)).isEqualTo(1);
+ }
  private FacilityInput input(String name){return new FacilityInput(name,"+84901234567","Address","Province","District","Ward","Description","Asia/Ho_Chi_Minh",null,null,Set.of("Parking"));}
 
  @Test void facilityReviewFreezesSubmissionSupportsSupplementAndPublishesExactlyOneDecision(){
