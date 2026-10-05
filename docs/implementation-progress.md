@@ -15,6 +15,7 @@ Technical tracking only. `Document/` remains read-only and authoritative for bus
 - DONE — Additional facility review: Owner submission, frozen pending profile, immutable snapshots, supplement/resubmit/approve/reject, private legal documents, retained submitted originals, audited Admin reads/decisions, duplicate-address hints, public availability after approval and durable owner notices. Separate Owner review/document and Admin review routes call real APIs. First-facility Owner applications remain a separate pending workflow.
 - DONE — Profile contact verification: separate contact route, safe own challenge metadata, email/phone OTP, resend cooldown and invalidated superseded codes. Existing contact stays current until successful verification; roles stay unchanged. Database/API tests, Gateway email/demo-SMS smoke and browser OTP submission pass.
 - DONE — Discovery filters core: public court results combine Facility category/location, Schedule opening/pricing and actual Booking reservations. Date/time/price/radius/sort filters, real empty/error/loading states and dated links to court availability replace the prototype. Map presentation remains a separate UI capability.
+- IN_PROGRESS — First-facility Owner application: partial Identity coordinator/encrypted legal payload, scoped applicant workspace, private Facility commands/publication gate, Schedule access guard and zero-balance Payment wallet initialization. Source and test sources compile; business tests, contracts, frontend, deployment key configuration and live verification have not been implemented/verified. This is a checkpoint, not a completed vertical slice.
 - IN_PROGRESS — Frontend: replace prototype workflows incrementally with routes and typed API calls.
 - IN_PROGRESS — Infrastructure: reproducible Compose, local-only controlled demo seed, build/test/runtime smoke scripts.
 
@@ -45,3 +46,39 @@ Technical tracking only. `Document/` remains read-only and authoritative for bus
 - Compose: all eight application images built; all 13 infrastructure/application containers healthy. Containerized frontend on 13000 calls Gateway on 18080 through the internal rewrite. Public links/CORS follow the frontend port; IPv4 health probe matches Node's bind address. Containerized Booking/Payment, Group, Transfer, Facility review, contact verification, Admin monitoring and migration smokes pass.
 - Local infrastructure: isolated `sporthub-14b1` Compose project, healthy PostgreSQL/Redis/RabbitMQ/MinIO/Mailpit. Existing `sporthub` project untouched.
 - Windows runtime: stop only this worktree's Java demo processes before rebuilding JARs; running JARs are locked by Windows.
+
+## Safe stop checkpoint — 2026-10-05
+
+User explicitly requested stopping implementation after preserving progress. No additional feature work follows this checkpoint.
+
+- Branch: `codex/sporthub-demo-e2e`; no detached HEAD or merge conflicts. `Document/` has no changes.
+- Completed commits this run: `d128c83` facility review/document retention; `cbadfef` own contact OTP route; `f1ccc8b` real Discovery filters/date propagation; `b29cccf` verified container demo.
+- DONE applies to the verified core slices above, not to every UC in a module. Overall Identity, Facility, Booking, Payment, Group, Transfer, Admin and Reports remain PARTIAL because additional workflows or blocked rules remain. Schedule core is DONE, with the new applicant access changes IN_PROGRESS and only compiled.
+- PARTIAL Reports: Admin source aggregates/CSV and Owner operational counts work; financial settlement/revenue reporting is not complete.
+- BLOCKED financial paths: refund policy, paid Group membership mutations, Transfer escrow release; Admin hierarchy remains unapproved. These are isolated and do not block existing core demos.
+- NOT_STARTED: Owner application frontend/routes and OpenAPI extensions, Owner application business/integration tests, map presentation and the remaining extended Admin workflows.
+- No generated files or conflict markers are pending. Generated `target/`, `.next/`, OpenAPI output, logs and browser evidence remain ignored local artifacts.
+
+### Verification at stop
+
+- PASS current checkpoint: `cd backend; mvn -o -pl identity-service,facility-service,schedule-service,payment-service,api-gateway -am -DskipTests test-compile` using the existing host Maven cache. Completed in 35.6 seconds. This compiles main/test sources and does not execute tests.
+- PASS before Owner application edits: `scripts/demo/build-backend.ps1 -UseExternalTestDatabase -TestsOnly` ran all 63 tests with zero failures/errors/skips. These results do not validate the new Owner application code.
+- PASS latest unchanged frontend: `pnpm lint`, `pnpm typecheck`, `pnpm build`; corrected asynchronously loaded category selection was rebuilt and browser-verified. Production search displays two courts, four matching slots per court, actual prices and the selected category/date; navigation preserves the search date.
+- PASS: `build-apps.ps1` built eight application images; `start-apps.ps1 -SkipBuild` made all 13 containers healthy. All remain healthy at stop.
+- PASS container Gateway smokes: `smoke-discovery.ps1`, `smoke-booking-payment.ps1`, `smoke-group.ps1`, `smoke-transfer.ps1`, `smoke-facility-review.ps1`, `smoke-profile-contact.ps1`, `smoke-admin.ps1`.
+- PASS prior contract validation: pinned OpenAPI generator v7.15.0 for existing Identity/Facility/Schedule/Booking/Payment/Transfer/Admin contracts; Booking/Facility Discovery extensions revalidated. No Owner application contract exists yet.
+- PASS: `git diff --check`; no conflicts; read-only database history query reports no failed migrations in any of the six demo databases.
+- FAIL at stop: `verify-migrations.ps1` expects Identity V6 but running demo has V5. Pending source migrations are Identity `V6__owner_applications.sql`, Facility `V7__first_facility_application_binding.sql`, Payment `V5__owner_wallet_initialization.sql`; none have been applied or runtime-verified. Existing demo versions: Identity V5, Facility V6, Schedule V2, Booking V3, Payment V4, Transfer V1.
+- Environment-only failed attempts: sandbox Maven offline command could not read the real dependency cache; rerun with the host cache passed. Sandbox Docker reads were denied; host read-only reruns succeeded. Earlier Docker Engine failure was recovered and the full backend suite/images subsequently passed.
+
+### Exact resume point
+
+Start with `backend/identity-service/src/main/java/com/sporthub/identity/service/OwnerApplicationService.java` and the three pending migrations. Add focused tests for application transitions, submission/decision retries and concurrency, locked applicants, duplicate/idempotent approvals, encrypted data/audited reads, facility visibility before Identity commit and Payment wallet initialization. Known work to review includes simultaneous submit retries, crash recovery while SUBMITTING/DECIDING, failure classification and publication behavior after later account/role changes. Do not assume compile success proves these semantics.
+
+Then verify pending migrations against dedicated test databases. Configure a separate 32-byte Base64 `OWNER_APPLICATION_DATA_KEY` through `.env.example`, demo initialization and Compose without printing/committing real keys; this wiring has not been added. Add typed contracts, Customer application pages and Admin review pages before declaring the milestone DONE. Current runtime images intentionally remain the last verified core implementation.
+
+### Run the preserved demo
+
+From this worktree, run `scripts/demo/start-apps.ps1 -SkipBuild` to reuse the verified existing images. Frontend: `http://localhost:13000`; Gateway: `http://localhost:18080`; Mailpit: `http://localhost:18025`. Seed identifiers are `customer`, `customer2`, `owner`, `staff`, `admin` at `@sporthub.local`; password is the local ignored `DEMO_PASSWORD` in `.env`. Do not rebuild application images merely to restart the preserved demo while the Owner application milestone remains unverified.
+
+Saved browser evidence remains local and ignored: `tmp/demo/discovery-filtered-container.jpg`, `tmp/demo/contact-verified.jpg`, `tmp/demo/facility-review-approved.jpg`, `tmp/demo/transfer-confirmed.jpg`. All useful code and technical tracking are committed; no ignored runtime secret is committed.

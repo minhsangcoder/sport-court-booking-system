@@ -15,6 +15,7 @@ public class AccessController {
         var profile=profiles.get(principal.userId());
         var bindings=jdbc.query("SELECT id,facility_id FROM staff_facility_bindings WHERE staff_user_id=? AND is_active=true",
             (rs,n)->new Binding(rs.getObject("facility_id",UUID.class),jdbc.queryForList("SELECT permission FROM staff_permissions WHERE binding_id=?",String.class,rs.getObject("id",UUID.class))),principal.userId());
+        bindings.addAll(jdbc.query("SELECT facility_id,state FROM owner_applications WHERE user_id=? AND state<>'APPROVED'",(r,n)->new Binding(r.getObject("facility_id",UUID.class),Set.of("DRAFT","SUPPLEMENT_REQUIRED").contains(r.getString("state"))?List.of("APPLICATION_READ","APPLICATION_EDIT"):List.of("APPLICATION_READ")),principal.userId()));
         return ApiResponse.success(new AccessView(profile.id(),profile.fullName(),profile.roles(),bindings));
     }
     record Binding(UUID facilityId,List<String> permissions){}

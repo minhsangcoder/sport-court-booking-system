@@ -19,8 +19,9 @@ public class FacilityClient {
         client=RestClient.builder().baseUrl(url).requestFactory(factory).build();
     }
     public void requireOwner(UUID facilityId,String token) {
-        read("/api/v1/owner/facilities/"+facilityId,token);
+        read("/api/v1/owner/facilities/"+facilityId+"/write-access",token);
     }
+    public void requireReader(UUID facilityId,String token){read("/api/v1/owner/facilities/"+facilityId,token);}
     public Context context(UUID courtId,String ownerToken) {
         var data=read(ownerToken==null?"/api/v1/facilities/courts/"+courtId+"/context":
             "/api/v1/owner/courts/"+courtId+"/context",ownerToken);
@@ -39,6 +40,7 @@ public class FacilityClient {
         } catch(org.springframework.web.client.HttpClientErrorException ex) {
             if(ex.getStatusCode().value()==403)throw new ForbiddenException("Facility is outside your ownership");
             if(ex.getStatusCode().value()==401)throw new UnauthorizedException("Authentication required");
+            if(ex.getStatusCode().value()==409)throw new ConflictException("Facility configuration is frozen during review");
             throw new ResourceNotFoundException("Facility or court is unavailable");
         }
     }

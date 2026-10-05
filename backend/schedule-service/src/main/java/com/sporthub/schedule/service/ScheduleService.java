@@ -98,7 +98,7 @@ public class ScheduleService {
     public Preview publicPreview(UUID court,LocalDate date) {return preview(facilities.context(court,null),date);}
     private void reader(UUID facility,Caller caller,String token) {
         if(staffReader(facility,caller))return;
-        if(caller.hasRole("OWNER")){owner(facility,caller,token);return;}
+        if(caller.hasRole("OWNER")||caller.facilityBindings().getOrDefault(facility,Set.of()).contains("APPLICATION_READ")){facilities.requireReader(facility,token);return;}
         throw new ForbiddenException("SCHEDULE_READ requires an active Staff binding at this facility");
     }
     private boolean staffReader(UUID facility,Caller caller){return caller.hasRole("STAFF")&&caller.facilityBindings().getOrDefault(facility,Set.of()).contains("SCHEDULE_READ");}
@@ -157,7 +157,7 @@ public class ScheduleService {
     private record Rank(boolean specific,int qualifiers,int priority) implements Comparable<Rank> {
         public int compareTo(Rank other) {int value=Boolean.compare(specific,other.specific);if(value==0)value=Integer.compare(qualifiers,other.qualifiers);if(value==0)value=Integer.compare(priority,other.priority);return value;}
     }
-    private void owner(UUID facility,Caller caller,String token) {caller.requireRole("OWNER");facilities.requireOwner(facility,token);}
+    private void owner(UUID facility,Caller caller,String token) {if(!caller.hasRole("OWNER")&&!caller.facilityBindings().getOrDefault(facility,Set.of()).contains("APPLICATION_EDIT"))throw new ForbiddenException("Owner or editable application workspace required");facilities.requireOwner(facility,token);}
     private void courtScope(UUID facility,UUID court,String token) {if(court!=null)checkFacility(facility,facilities.context(court,token));}
     private void checkFacility(UUID facility,FacilityClient.Context context) {if(!facility.equals(context.facilityId()))throw new ForbiddenException("Court is outside the facility");}
     private boolean overlap(LocalTime a,LocalTime b,LocalTime c,LocalTime d) {return a.isBefore(d)&&b.isAfter(c);}

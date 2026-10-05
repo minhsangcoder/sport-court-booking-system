@@ -11,26 +11,28 @@ import java.util.*;
 @Service @Transactional(readOnly=true)
 public class FacilityService {
  private final FacilityRepository facilities; private final CourtRepository courts;
- private final SportCategoryRepository categories; private final MaintenanceRepository maintenance; private final JdbcTemplate jdbc;
- public FacilityService(FacilityRepository f,CourtRepository c,SportCategoryRepository s,MaintenanceRepository m,JdbcTemplate jdbc){facilities=f;courts=c;categories=s;maintenance=m;this.jdbc=jdbc;}
+ private final SportCategoryRepository categories; private final MaintenanceRepository maintenance; private final JdbcTemplate jdbc;private final OwnerApplicationGate gate;
+ public FacilityService(FacilityRepository f,CourtRepository c,SportCategoryRepository s,MaintenanceRepository m,JdbcTemplate jdbc,OwnerApplicationGate gate){facilities=f;courts=c;categories=s;maintenance=m;this.jdbc=jdbc;this.gate=gate;}
  public List<FacilityView> owned(Caller caller){caller.requireRole("OWNER");return facilities.findByOwnerIdOrderByCreatedAtDesc(caller.id()).stream().map(this::view).toList();}
  public FacilityView ownedDetail(UUID id,Caller caller){return view(ownedEntity(id,caller));}
- public Facility ownedEntity(UUID id,Caller caller){var facility=find(id);if(!caller.hasRole("OWNER") || !facility.getOwnerId().equals(caller.id()))throw new ForbiddenException("Facility is outside your ownership");return facility;}
- @Transactional public Facility mutableOwnedEntity(UUID id,Caller caller){jdbc.queryForList("SELECT id FROM facilities WHERE id=? FOR UPDATE",UUID.class,id);var f=ownedEntity(id,caller);if(Set.of("PENDING_APPROVAL","REJECTED").contains(f.getStatus()))throw new ConflictException("Submitted/rejected facility profile cannot be edited; await a supplement decision or create a new draft");return f;}
+ public Facility ownedEntity(UUID id,Caller caller){var facility=find(id);boolean applicant=caller.hasRole("CUSTOMER")&&caller.facilityBindings().getOrDefault(id,Set.of()).contains("APPLICATION_READ")&&applicationId(id)!=null;if(!(caller.hasRole("OWNER")||applicant) || !facility.getOwnerId().equals(caller.id()))throw new ForbiddenException("Facility is outside your ownership");return facility;}
+ @Transactional public Facility mutableOwnedEntity(UUID id,Caller caller){jdbc.queryForList("SELECT id FROM facilities WHERE id=? FOR UPDATE",UUID.class,id);var f=ownedEntity(id,caller);if(!caller.hasRole("OWNER")&&!caller.facilityBindings().getOrDefault(id,Set.of()).contains("APPLICATION_EDIT"))throw new ForbiddenException("Application workspace is read-only");if(Set.of("PENDING_APPROVAL","REJECTED").contains(f.getStatus()))throw new ConflictException("Submitted/rejected facility profile cannot be edited; await a supplement decision or create a new draft");if(applicationId(id)!=null&&f.getStatus().equals("ACTIVE")&&!gate.approved(List.of(applicationId(id))).contains(applicationId(id)))throw new ConflictException("First facility activation is awaiting application commit");return f;}
+ public UUID applicationId(UUID id){return jdbc.queryForList("SELECT application_id FROM first_facility_applications WHERE facility_id=?",UUID.class,id).stream().findFirst().orElse(null);}
  public Facility find(UUID id){return facilities.findById(id).orElseThrow(()->new ResourceNotFoundException("Facility not found"));}
  public List<FacilityView> search(String query){return search(query,null,null,null);}
  public List<FacilityView> search(String query,String province,String district,UUID category){
-  return jdbc.queryForList("""
+  var candidates=jdbc.queryForList("""
    SELECT f.id FROM facilities f WHERE f.status='ACTIVE'
     AND lower(concat_ws(' ',f.name,f.address_line,f.province,f.district,f.ward)) LIKE ?
     AND lower(f.province) LIKE ? AND lower(f.district) LIKE ?
     AND EXISTS(SELECT 1 FROM courts c JOIN sport_categories s ON s.id=c.sport_category_id
       WHERE c.facility_id=f.id AND c.enabled AND s.active AND (?::uuid IS NULL OR c.sport_category_id=?::uuid))
    ORDER BY f.name,f.id LIMIT 200
-   """,UUID.class,pattern(query),pattern(province),pattern(district),category,category).stream().map(id->view(find(id))).toList();
+   """,UUID.class,pattern(query),pattern(province),pattern(district),category,category);var bindings=new HashMap<UUID,UUID>();for(var id:candidates){var app=applicationId(id);if(app!=null)bindings.put(id,app);}var committed=gate.approved(bindings.values());return candidates.stream().filter(id->!bindings.containsKey(id)||committed.contains(bindings.get(id))).map(id->view(find(id))).toList();
  }
  private String pattern(String value){if(value!=null && value.length()>180)throw new IllegalArgumentException("Search text must not exceed 180 characters");return "%"+(value==null?"":value.trim().toLowerCase(Locale.ROOT).replace("\\","\\\\").replace("%","\\%").replace("_","\\_"))+"%";}
- public FacilityView publicDetail(UUID id){var f=find(id);if(!f.getStatus().equals("ACTIVE"))throw new ResourceNotFoundException("Facility is not publicly available");return view(f);}
+ public FacilityView publicDetail(UUID id){var f=find(id);var app=applicationId(id);if(!f.getStatus().equals("ACTIVE")||(app!=null&&!gate.approved(List.of(app)).contains(app)))throw new ResourceNotFoundException("Facility is not publicly available");return view(f);}
+ @Transactional public FacilityView createFirst(UUID applicationId,UUID facilityId,UUID userId,FacilityInput input){var existing=applicationId(facilityId);if(existing!=null){var f=find(facilityId);if(!existing.equals(applicationId)||!f.getOwnerId().equals(userId))throw new ConflictException("Application facility binding differs");return view(f);}if(facilities.existsById(facilityId))throw new ConflictException("Facility id already exists");var f=new Facility();f.setId(facilityId);f.setOwnerId(userId);assign(f,input);facilities.saveAndFlush(f);jdbc.update("INSERT INTO first_facility_applications(application_id,facility_id,owner_id) VALUES(?,?,?)",applicationId,facilityId,userId);audit(f,new Caller(userId,"Applicant",Set.of("CUSTOMER"),Map.of()),"FIRST_FACILITY_DRAFT_CREATED");return view(f);}
  @Transactional public FacilityView create(FacilityInput input,Caller caller){caller.requireRole("OWNER");var f=new Facility();f.setOwnerId(caller.id());assign(f,input);facilities.saveAndFlush(f);audit(f,caller,"FACILITY_CREATED");return view(f);}
  @Transactional public FacilityView update(UUID id,FacilityInput input,Caller caller){var f=mutableOwnedEntity(id,caller);assign(f,input);facilities.saveAndFlush(f);audit(f,caller,"FACILITY_UPDATED");return view(f);}
  public List<CourtView> ownedCourts(UUID id,Caller caller){ownedEntity(id,caller);return courts.findByFacilityIdOrderByNameAsc(id).stream().map(this::courtView).toList();}
