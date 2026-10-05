@@ -492,4 +492,134 @@ class IdentityServiceIntegrationTest {
         assertThatThrownBy(()->applicationCipher.open(first.substring(0,first.length()-4)+"AAAA",id)).isInstanceOf(IllegalStateException.class);
     }
 
+    private OwnerApplicationDtos.SearchCriteria searchCriteria(Map<String,String> p){
+        return new OwnerApplicationDtos.SearchCriteria(p.get("q"),p.get("state"),p.get("applicant"),p.get("facility"),
+            p.get("submittedFrom"),p.get("submittedTo"),p.get("reviewedFrom"),p.get("reviewedTo"),p.get("reviewedBy"),p.get("applicationId"),p.get("sort"),p.get("page"),p.get("size"));
+    }
+    private record SearchFixture(UUID id,String email,String phone,String name){}
+    private SearchFixture searchFixture(String tag,String facility,String state,String submitted,String reviewed,UUID reviewer){
+        var user=activate(uniqueEmail("filter"));UUID id=UUID.randomUUID();String name=tag+" applicant";
+        String phone="+84"+Long.toUnsignedString(System.nanoTime());
+        jdbc.update("UPDATE user_profiles SET full_name=? WHERE user_id=?",name,user.getId());
+        jdbc.update("UPDATE users SET phone=? WHERE id=?",phone,user.getId());
+        jdbc.update("INSERT INTO owner_applications(id,user_id,facility_id,state,business_name,facility_name,private_payload,initial_facility,submitted_at,reviewed_at,reviewed_by,created_at) VALUES(?,?,?,?,?,?,?,?::jsonb,?,?,?,?::timestamptz)",
+            id,user.getId(),UUID.randomUUID(),state,tag,facility,applicationCipher.seal("{\"representativeName\":\"ENCRYPTED-NAME-ONLY\",\"identityNumber\":\"DO-NOT-SEARCH-ME\"}",id),"{}",
+            submitted==null?null:java.sql.Timestamp.from(Instant.parse(submitted)),reviewed==null?null:java.sql.Timestamp.from(Instant.parse(reviewed)),reviewer,"2026-01-01T00:00:00Z");
+        return new SearchFixture(id,user.getEmail(),phone,name);
+    }
+    private java.util.List<UUID> filteredIds(Map<String,String> p,com.sporthub.identity.security.AuthenticatedUser admin){
+        return applications.search(searchCriteria(p),admin).items().stream().map(OwnerApplicationDtos.Summary::id).toList();
+    }
+
+    @Test void ownerSearchWithoutFiltersPreservesLegacyArrayOrderAndSummaryProjection(){
+        var admin=applicationAdmin();var legacy=applications.search(null,null,admin);var page=applications.search(searchCriteria(Map.of("size","100")),admin);
+        assertThat(page.items()).isEqualTo(legacy);
+        assertThat(page.totalElements()).isEqualTo(jdbc.queryForObject("SELECT COUNT(*) FROM owner_applications a JOIN users u ON u.id=a.user_id JOIN user_profiles p ON p.user_id=u.id",Long.class));
+        assertThat(page.page()).isZero();assertThat(page.size()).isEqualTo(100);
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().valueToTree(page).toString())
+            .doesNotContain("private_payload","identityNumber","bankAccountNumber","initial_facility","ENCRYPTED-NAME-ONLY");
+    }
+    @Test void ownerSearchCombinesStateKeywordApplicantAndFacilityWithAnd(){
+        var admin=applicationAdmin();String tag="combined-"+UUID.randomUUID();
+        var a=searchFixture(tag,tag+" stadium","PENDING_APPROVAL","2026-10-06T01:00:00Z",null,null);
+        searchFixture(tag,tag+" arena","REJECTED","2026-10-06T02:00:00Z",null,null);
+        assertThat(filteredIds(Map.of("q",tag,"state","PENDING_APPROVAL"),admin)).containsExactly(a.id());
+        assertThat(filteredIds(Map.of("q","  "+tag.toUpperCase()+"  ","facility","  STADIUM  ","applicant",a.email().toUpperCase(),"state","PENDING_APPROVAL","submittedFrom","2026-10-06","submittedTo","2026-10-06"),admin)).containsExactly(a.id());
+        assertThat(filteredIds(Map.of("q",tag,"state","REJECTED","facility","stadium"),admin)).isEmpty();
+    }
+    @Test void ownerSearchApplicantMatchesOnlyExistingAccountNameEmailAndPhone(){
+        var admin=applicationAdmin();String tag="contact-"+UUID.randomUUID();var a=searchFixture(tag,tag,"PENDING_APPROVAL",null,null,null);
+        for(String keyword:java.util.List.of(a.email(),a.phone(),a.name()))assertThat(filteredIds(Map.of("applicant",keyword),admin)).containsExactly(a.id());
+        assertThat(filteredIds(Map.of("q",tag,"applicant","ENCRYPTED-NAME-ONLY"),admin)).isEmpty();
+        assertThat(filteredIds(Map.of("q",tag,"applicant","DO-NOT-SEARCH-ME"),admin)).isEmpty();
+    }
+    @Test void ownerSearchEscapesLiteralWildcardsAndUsesBoundParameters(){
+        var admin=applicationAdmin();String tag="literal-"+UUID.randomUUID();var a=searchFixture(tag+" %_!\\",tag+" %_!\\","DRAFT",null,null,null);
+        searchFixture(tag+" other",tag+" other","DRAFT",null,null,null);
+        assertThat(filteredIds(Map.of("q",tag,"facility","%_!\\"),admin)).containsExactly(a.id());
+        assertThat(applications.search(tag+" %_!\\",null,admin).stream().map(OwnerApplicationDtos.Summary::id)).containsExactly(a.id());
+        assertThat(filteredIds(Map.of("q","' OR 1=1 --"),admin)).isEmpty();
+    }
+    @Test void ownerSearchSubmittedFromIsInclusiveAtVietnamMidnight(){
+        var admin=applicationAdmin();String tag="from-"+UUID.randomUUID();
+        searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-05T16:59:59.999Z",null,null);
+        var a=searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-05T17:00:00Z",null,null);
+        var b=searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-06T17:00:00Z",null,null);
+        searchFixture(tag,tag,"DRAFT",null,null,null);
+        assertThat(filteredIds(Map.of("q",tag,"submittedFrom","2026-10-06"),admin)).containsExactly(a.id(),b.id());
+    }
+    @Test void ownerSearchSubmittedToIncludesWholeVietnamDayButExcludesNextMidnight(){
+        var admin=applicationAdmin();String tag="to-"+UUID.randomUUID();
+        var a=searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-05T16:59:59Z",null,null);
+        var b=searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-06T16:59:59.999Z",null,null);
+        searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-06T17:00:00Z",null,null);
+        assertThat(filteredIds(Map.of("q",tag,"submittedTo","2026-10-06"),admin)).containsExactly(a.id(),b.id());
+        assertThat(filteredIds(Map.of("q",tag,"submittedFrom","2026-10-06","submittedTo","2026-10-06"),admin)).containsExactly(b.id());
+    }
+    @Test void ownerSearchReviewerReviewDatesAndApplicationIdAreIndependentAndComposable(){
+        var admin=applicationAdmin();String tag="review-"+UUID.randomUUID();
+        var a=searchFixture(tag,tag,"REJECTED","2026-10-04T01:00:00Z","2026-10-05T17:00:00Z",admin.userId());
+        searchFixture(tag,tag,"SUPPLEMENT_REQUIRED","2026-10-04T01:00:00Z","2026-10-06T17:00:00Z",admin.userId());
+        searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-04T01:00:00Z",null,null);
+        assertThat(filteredIds(Map.of("q",tag,"reviewedFrom","2026-10-06","reviewedTo","2026-10-06"),admin)).containsExactly(a.id());
+        assertThat(filteredIds(Map.of("reviewedBy",admin.userId().toString(),"applicationId",a.id().toString()),admin)).containsExactly(a.id());
+        assertThat(filteredIds(Map.of("applicationId",a.id().toString(),"reviewedBy",UUID.randomUUID().toString()),admin)).isEmpty();
+        assertThat(filteredIds(Map.of("applicationId",a.id().toString()),admin)).containsExactly(a.id());
+        assertThat(filteredIds(Map.of("q",tag,"reviewedFrom","2026-10-07"),admin)).hasSize(1);
+        assertThat(filteredIds(Map.of("q",tag,"reviewedTo","2026-10-06"),admin)).containsExactly(a.id());
+    }
+    @Test void ownerSearchPaginationIsStableWithTiedDatesAndRetainsAllFilters(){
+        var admin=applicationAdmin();String tag="pages-"+UUID.randomUUID();
+        var a=searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-06T01:00:00Z",null,null);
+        var b=searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-06T01:00:00Z",null,null);
+        var c=searchFixture(tag,tag,"PENDING_APPROVAL","2026-10-06T01:00:00Z",null,null);
+        var expected=java.util.stream.Stream.of(a.id(),b.id(),c.id()).sorted(java.util.Comparator.comparing(UUID::toString)).toList();
+        var filters=new java.util.HashMap<>(Map.of("q",tag,"state","PENDING_APPROVAL","submittedFrom","2026-10-06","size","2"));
+        var first=applications.search(searchCriteria(filters),admin);assertThat(first.totalElements()).isEqualTo(3);assertThat(first.totalPages()).isEqualTo(2);
+        assertThat(first.items().stream().map(OwnerApplicationDtos.Summary::id)).containsExactlyElementsOf(expected.subList(0,2));
+        filters.put("page","1");assertThat(filteredIds(filters,admin)).containsExactly(expected.get(2));
+        filters.put("page","0");filters.put("sort","SUBMITTED_DESC");assertThat(filteredIds(filters,admin)).containsExactly(expected.get(2),expected.get(1));
+        filters.put("page","2147483647");var outside=applications.search(searchCriteria(filters),admin);assertThat(outside.items()).isEmpty();assertThat(outside.totalElements()).isEqualTo(3);
+    }
+    @Test void ownerSearchBlankFiltersAreAbsentAndNoResultsHaveZeroPages(){
+        var admin=applicationAdmin();String tag="blank-"+UUID.randomUUID();var a=searchFixture(tag,tag,"DRAFT",null,null,null);
+        assertThat(filteredIds(Map.of("q","  "+tag+"  ","state","  ","facility","  ","submittedFrom"," "),admin)).containsExactly(a.id());
+        var result=applications.search(searchCriteria(Map.of("q",UUID.randomUUID().toString())),admin);
+        assertThat(result.items()).isEmpty();assertThat(result.totalElements()).isZero();assertThat(result.totalPages()).isZero();
+    }
+    @Test void ownerSearchRejectsInvalidDatesRangesEnumsUuidsSortAndPagination(){
+        var admin=applicationAdmin();
+        for(var p:java.util.List.of(Map.of("state","APPROVE"),Map.of("submittedFrom","2026-02-30"),Map.of("submittedTo","06/10/2026"),
+            Map.of("submittedFrom","2026-10-07","submittedTo","2026-10-06"),Map.of("reviewedFrom","2026-10-07","reviewedTo","2026-10-06"),
+            Map.of("applicationId","1-1-1-1-1"),Map.of("reviewedBy","invalid"),Map.of("sort","private_payload"),Map.of("page","-1"),
+            Map.of("page","2147483648"),Map.of("page","abc"),Map.of("size","0"),Map.of("size","101"),Map.of("q","x".repeat(181)),Map.of("applicant","x".repeat(255)))) {
+            assertThatThrownBy(()->applications.search(searchCriteria(p),admin)).isInstanceOfSatisfying(IdentityException.class,e->assertThat(e.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST));
+        }
+    }
+    @Test void ownerSearchHttpRetainsLegacyContractAndReturnsStructuredValidation() throws Exception {
+        var admin=applicationAdmin();String token=authService.login(new LoginRequest(admin.email(),"Password123!"),metadata).response().accessToken();
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/admin/owner-applications").header("Authorization","Bearer "+token))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data").isArray());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/admin/owner-applications/page").param("size","2").header("Authorization","Bearer "+token))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.items").isArray())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.size").value(2)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"));
+        for(var p:java.util.List.of(Map.of("state","INVALID"),Map.of("submittedFrom","2026-10-07","submittedTo","2026-10-06"),Map.of("sort","created_at"),Map.of("size","abc"))){
+            var request=org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/admin/owner-applications/page").header("Authorization","Bearer "+token);p.forEach(request::param);
+            http.perform(request).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("IDENTITY-OWNER-APPLICATION"));
+        }
+    }
+    @Test void ownerSearchRequiresRealAdminSessionAndLockedAdminCannotRead() throws Exception {
+        var customer=activate(uniqueEmail("search-denied"));var customerActor=applicant(customer);
+        assertThatThrownBy(()->applications.search(searchCriteria(Map.of()),customerActor)).isInstanceOfSatisfying(IdentityException.class,e->assertThat(e.getStatus()).isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN));
+        String path="/api/v1/admin/owner-applications/page";
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        String token=authService.login(new LoginRequest(customer.getEmail(),"Password123!"),metadata).response().accessToken();
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path).header("Authorization","Bearer "+token).header("X-User-Roles","ADMIN"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        var admin=applicationAdmin();String adminToken=authService.login(new LoginRequest(admin.email(),"Password123!"),metadata).response().accessToken();
+        jdbc.update("UPDATE users SET status='LOCKED' WHERE id=?",admin.userId());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path).header("Authorization","Bearer "+adminToken))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+    }
+
 }

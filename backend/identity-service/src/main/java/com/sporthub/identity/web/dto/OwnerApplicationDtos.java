@@ -19,5 +19,8 @@ public final class OwnerApplicationDtos {
  public record Decision(@Pattern(regexp="APPROVE|REJECT|SUPPLEMENT_REQUIRED") @NotBlank String action,@NotBlank @Size(max=1200) String reason,
   @DecimalMin("0") @DecimalMax("100") @Digits(integer=3,fraction=2) BigDecimal commissionPercent){}
  public record Summary(UUID id,UUID userId,UUID facilityId,String businessName,String facilityName,String state,Instant submittedAt,String reason,BigDecimal commissionPercent,String lastError){}
+ public record SearchCriteria(String q,String state,String applicant,String facility,String submittedFrom,String submittedTo,
+  String reviewedFrom,String reviewedTo,String reviewedBy,String applicationId,String sort,String page,String size){}
+ public record SearchPage(List<Summary> items,int page,int size,long totalElements,long totalPages){}
  public record Detail(Summary application,Legal legal,JsonNode facility,List<Map<String,Object>> history,List<Map<String,Object>> audit){}
 }

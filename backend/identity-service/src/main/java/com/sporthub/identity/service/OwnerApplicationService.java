@@ -1,6 +1,7 @@
 package com.sporthub.identity.service;
 import static com.sporthub.identity.web.dto.OwnerApplicationDtos.*;
 import com.sporthub.identity.domain.*;
+import com.sporthub.identity.repository.OwnerApplicationSearchRepository;
 import com.sporthub.identity.security.AuthenticatedUser;
 import com.sporthub.identity.exception.IdentityException;
 import com.fasterxml.jackson.databind.*;
@@ -16,10 +17,11 @@ import java.time.Instant;
 /** Durable coordinator. Identity commit is the publication gate; prepared Facility/Payment resources stay private. */
 @Service
 public class OwnerApplicationService {
- private final JdbcTemplate jdbc;private final ObjectMapper json;private final OwnerApplicationCipher cipher;private final OwnerApplicationDependencies dependencies;private final TransactionTemplate tx;private final jakarta.validation.Validator validator;
- public OwnerApplicationService(JdbcTemplate jdbc,ObjectMapper json,OwnerApplicationCipher cipher,OwnerApplicationDependencies dependencies,PlatformTransactionManager manager,jakarta.validation.Validator validator){this.validator=validator;this.jdbc=jdbc;this.json=json;this.cipher=cipher;this.dependencies=dependencies;tx=new TransactionTemplate(manager);}
+ private final OwnerApplicationSearchRepository searchRepository;private final JdbcTemplate jdbc;private final ObjectMapper json;private final OwnerApplicationCipher cipher;private final OwnerApplicationDependencies dependencies;private final TransactionTemplate tx;private final jakarta.validation.Validator validator;
+ public OwnerApplicationService(JdbcTemplate jdbc,ObjectMapper json,OwnerApplicationCipher cipher,OwnerApplicationDependencies dependencies,PlatformTransactionManager manager,jakarta.validation.Validator validator,OwnerApplicationSearchRepository searchRepository){this.searchRepository=searchRepository;this.validator=validator;this.jdbc=jdbc;this.json=json;this.cipher=cipher;this.dependencies=dependencies;tx=new TransactionTemplate(manager);}
  public List<Summary> own(AuthenticatedUser actor){return jdbc.queryForList("SELECT id FROM owner_applications WHERE user_id=? ORDER BY created_at DESC",UUID.class,actor.userId()).stream().map(id->summary(row(id))).toList();}
- public List<Summary> search(String q,String state,AuthenticatedUser actor){admin(actor);String pattern="%"+(q==null?"":q.trim().replace("%","\\%").replace("_","\\_"))+"%";return jdbc.queryForList("SELECT a.id FROM owner_applications a JOIN users u ON u.id=a.user_id JOIN user_profiles p ON p.user_id=u.id WHERE (a.business_name ILIKE ? OR a.facility_name ILIKE ? OR p.full_name ILIKE ? OR u.phone LIKE ?) AND (?::varchar IS NULL OR a.state=?::varchar) ORDER BY a.submitted_at ASC NULLS LAST,a.created_at LIMIT 100",UUID.class,pattern,pattern,pattern,pattern,state,state).stream().map(id->summary(row(id))).toList();}
+ public List<Summary> search(String q,String state,AuthenticatedUser actor){admin(actor);return searchRepository.legacy(OwnerApplicationSearch.legacy(q,state));}
+ public SearchPage search(SearchCriteria criteria,AuthenticatedUser actor){admin(actor);return searchRepository.search(OwnerApplicationSearch.parse(criteria));}
  public Detail detail(UUID id,AuthenticatedUser actor,boolean adminView){if(adminView)admin(actor);var data=row(id);if(!adminView)own(data,actor);if(adminView)tx.executeWithoutResult(status->audit(id,actor.userId(),"ADMIN_OWNER_APPLICATION_VIEWED",Map.of()));var facility=dependencies.facility(id,adminView?"view":"own-view",command(data,actor.userId()),null);
   var history=jdbc.query("SELECT id,submitted_at,facility_snapshot FROM owner_application_submissions WHERE application_id=? ORDER BY submitted_at DESC",(r,n)->Map.<String,Object>of("id",r.getObject("id",UUID.class),"submittedAt",r.getTimestamp("submitted_at").toInstant(),"facilitySnapshot",read(r.getString("facility_snapshot"))),id);
   var audits=jdbc.query("SELECT id,user_id,action,created_at,new_value FROM audit_log WHERE entity_type='OWNER_APPLICATION' AND entity_id=? ORDER BY created_at DESC LIMIT 100",(r,n)->Map.<String,Object>of("id",r.getObject("id",UUID.class),"actorId",r.getObject("user_id",UUID.class),"action",r.getString("action"),"createdAt",r.getTimestamp("created_at").toInstant(),"details",read(r.getString("new_value"))),id);

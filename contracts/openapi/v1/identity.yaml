@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SportHub Identity API",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Implemented authentication, profile, durable first-facility Owner applications and facility-scoped Staff bindings. Protected application reads are uncached and Admin detail reads are audited. Private signed service coordination is documented in owner-internal.yaml and has no Gateway route."
   },
   "servers": [
@@ -1478,7 +1478,7 @@
             "$ref": "#/components/responses/ServiceUnavailable"
           }
         },
-        "description": "ADMIN role enforced by backend. ",
+        "description": "ADMIN role enforced by backend. Backward-compatible array of at most 100 summaries. Trimmed blank q/state are absent. Literal text search; encrypted representative/legal fields are not searched. Use /admin/owner-applications/page for extended filters and pagination.",
         "parameters": [
           {
             "name": "q",
@@ -1493,8 +1493,200 @@
             "name": "state",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/OwnerApplicationState"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OwnerApplicationState"
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    ""
+                  ]
+                }
+              ]
             }
+          }
+        ]
+      }
+    },
+    "/admin/owner-applications/page": {
+      "get": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "searchAdminOwnerApplications",
+        "summary": "Search and paginate the Owner application review queue",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "description": "ADMIN role required; Cache-Control: no-store. Optional filters combine with AND. Text is trimmed, blank values are absent, and %, _ and ! match literally. No encrypted legal data is queried or added to summary responses. Date ranges use Vietnam calendar days (Asia/Ho_Chi_Minh, UTC+7): inclusive from midnight through the end of the to day, internally an exclusive next-day boundary. submittedAt is the latest submission; reviewedAt is the completed decision time. reviewedBy is the Admin assigned to the latest requested decision, and is cleared on resubmission. Null timestamps do not match date filters. Each from must be <= its to. Invalid state, dates, UUIDs, pagination, lengths or sort return 400 (IDENTITY-OWNER-APPLICATION). Ordering uses submittedAt NULLS LAST, createdAt, then id, all in the chosen direction; there is no arbitrary sort. Count and items share one database snapshot. Out-of-range pages return empty items with the actual count.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            },
+            "description": "Business, facility, account name or phone."
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OwnerApplicationState"
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    ""
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "applicant",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 254
+            },
+            "description": "Case-insensitive account full name/email or phone substring; excludes encrypted legal representative name."
+          },
+          {
+            "name": "facility",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            },
+            "description": "Case-insensitive first-facility name stored on the latest submitted application (initial name for drafts); not a cross-service live facility lookup."
+          },
+          {
+            "name": "submittedFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive from Vietnam calendar date for the latest submission. YYYY-MM-DD. Blank is absent."
+          },
+          {
+            "name": "submittedTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive to Vietnam calendar date for the latest submission. YYYY-MM-DD. Blank is absent."
+          },
+          {
+            "name": "reviewedFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive from Vietnam calendar date for the completed decision. YYYY-MM-DD. Blank is absent."
+          },
+          {
+            "name": "reviewedTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Inclusive to Vietnam calendar date for the completed decision. YYYY-MM-DD. Blank is absent."
+          },
+          {
+            "name": "reviewedBy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Admin UUID on the latest requested decision."
+          },
+          {
+            "name": "applicationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Exact application UUID."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SUBMITTED_ASC",
+                "SUBMITTED_DESC"
+              ],
+              "default": "SUBMITTED_ASC"
+            },
+            "description": "Whitelist only. Stable ordering with application UUID as final tie-breaker."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647,
+              "default": 0
+            },
+            "description": "Zero-based page."
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Summaries per page."
           }
         ]
       }
@@ -2809,6 +3001,58 @@
                 "items": {
                   "$ref": "#/components/schemas/OwnerApplication"
                 }
+              }
+            }
+          }
+        ]
+      },
+      "OwnerApplicationPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements",
+          "totalPages"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerApplication"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "OwnerApplicationPageResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/OwnerApplicationPage"
               }
             }
           }
