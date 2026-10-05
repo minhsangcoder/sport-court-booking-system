@@ -1,6 +1,6 @@
 # SportHub domain event conventions
 
-This document defines the technical contract for asynchronous communication between SportHub services. It does not define business events or implement event-driven workflows.
+This document records the technical envelope and implemented cross-service event contracts. Business payloads remain owned by their producer.
 
 ## Envelope
 
@@ -47,6 +47,20 @@ Validation failures, unsupported versions and deterministic business rejections 
 
 Dead-letter messages require observable alerts and an explicit replay procedure. Replay must pass through the same idempotency check as normal delivery.
 
-## Scope of Phase 1
+## Implemented payment integration
 
-Phase 1 establishes the envelope and conventions only. It does not publish `booking.created`, `payment.completed` or any other business event. Queue topology, retry values and payload contracts are introduced with the owning service in later phases.
+`payment.completed` v1 is produced by Payment Service after a verified provider callback. Its payload contains `paymentId`, `bookingId`, `payerId`, nullable `memberId` and `acquisitionId`, `purpose` (`BOOKING`, `GROUP_CONTRIBUTION` or `TRANSFER`), `amount`, `currency`, `status`, `paidAt`, and `transactionId`. Booking validates individual/group outcomes in its court-locked inbox and ignores Transfer outcomes. Transfer validates its own acquisition, buyer, amount and deadline through a separate inbox. A mismatch records reconciliation without granting usage rights.
+
+`booking.group.refund.requested` v1 records that a group contribution requires refund review after timeout or a rejected late/duplicate payment. Its payload contains `bookingId`, `paymentId`, the original `payerId`, `reason`, and `policyState=BLOCKED_RULE`. Payment consumes it through its own inbox and persists an idempotent refund request. It does not choose a refund percentage or execute financial movement while the policy is unresolved.
+
+Both services use durable queues with dead-letter routing and three bounded delivery attempts. Outbox publication waits for a correlated broker confirmation and checks mandatory returns before marking an event published. Repeated event IDs and repeated provider transactions cannot repeat the domain side effects.
+
+## Transfer handoff and escrow
+
+Transfer persists REGISTER/EDIT/LOCK/UNLOCK/WITHDRAW/HANDOFF commands before calling Booking's signed private REST endpoints. Booking owns the transfer lease, serializes it with check-in under the court lock, and changes holder/customer plus QR version in one local transaction. REST retries use listing/acquisition/payment identities; a lost response cannot hand off twice. A transient error leaves the command durable for retry. A deterministic handoff rejection becomes PENDING_AUDIT.
+
+`transfer.refund.review.requested` v1 contains `paymentId`, `bookingId`, the original `payerId`, and `reason`. Payment validates the referenced successful Transfer order, persists a BLOCKED_RULE refund request through its inbox, and marks escrow REFUND_REVIEW. Successful Transfer payments create an immutable amount/payer/seller escrow record in HELD_POLICY_BLOCKED. No payout or refund amount is selected while release/eligibility rules remain unresolved.
+
+## Facility review notices
+
+`facility.reviewed` v1 is owned by Facility Service. It contains `reviewId`, `facilityId`, `ownerId`, `facilityName`, `state` (APPROVED/REJECTED/SUPPLEMENT_REQUIRED), and `reason`. Review state, immutable submission snapshot, audit and outbox are committed in the Facility database. Identity consumes through its own inbox and queues a notice to its own verified contact. Both event ID and review ID prevent repeated notifications. Private document links and identity documents are excluded from the event. Submitted legal attachments stay available to audited Admin access when a supplement archives them.

@@ -1,0 +1,8 @@
+'use client'
+import Link from 'next/link'
+import { useApi } from '@/lib/use-api'
+import { RequireAuth } from '@/features/auth/require-auth'
+import { money } from '@/features/schedule/types'
+import { type Group,groupStates } from './types'
+export function GroupList(){return <RequireAuth roles={['CUSTOMER']}><Loaded/></RequireAuth>}
+function Loaded(){const r=useApi<Group[]>('/groups');return <div className="mx-auto max-w-5xl px-5 py-10"><div className="flex flex-wrap items-center justify-between gap-4"><h1 className="text-3xl font-black">Nhóm đặt sân</h1><div className="flex gap-4 text-sm text-emerald-700"><Link href="/customer/groups/join">Nhập mã mời</Link><Link href="/search">Tạo nhóm từ lịch sân</Link></div></div>{r.loading&&<p className="mt-6" role="status">Đang tải nhóm…</p>}{r.error&&<p className="mt-6 text-red-700" role="alert">{r.error}<button className="ml-4 underline" onClick={r.reload}>Thử lại</button></p>}{r.data?.length===0&&<p className="mt-8 rounded-2xl border p-6 text-slate-500">Bạn chưa tham gia nhóm nào. Chọn sân và hình thức chia tiền ở bước tóm tắt, hoặc nhập mã mời.</p>}<div className="mt-8 grid gap-4 sm:grid-cols-2">{r.data?.map(g=><Link key={g.id} href={`/customer/groups/${g.id}`} className="rounded-2xl border p-6 hover:border-emerald-500"><p className="text-sm font-semibold text-emerald-700">{groupStates[g.state]}</p><h2 className="mt-3 text-xl font-bold">{g.name}</h2><p className="mt-2 text-sm text-slate-500">{new Date(g.booking.startsAt).toLocaleString('vi-VN',{timeZone:g.booking.priceSnapshot.timezone})}</p><p className="mt-4">{g.members.length} thành viên · {money(g.totalPaid)} / {money(g.booking.amount)}</p></Link>)}</div></div>}

@@ -1,0 +1,4 @@
+export type TransferPolicy={configured:boolean;enabled:boolean;minLeadSeconds:number}
+export type Listing={id:string;facilityId:string;courtId:string;venue:{facilityName:string;courtName:string;sportCategoryId:string;address:string;province:string;district:string;timezone:string;amenities:string[]};originalAmount:number;price:number;currency:string;startsAt:string;endsAt:string;deadline:string;state:string;own:boolean;available:boolean;version:number}
+export type Acquisition={id:string;listingId:string;bookingId:string;buyerId:string;amount:number;currency:string;expiresAt:string;state:string;paymentId:string|null}
+export const transferStates:Record<string,string>={ACTIVE:'Đang rao',LOCKED:'Có người đang thanh toán',COMPLETED:'Đã bàn giao',WITHDRAWN:'Đã rút tin',EXPIRED:'Hết hạn',PENDING:'Chờ thanh toán',PENDING_HANDOFF:'Đang bàn giao',SUCCESS:'Đã nhận quyền sử dụng',CANCELLED:'Đã hủy',FAILED:'Giao dịch thất bại',PENDING_AUDIT:'Đang đối soát'}

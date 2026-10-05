@@ -7,6 +7,9 @@ import lombok.Getter;
  */
 @Getter
 public class ResourceNotFoundException extends BaseException {
+    public ResourceNotFoundException(String message) {
+        this(ErrorCode.RESOURCE_NOT_FOUND, message);
+    }
 
     private final String resourceType;
     private final String identifier;

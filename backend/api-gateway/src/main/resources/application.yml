@@ -38,17 +38,30 @@ spring:
               - Authorization
               - Content-Type
               - X-Correlation-Id
+              - Idempotency-Key
             exposedHeaders:
               - X-Correlation-Id
             allowCredentials: true
             maxAge: 3600
 
       routes:
+        - id: transfer-service
+          uri: ${TRANSFER_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/v1/transfers/**
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/payments/**, /api/v1/admin/payments/**
+        - id: facility-service
+          uri: ${FACILITY_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/facilities/**, /api/v1/owner/facilities/**, /api/v1/owner/courts/**, /api/v1/owner/maintenance/**, /api/v1/sport-categories/**, /api/v1/admin/sport-categories/**, /api/v1/admin/facilities/**
         # ── Identity & Access Service ──────────────────────────
         - id: identity-service
           uri: ${IDENTITY_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/v1/auth/**, /api/v1/users/**, /api/v1/owner-applications/**, /api/v1/staff-bindings/**
+            - Path=/api/v1/auth/**, /api/v1/users/**, /api/v1/owner-applications/**, /api/v1/staff-bindings/**, /api/v1/admin/accounts/**
           filters:
             - StripPrefix=0
 
@@ -64,7 +77,7 @@ spring:
         - id: booking-service
           uri: ${BOOKING_SERVICE_URL:http://localhost:8084}
           predicates:
-            - Path=/api/v1/bookings/**, /api/v1/groups/**
+            - Path=/api/v1/bookings/**, /api/v1/groups/**, /api/v1/admin/bookings/**
           filters:
             - StripPrefix=0
 
@@ -78,7 +91,7 @@ spring:
 sporthub:
   gateway:
     security:
-      # Phase 1 documents public routes; Phase 2 will use this list during JWT validation.
+      # Only these routes bypass Phase 2A JWT authentication.
       public-paths:
         - /api/v1/auth/register
         - /api/v1/auth/verify
@@ -86,7 +99,17 @@ sporthub:
         - /api/v1/auth/refresh
         - /api/v1/auth/forgot-password
         - /api/v1/auth/reset-password
+        - /api/v1/auth/logout
+        - /api/v1/facilities/**
+        - /api/v1/sport-categories
+        - /api/v1/schedules/public/**
+        - /api/v1/bookings/availability
+        - /api/v1/bookings/search
+        - /api/v1/payments/providers/demo/callback
         - /actuator/health/**
+
+jwt:
+  secret: ${JWT_SECRET}
 
 # ── Actuator ──────────────────────────────────────────────────
 management:

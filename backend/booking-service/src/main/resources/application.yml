@@ -11,6 +11,7 @@ spring:
     hikari:
       maximum-pool-size: 15
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
@@ -33,12 +34,32 @@ spring:
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:sporthub}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2
 
 # ── Booking-specific config ───────────────────────────────────
 booking:
   slot-hold:
-    ttl-seconds: 600          # 10 minutes
+    ttl-seconds: ${BOOKING_HOLD_SECONDS:600} # DEMO_DEFAULT technical TTL
+    max-pending: ${BOOKING_MAX_PENDING:5} # DEMO_DEFAULT anti-spam limit
     max-slots-per-hold: 10    # Max slots per single hold request
+  advance-days: ${BOOKING_ADVANCE_DAYS:90} # DEMO_DEFAULT technical booking horizon
+  group:
+    deadline-seconds: ${GROUP_PAYMENT_DEADLINE_SECONDS:1800} # DEMO_DEFAULT configurable deadline
+    min-lead-seconds: ${GROUP_MIN_LEAD_SECONDS:7200} # UC-6.1 configurable minimum lead time
+
+sporthub:
+  events:
+    outbox:
+      enabled: true
 
 management:
   endpoints.web.exposure.include: health,info

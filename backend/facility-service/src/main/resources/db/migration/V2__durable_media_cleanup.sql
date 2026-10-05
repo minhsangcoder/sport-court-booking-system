@@ -1,0 +1,4 @@
+CREATE TABLE media_cleanup (
+ object_key VARCHAR(500) PRIMARY KEY,attempts INT NOT NULL DEFAULT 0,
+ next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

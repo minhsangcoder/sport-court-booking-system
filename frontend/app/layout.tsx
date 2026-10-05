@@ -1,6 +1,8 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { AuthProvider } from '@/lib/auth-context'
+import { AppHeader } from '@/components/layout/app-header'
 
 export const metadata: Metadata = {
   title: 'SportHub — Đặt sân thể thao tại Hà Nội',
@@ -41,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="antialiased">
-        {children}
+        <AuthProvider><AppHeader /><main className="min-h-[calc(100vh-80px)]">{children}</main></AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

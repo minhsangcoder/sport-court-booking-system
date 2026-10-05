@@ -22,6 +22,7 @@ spring:
 
   # ── JPA / Hibernate ─────────────────────────────────────────
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     show-sql: false
@@ -52,9 +53,30 @@ spring:
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
     virtual-host: ${RABBITMQ_VHOST:sporthub}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000
+          multiplier: 2
+          max-interval: 5000
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
+
+sporthub:
+  identity:
+    verification-expiration-minutes: ${VERIFICATION_EXPIRATION_MINUTES:15}
+    password-reset-expiration-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:15}
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+    mail-from: ${MAIL_FROM:no-reply@sporthub.local}
+    secure-cookie: ${SECURE_COOKIE:false}
+    demo-sms-enabled: ${DEMO_SMS_ENABLED:false}
+  demo:
+    seed-enabled: ${DEMO_SEED_ENABLED:false}
+    password: ${DEMO_PASSWORD:}
 
 # ── JWT Configuration ─────────────────────────────────────────
 jwt:
@@ -75,7 +97,6 @@ management:
 # ── Logging ───────────────────────────────────────────────────
 logging:
   level:
-    com.sporthub: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.security: DEBUG
+    com.sporthub: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: INFO

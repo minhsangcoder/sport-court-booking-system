@@ -4,19 +4,27 @@ This file records unresolved decisions that must not be silently encoded as busi
 
 ## Refund policy
 
-The primary thesis text states that a paid cancellation receives no refund, while the UC-5 specification and architecture blueprint describe time-based refund tiers. Phase 1 does not resolve this conflict. Booking and payment contracts must not be finalized until the product owner confirms the authoritative policy.
+The primary thesis text states that a paid cancellation receives no refund, while the UC-5 specification and architecture blueprint describe time-based refund tiers. Financial cancellation/refund execution remains BLOCKED_RULE. Core booking/payment/group/transfer contracts document the implemented flow and durable requests for review; they do not select a refund percentage.
 
 ## Staff permission catalog
 
-Requirements confirm facility-scoped Staff permissions but do not define one final stable vocabulary. The Identity contract therefore validates the permission-name format without inventing a closed enum. The permission catalog and authorization matrix must be approved before Phase 2 authorization is implemented.
+Resolved by explicit user approval on 2026-10-05: `BOOKING_READ`, `BOOKING_CREATE_COUNTER`, `BOOKING_CHECK_IN`, `BOOKING_COMPLETE`, `SCHEDULE_READ`. Owner grants each capability within a specific facility. Backend must require both an active binding and the matching permission. These names do not grant pricing write access.
 
 ## Owner application orchestration
 
 The requirements treat the first facility profile as part of an Owner application, while target architecture assigns facility data to Facility Service. Before implementation, the team must decide whether Identity orchestrates the application, a dedicated application workflow owns it, or the services coordinate through an explicit saga. No cross-service database access is permitted.
 
+## Admin account hierarchy
+
+Account controls use the approved ADMIN role. A reasoned change to ordinary CUSTOMER/OWNER/STAFF accounts revokes all sessions and records immutable before/after audit. Self changes and changes to an existing ADMIN target are rejected. Detailed Root Admin/equal-rank rules remain BLOCKED_RULE until that hierarchy is approved; no extra role labels are introduced. Read-only monitoring/reporting can proceed.
+
 ## Identity role persistence
 
-The current V1 migration stores one `role` value on `users`, while requirements and the public contract allow an account to hold multiple roles. Phase 2 must either introduce a service-owned role-assignment table through a new migration or explicitly narrow the contract after product confirmation. Existing committed migrations must not be edited after they have been applied.
+Resolved by the required multi-role implementation: Identity V2 introduces `user_roles` and profiles; V3 supports independent email/phone registration and verification. Existing V1 is preserved. Only CUSTOMER, OWNER, STAFF and ADMIN are used.
+
+## Transfer policy and settlement
+
+Facility V3 stores explicit Owner-configured enablement and minimum lead time per facility; an unconfigured facility cannot create/acquire a Transfer listing. Individual Transfer usage rights are implemented through a durable Transfer-to-Booking REST saga. Payment records escrow as HELD_POLICY_BLOCKED because sources disagree on release after handoff versus after play. No automatic seller payout occurs. Paid Group ownership/membership changes remain BLOCKED_RULE and are rejected before listing creation.
 
 ## MinIO Community Edition image provenance
 

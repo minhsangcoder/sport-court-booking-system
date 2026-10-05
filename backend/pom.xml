@@ -25,13 +25,11 @@
         <module>sporthub-common</module>
         <module>api-gateway</module>
         <module>identity-service</module>
+        <module>facility-service</module>
         <module>schedule-service</module>
         <module>booking-service</module>
-        <!-- Phase 3+ modules (uncomment when ready):
-        <module>facility-service</module>
         <module>payment-service</module>
         <module>transfer-service</module>
-        -->
     </modules>
 
     <!-- ═══════════════════════════════════════════════════════════════
@@ -43,6 +41,7 @@
         <jjwt.version>0.12.6</jjwt.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.34</lombok.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
 
     <!-- ═══════════════════════════════════════════════════════════════

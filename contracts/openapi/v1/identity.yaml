@@ -1,963 +1,2038 @@
-openapi: 3.1.0
-info:
-  title: SportHub Identity API
-  version: 1.0.0
-  description: |
-    Contract for SportHub account, authentication, profile, owner-application and
-    facility-scoped staff-binding capabilities. Phase 1 defines this contract only;
-    it does not imply that controller or service logic is implemented.
-servers:
-  - url: /api/v1
-tags:
-  - name: Authentication
-  - name: Profile
-  - name: Owner applications
-  - name: Staff bindings
-
-paths:
-  /auth/register:
-    post:
-      tags: [Authentication]
-      operationId: registerAccount
-      summary: Register a customer account pending verification
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: Account created and verification challenge issued
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RegisterResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /auth/verify:
-    post:
-      tags: [Authentication]
-      operationId: verifyAccount
-      summary: Verify an account using a code or verification link token
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerificationRequest'
-      responses:
-        '200':
-          description: Verification completed
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VerificationResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /auth/login:
-    post:
-      tags: [Authentication]
-      operationId: login
-      summary: Authenticate an active account
-      description: |
-        Returns a JWT access token with a 15-minute lifetime. The refresh token is
-        never returned in the JSON body; it is issued as a secure HttpOnly cookie.
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Authentication succeeded
-          headers:
-            Set-Cookie:
-              $ref: '#/components/headers/RefreshCookie'
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /auth/refresh:
-    post:
-      tags: [Authentication]
-      operationId: refreshAccessToken
-      summary: Rotate the refresh cookie and issue a new access token
-      security:
-        - refreshCookie: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      responses:
-        '200':
-          description: Access token refreshed and refresh cookie rotated
-          headers:
-            Set-Cookie:
-              $ref: '#/components/headers/RefreshCookie'
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /auth/logout:
-    post:
-      tags: [Authentication]
-      operationId: logout
-      summary: Revoke the current refresh session
-      security:
-        - refreshCookie: []
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      responses:
-        '204':
-          description: Session revoked; the refresh cookie is expired by the server
-          headers:
-            Set-Cookie:
-              description: Expired `sporthub_refresh` HttpOnly cookie.
-              schema:
-                type: string
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/forgot-password:
-    post:
-      tags: [Authentication]
-      operationId: requestPasswordReset
-      summary: Request a time-limited password reset challenge
-      description: Always returns an accepted response to avoid account enumeration.
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ForgotPasswordRequest'
-      responses:
-        '202':
-          description: Request accepted whether or not the account exists
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessageResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /auth/reset-password:
-    post:
-      tags: [Authentication]
-      operationId: resetPassword
-      summary: Set a new password using a valid reset challenge
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
-      responses:
-        '204':
-          description: Password updated and the reset challenge invalidated
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /users/me:
-    get:
-      tags: [Profile]
-      operationId: getCurrentUser
-      summary: Get the authenticated user's profile
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      responses:
-        '200':
-          description: Current profile
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserProfileResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-    patch:
-      tags: [Profile]
-      operationId: updateCurrentUser
-      summary: Update editable profile fields
-      description: Changing email or phone starts verification; roles and status cannot be changed here.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateProfileRequest'
-      responses:
-        '200':
-          description: Updated profile and any pending contact verification state
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserProfileResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  /owner-applications:
-    post:
-      tags: [Owner applications]
-      operationId: submitOwnerApplication
-      summary: Submit an owner application with the first facility profile
-      description: The Owner role is granted only after a later Admin approval workflow.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OwnerApplicationRequest'
-      responses:
-        '202':
-          description: Owner application accepted for review
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/CorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OwnerApplicationResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
-
-  /staff-bindings:
-    get:
-      tags: [Staff bindings]
-      operationId: listStaffBindings
-      summary: List staff bindings for a facility managed by the Owner
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - name: facilityId
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Facility staff bindings
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StaffBindingListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-    post:
-      tags: [Staff bindings]
-      operationId: createStaffBinding
-      summary: Link an existing account to a facility as Staff
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateStaffBindingRequest'
-      responses:
-        '201':
-          description: Staff binding created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StaffBindingResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  /staff-bindings/{bindingId}:
-    patch:
-      tags: [Staff bindings]
-      operationId: updateStaffBinding
-      summary: Update permissions or active state for a staff binding
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/BindingId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateStaffBindingRequest'
-      responses:
-        '200':
-          description: Staff binding updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StaffBindingResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    delete:
-      tags: [Staff bindings]
-      operationId: deactivateStaffBinding
-      summary: Remove Staff access to the facility without deleting the user account
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/BindingId'
-      responses:
-        '204':
-          description: Staff binding deactivated
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: JWT access token with a 15-minute lifetime; held in frontend memory.
-    refreshCookie:
-      type: apiKey
-      in: cookie
-      name: sporthub_refresh
-      description: Rotating refresh token cookie with a 7-day lifetime.
-
-  parameters:
-    CorrelationId:
-      name: X-Correlation-Id
-      in: header
-      required: false
-      description: Optional caller correlation ID; the Gateway generates one when absent or unsafe.
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 128
-        pattern: '^[A-Za-z0-9._-]+$'
-    BindingId:
-      name: bindingId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-
-  headers:
-    CorrelationId:
-      description: Correlation ID propagated through the request.
-      schema:
-        type: string
-    RefreshCookie:
-      description: |
-        `sporthub_refresh` cookie. Local HTTP development uses `HttpOnly; SameSite=Lax; Secure=false`.
-        HTTPS environments must use `HttpOnly; SameSite=Lax; Secure=true`. Max-Age is 604800 seconds.
-      schema:
-        type: string
-
-  responses:
-    BadRequest:
-      description: Request validation failed
-      content:
-        application/json:
-          schema:
-            $ref: './components/schemas.yaml#/ErrorResponse'
-    Unauthorized:
-      description: Authentication is missing, invalid or expired
-      content:
-        application/json:
-          schema:
-            $ref: './components/schemas.yaml#/ErrorResponse'
-    Forbidden:
-      description: Authenticated user lacks the required permission
-      content:
-        application/json:
-          schema:
-            $ref: './components/schemas.yaml#/ErrorResponse'
-    NotFound:
-      description: Requested resource was not found
-      content:
-        application/json:
-          schema:
-            $ref: './components/schemas.yaml#/ErrorResponse'
-    Conflict:
-      description: Request conflicts with current account state or unique data
-      content:
-        application/json:
-          schema:
-            $ref: './components/schemas.yaml#/ErrorResponse'
-    UnprocessableEntity:
-      description: Verification or business precondition failed
-      content:
-        application/json:
-          schema:
-            $ref: './components/schemas.yaml#/ErrorResponse'
-    TooManyRequests:
-      description: Rate limit exceeded
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-      content:
-        application/json:
-          schema:
-            $ref: './components/schemas.yaml#/ErrorResponse'
-
-  schemas:
-    RegisterRequest:
-      type: object
-      additionalProperties: false
-      required: [fullName, password]
-      anyOf:
-        - required: [email]
-        - required: [phone]
-      properties:
-        fullName:
-          type: string
-          minLength: 2
-          maxLength: 120
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        phone:
-          type: string
-          pattern: '^\+[1-9][0-9]{7,14}$'
-        password:
-          $ref: '#/components/schemas/NewPassword'
-
-    VerificationRequest:
-      type: object
-      additionalProperties: false
-      oneOf:
-        - required: [verificationToken]
-        - required: [challengeId, code]
-      properties:
-        verificationToken:
-          type: string
-          minLength: 32
-          maxLength: 2048
-        challengeId:
-          type: string
-          format: uuid
-        code:
-          type: string
-          pattern: '^[0-9]{6}$'
-
-    LoginRequest:
-      type: object
-      additionalProperties: false
-      required: [identifier, password]
-      properties:
-        identifier:
-          type: string
-          minLength: 3
-          maxLength: 254
-          description: Registered email address or E.164 phone number.
-        password:
-          type: string
-          minLength: 1
-          maxLength: 72
-
-    ForgotPasswordRequest:
-      type: object
-      additionalProperties: false
-      required: [identifier]
-      properties:
-        identifier:
-          type: string
-          minLength: 3
-          maxLength: 254
-          description: Registered email address or E.164 phone number.
-
-    ResetPasswordRequest:
-      type: object
-      additionalProperties: false
-      required: [challengeId, code, newPassword]
-      properties:
-        challengeId:
-          type: string
-          format: uuid
-        code:
-          type: string
-          pattern: '^[0-9]{6}$'
-        newPassword:
-          $ref: '#/components/schemas/NewPassword'
-
-    NewPassword:
-      type: string
-      minLength: 8
-      maxLength: 72
-      description: Plain password accepted only on TLS endpoints and never stored as-is.
-
-    UpdateProfileRequest:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        fullName:
-          type: string
-          minLength: 2
-          maxLength: 120
-        email:
-          type: string
-          format: email
-          maxLength: 254
-          description: A changed email remains pending until verified.
-        phone:
-          type: string
-          pattern: '^\+[1-9][0-9]{7,14}$'
-          description: A changed phone remains pending until verified.
-        avatarUrl:
-          type: string
-          format: uri
-          maxLength: 2048
-        dateOfBirth:
-          type: string
-          format: date
-
-    OwnerApplicationRequest:
-      type: object
-      additionalProperties: false
-      required: [ownerDetails, firstFacility]
-      properties:
-        ownerDetails:
-          $ref: '#/components/schemas/OwnerDetails'
-        firstFacility:
-          $ref: '#/components/schemas/FirstFacilityApplication'
-
-    OwnerDetails:
-      type: object
-      additionalProperties: false
-      required: [businessName]
-      properties:
-        businessName:
-          type: string
-          minLength: 2
-          maxLength: 255
-        taxCode:
-          type: string
-          minLength: 5
-          maxLength: 50
-        verificationDocumentObjectKeys:
-          type: array
-          minItems: 1
-          maxItems: 10
-          uniqueItems: true
-          items:
-            type: string
-            minLength: 1
-            maxLength: 500
-          description: Existing MinIO object keys; this endpoint does not upload files.
-
-    FirstFacilityApplication:
-      type: object
-      additionalProperties: false
-      required: [name, phone, address]
-      properties:
-        name:
-          type: string
-          minLength: 2
-          maxLength: 255
-        phone:
-          type: string
-          pattern: '^\+[1-9][0-9]{7,14}$'
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        description:
-          type: string
-          maxLength: 2000
-        address:
-          $ref: '#/components/schemas/AddressInput'
-        sportTypes:
-          type: array
-          minItems: 1
-          maxItems: 20
-          uniqueItems: true
-          items:
-            type: string
-            minLength: 2
-            maxLength: 80
-        imageObjectKeys:
-          type: array
-          maxItems: 20
-          uniqueItems: true
-          items:
-            type: string
-            minLength: 1
-            maxLength: 500
-
-    AddressInput:
-      type: object
-      additionalProperties: false
-      required: [province, district, ward, addressLine]
-      properties:
-        province:
-          type: string
-          minLength: 2
-          maxLength: 120
-        district:
-          type: string
-          minLength: 2
-          maxLength: 120
-        ward:
-          type: string
-          minLength: 2
-          maxLength: 120
-        addressLine:
-          type: string
-          minLength: 3
-          maxLength: 500
-        latitude:
-          type: number
-          format: double
-          minimum: -90
-          maximum: 90
-        longitude:
-          type: number
-          format: double
-          minimum: -180
-          maximum: 180
-
-    CreateStaffBindingRequest:
-      type: object
-      additionalProperties: false
-      required: [staffUserId, facilityId, permissions]
-      properties:
-        staffUserId:
-          type: string
-          format: uuid
-        facilityId:
-          type: string
-          format: uuid
-        permissions:
-          $ref: '#/components/schemas/PermissionNames'
-
-    UpdateStaffBindingRequest:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        permissions:
-          $ref: '#/components/schemas/PermissionNames'
-        active:
-          type: boolean
-
-    PermissionNames:
-      type: array
-      minItems: 1
-      maxItems: 50
-      uniqueItems: true
-      items:
-        type: string
-        pattern: '^[A-Z][A-Z0-9_]{2,63}$'
-      description: Permission names from the platform permission catalog; the exact catalog remains an open authorization decision.
-
-    RegisterResult:
-      type: object
-      required: [userId, accountStatus, verificationChallengeId, verificationExpiresAt]
-      properties:
-        userId:
-          type: string
-          format: uuid
-        accountStatus:
-          $ref: '#/components/schemas/AccountStatus'
-        verificationChallengeId:
-          type: string
-          format: uuid
-        verificationExpiresAt:
-          type: string
-          format: date-time
-
-    VerificationResult:
-      type: object
-      required: [userId, verified, accountStatus]
-      properties:
-        userId:
-          type: string
-          format: uuid
-        verified:
-          type: boolean
-          const: true
-        accountStatus:
-          $ref: '#/components/schemas/AccountStatus'
-
-    AuthResult:
-      type: object
-      required: [accessToken, tokenType, expiresIn, user]
-      properties:
-        accessToken:
-          type: string
-          minLength: 1
-          description: JWT access token. The frontend keeps this value in memory only.
-        tokenType:
-          type: string
-          const: Bearer
-        expiresIn:
-          type: integer
-          const: 900
-          description: Access-token lifetime in seconds.
-        user:
-          $ref: '#/components/schemas/UserProfile'
-
-    UserProfile:
-      type: object
-      required: [id, fullName, roles, status, emailVerified, phoneVerified, createdAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        fullName:
-          type: string
-        email:
-          type: string
-          format: email
-        phone:
-          type: string
-        avatarUrl:
-          type: string
-          format: uri
-        dateOfBirth:
-          type: string
-          format: date
-        roles:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items:
-            $ref: '#/components/schemas/Role'
-        status:
-          $ref: '#/components/schemas/AccountStatus'
-        emailVerified:
-          type: boolean
-        phoneVerified:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-
-    OwnerApplication:
-      type: object
-      required: [id, status, submittedAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        status:
-          type: string
-          enum: [PENDING]
-        submittedAt:
-          type: string
-          format: date-time
-
-    StaffBinding:
-      type: object
-      required: [id, staffUserId, facilityId, permissions, active, createdAt, updatedAt]
-      properties:
-        id:
-          type: string
-          format: uuid
-        staffUserId:
-          type: string
-          format: uuid
-        facilityId:
-          type: string
-          format: uuid
-        permissions:
-          $ref: '#/components/schemas/PermissionNames'
-        active:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    Role:
-      type: string
-      enum: [CUSTOMER, OWNER, STAFF, ADMIN]
-
-    AccountStatus:
-      type: string
-      enum: [PENDING_VERIFICATION, ACTIVE, SUSPENDED, LOCKED, DEACTIVATED]
-
-    RegisterResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: '#/components/schemas/RegisterResult'
-
-    VerificationResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: '#/components/schemas/VerificationResult'
-
-    AuthResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: '#/components/schemas/AuthResult'
-
-    UserProfileResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: '#/components/schemas/UserProfile'
-
-    OwnerApplicationResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: '#/components/schemas/OwnerApplication'
-
-    StaffBindingResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: '#/components/schemas/StaffBinding'
-
-    StaffBindingListResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          required: [data]
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/StaffBinding'
-
-    MessageResponse:
-      allOf:
-        - $ref: './components/schemas.yaml#/ApiResponse'
-        - type: object
-          properties:
-            data:
-              type: object
-              additionalProperties: false
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SportHub Identity API",
+    "version": "1.1.0",
+    "description": "Contract for SportHub account, authentication, profile, owner-application and\nfacility-scoped staff-binding capabilities. Authentication and profile are\nimplemented. Owner application and staff binding remain planned capabilities.\nPhone challenges require a configured SMS adapter; local/demo delivery may use\nMailpit and is explicitly labelled as a demo SMS transport.\n"
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication"
+    },
+    {
+      "name": "Profile"
+    },
+    {
+      "name": "Owner applications"
+    },
+    {
+      "name": "Staff bindings"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "registerAccount",
+        "summary": "Register a customer account pending verification",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created and verification challenge issued",
+            "headers": {
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/verify": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "verifyAccount",
+        "summary": "Verify an account using a code or verification link token",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification completed",
+            "headers": {
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "login",
+        "summary": "Authenticate an active account",
+        "description": "Returns a JWT access token with a 15-minute lifetime. The refresh token is\nnever returned in the JSON body; it is issued as a secure HttpOnly cookie.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication succeeded",
+            "headers": {
+              "Set-Cookie": {
+                "$ref": "#/components/headers/RefreshCookie"
+              },
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "refreshAccessToken",
+        "summary": "Rotate the refresh cookie and issue a new access token",
+        "security": [
+          {
+            "refreshCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access token refreshed and refresh cookie rotated",
+            "headers": {
+              "Set-Cookie": {
+                "$ref": "#/components/headers/RefreshCookie"
+              },
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "logout",
+        "summary": "Revoke the current refresh session",
+        "security": [
+          {
+            "refreshCookie": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session revoked; the refresh cookie is expired by the server",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Expired `sporthub_refresh` HttpOnly cookie.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "requestPasswordReset",
+        "summary": "Request a time-limited password reset challenge",
+        "description": "Always returns an accepted response to avoid account enumeration.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Request accepted whether or not the account exists",
+            "headers": {
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "resetPassword",
+        "summary": "Set a new password using a valid reset challenge",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Password updated and the reset challenge invalidated",
+            "headers": {
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "getCurrentUser",
+        "summary": "Get the authenticated user's profile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current profile",
+            "headers": {
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "updateCurrentUser",
+        "summary": "Update editable profile fields",
+        "description": "Changing email or phone starts verification; roles and status cannot be changed here.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current profile; contact changes remain pending until verified. Read contact-challenges for own OTP metadata.",
+            "headers": {
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "description": "Contact verification request cooldown"
+          }
+        }
+      }
+    },
+    "/owner-applications": {
+      "post": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "submitOwnerApplication",
+        "summary": "Submit an owner application with the first facility profile",
+        "description": "The Owner role is granted only after a later Admin approval workflow.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerApplicationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Owner application accepted for review",
+            "headers": {
+              "X-Correlation-Id": {
+                "$ref": "#/components/headers/CorrelationId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          }
+        }
+      }
+    },
+    "/staff-bindings": {
+      "get": {
+        "tags": [
+          "Staff bindings"
+        ],
+        "operationId": "listStaffBindings",
+        "summary": "List staff bindings for a facility managed by the Owner",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          },
+          {
+            "name": "facilityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Facility staff bindings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffBindingListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Staff bindings"
+        ],
+        "operationId": "createStaffBinding",
+        "summary": "Link an existing account to a facility as Staff",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffBindingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Staff binding created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffBindingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/staff-bindings/{bindingId}": {
+      "patch": {
+        "tags": [
+          "Staff bindings"
+        ],
+        "operationId": "updateStaffBinding",
+        "summary": "Update permissions or active state for a staff binding",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          },
+          {
+            "$ref": "#/components/parameters/BindingId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStaffBindingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff binding updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffBindingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Staff bindings"
+        ],
+        "operationId": "deactivateStaffBinding",
+        "summary": "Remove Staff access to the facility without deleting the user account",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CorrelationId"
+          },
+          {
+            "$ref": "#/components/parameters/BindingId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Staff binding deactivated"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/users/me/access": {
+      "get": {
+        "operationId": "getCurrentAccess",
+        "parameters": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AccessView"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid session"
+          },
+          "403": {
+            "description": "Outside facility scope"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/staff-bindings/facilities/{facilityId}": {
+      "get": {
+        "operationId": "getFacilityStaff",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AssignedStaff"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid session"
+          },
+          "403": {
+            "description": "Outside facility scope"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "post": {
+        "operationId": "assignFacilityStaff",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AssignedStaff"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid session"
+          },
+          "403": {
+            "description": "Outside facility scope"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffAssignmentInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/staff-bindings/facilities/{facilityId}/{bindingId}": {
+      "delete": {
+        "operationId": "revokeFacilityStaff",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "bindingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "401": {
+            "description": "Invalid session"
+          },
+          "403": {
+            "description": "Outside facility scope"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/users/me/contact-challenges": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "getOwnContactChallenges",
+        "summary": "List own pending email and phone verification requests",
+        "description": "Safe challenge metadata only. Existing login contact remains unchanged until verification succeeds. Expired requests stay visible for resend.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own contact verification state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChallengeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/me/contact-challenges/{channel}/resend": {
+      "post": {
+        "tags": [
+          "Profile"
+        ],
+        "operationId": "resendOwnContactChallenge",
+        "summary": "Resend verification for an own pending contact change",
+        "description": "At least 60 seconds between requests. Supersedes previous codes for the channel. No pending recipient can be supplied by the caller.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "EMAIL",
+                "PHONE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own contact verification state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactChallengeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "description": "Wait until resendAfter before requesting another code"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token with a 15-minute lifetime; held in frontend memory."
+      },
+      "refreshCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sporthub_refresh",
+        "description": "Rotating refresh token cookie with a 7-day lifetime."
+      }
+    },
+    "parameters": {
+      "CorrelationId": {
+        "name": "X-Correlation-Id",
+        "in": "header",
+        "required": false,
+        "description": "Optional caller correlation ID; the Gateway generates one when absent or unsafe.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        }
+      },
+      "BindingId": {
+        "name": "bindingId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "headers": {
+      "CorrelationId": {
+        "description": "Correlation ID propagated through the request.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "RefreshCookie": {
+        "description": "`sporthub_refresh` cookie. Local HTTP development uses `HttpOnly; SameSite=Lax; Secure=false`.\nHTTPS environments must use `HttpOnly; SameSite=Lax; Secure=true`. Max-Age is 604800 seconds.\n",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication is missing, invalid or expired",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated user lacks the required permission",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Requested resource was not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Request conflicts with current account state or unique data",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      },
+      "UnprocessableEntity": {
+        "description": "Verification or business precondition failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fullName",
+          "password"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "phone"
+            ]
+          }
+        ],
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+[1-9][0-9]{7,14}$"
+          },
+          "password": {
+            "$ref": "#/components/schemas/NewPassword"
+          }
+        }
+      },
+      "VerificationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "verificationToken"
+            ]
+          },
+          {
+            "required": [
+              "challengeId",
+              "code"
+            ]
+          }
+        ],
+        "properties": {
+          "verificationToken": {
+            "type": "string",
+            "minLength": 32,
+            "maxLength": 2048
+          },
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier",
+          "password"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 254,
+            "description": "Registered email address or E.164 phone number."
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 72
+          }
+        }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "identifier"
+        ],
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 254,
+            "description": "Registered email address or E.164 phone number."
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "challengeId",
+          "code",
+          "newPassword"
+        ],
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          },
+          "newPassword": {
+            "$ref": "#/components/schemas/NewPassword"
+          }
+        }
+      },
+      "NewPassword": {
+        "type": "string",
+        "minLength": 8,
+        "maxLength": 72,
+        "description": "Plain password accepted only on TLS endpoints and never stored as-is."
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "A changed email remains pending until verified.",
+            "minLength": 3
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+[1-9][0-9]{7,14}$",
+            "description": "A changed phone remains pending until verified."
+          },
+          "avatarUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "OwnerApplicationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ownerDetails",
+          "firstFacility"
+        ],
+        "properties": {
+          "ownerDetails": {
+            "$ref": "#/components/schemas/OwnerDetails"
+          },
+          "firstFacility": {
+            "$ref": "#/components/schemas/FirstFacilityApplication"
+          }
+        }
+      },
+      "OwnerDetails": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "businessName"
+        ],
+        "properties": {
+          "businessName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 255
+          },
+          "taxCode": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 50
+          },
+          "verificationDocumentObjectKeys": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "description": "Existing MinIO object keys; this endpoint does not upload files."
+          }
+        }
+      },
+      "FirstFacilityApplication": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "phone",
+          "address"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+[1-9][0-9]{7,14}$"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressInput"
+          },
+          "sportTypes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80
+            }
+          },
+          "imageObjectKeys": {
+            "type": "array",
+            "maxItems": 20,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        }
+      },
+      "AddressInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "province",
+          "district",
+          "ward",
+          "addressLine"
+        ],
+        "properties": {
+          "province": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "district": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "ward": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "addressLine": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "minimum": -180,
+            "maximum": 180
+          }
+        }
+      },
+      "CreateStaffBindingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "staffUserId",
+          "facilityId",
+          "permissions"
+        ],
+        "properties": {
+          "staffUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/PermissionNames"
+          }
+        }
+      },
+      "UpdateStaffBindingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "permissions": {
+            "$ref": "#/components/schemas/PermissionNames"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PermissionNames": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 50,
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "description": "Permission names from the platform permission catalog; the exact catalog remains an open authorization decision."
+      },
+      "RegisterResult": {
+        "type": "object",
+        "required": [
+          "userId",
+          "accountStatus",
+          "verificationChallengeId",
+          "verificationExpiresAt"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountStatus": {
+            "$ref": "#/components/schemas/AccountStatus"
+          },
+          "verificationChallengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verificationExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "VerificationResult": {
+        "type": "object",
+        "required": [
+          "userId",
+          "verified",
+          "accountStatus"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "verified": {
+            "type": "boolean",
+            "const": true
+          },
+          "accountStatus": {
+            "$ref": "#/components/schemas/AccountStatus"
+          }
+        }
+      },
+      "AuthResult": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "user"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "minLength": 1,
+            "description": "JWT access token. The frontend keeps this value in memory only."
+          },
+          "tokenType": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "const": 900,
+            "description": "Access-token lifetime in seconds."
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserProfile"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "required": [
+          "id",
+          "fullName",
+          "roles",
+          "status",
+          "emailVerified",
+          "phoneVerified",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date"
+          },
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "phoneVerified": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OwnerApplication": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "submittedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StaffBinding": {
+        "type": "object",
+        "required": [
+          "id",
+          "staffUserId",
+          "facilityId",
+          "permissions",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "staffUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/PermissionNames"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "CUSTOMER",
+          "OWNER",
+          "STAFF",
+          "ADMIN"
+        ]
+      },
+      "AccountStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_VERIFICATION",
+          "ACTIVE",
+          "SUSPENDED",
+          "LOCKED",
+          "DEACTIVATED"
+        ]
+      },
+      "RegisterResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/RegisterResult"
+              }
+            }
+          }
+        ]
+      },
+      "VerificationResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/VerificationResult"
+              }
+            }
+          }
+        ]
+      },
+      "AuthResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/AuthResult"
+              }
+            }
+          }
+        ]
+      },
+      "UserProfileResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/UserProfile"
+              }
+            }
+          }
+        ]
+      },
+      "OwnerApplicationResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/OwnerApplication"
+              }
+            }
+          }
+        ]
+      },
+      "StaffBindingResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/StaffBinding"
+              }
+            }
+          }
+        ]
+      },
+      "StaffBindingListResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/StaffBinding"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "MessageResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        ]
+      },
+      "AssignedPermission": {
+        "type": "string",
+        "enum": [
+          "BOOKING_READ",
+          "BOOKING_CREATE_COUNTER",
+          "BOOKING_CHECK_IN",
+          "BOOKING_COMPLETE",
+          "SCHEDULE_READ"
+        ]
+      },
+      "FacilityBinding": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignedPermission"
+            }
+          }
+        },
+        "required": [
+          "facilityId",
+          "permissions"
+        ]
+      },
+      "AccessView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CUSTOMER",
+                "OWNER",
+                "STAFF",
+                "ADMIN"
+              ]
+            }
+          },
+          "facilityBindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacilityBinding"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "roles",
+          "facilityBindings"
+        ]
+      },
+      "StaffAssignmentInput": {
+        "type": "object",
+        "properties": {
+          "identifier": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/AssignedPermission"
+            }
+          }
+        },
+        "required": [
+          "identifier",
+          "permissions"
+        ]
+      },
+      "AssignedStaff": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignedPermission"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "facilityId",
+          "userId",
+          "fullName",
+          "email",
+          "active",
+          "permissions"
+        ]
+      },
+      "ContactChallenge": {
+        "type": "object",
+        "required": [
+          "id",
+          "channel",
+          "recipient",
+          "expiresAt",
+          "resendAfter",
+          "usable"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "EMAIL",
+              "PHONE"
+            ]
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resendAfter": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ContactChallengeResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ContactChallenge"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ContactChallengeListResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactChallenge"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
