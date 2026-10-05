@@ -14,6 +14,10 @@ Resolved by explicit user approval on 2026-10-05: `BOOKING_READ`, `BOOKING_CREAT
 
 The requirements treat the first facility profile as part of an Owner application, while target architecture assigns facility data to Facility Service. Before implementation, the team must decide whether Identity orchestrates the application, a dedicated application workflow owns it, or the services coordinate through an explicit saga. No cross-service database access is permitted.
 
+## Admin account hierarchy
+
+Account controls use the approved ADMIN role. A reasoned change to ordinary CUSTOMER/OWNER/STAFF accounts revokes all sessions and records immutable before/after audit. Self changes and changes to an existing ADMIN target are rejected. Detailed Root Admin/equal-rank rules remain BLOCKED_RULE until that hierarchy is approved; no extra role labels are introduced. Read-only monitoring/reporting can proceed.
+
 ## Identity role persistence
 
 Resolved by the required multi-role implementation: Identity V2 introduces `user_roles` and profiles; V3 supports independent email/phone registration and verification. Existing V1 is preserved. Only CUSTOMER, OWNER, STAFF and ADMIN are used.

@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
         scanBasePackages = {"com.sporthub.identity", "com.sporthub.common"},
         exclude = UserDetailsServiceAutoConfiguration.class)
 @ConfigurationPropertiesScan("com.sporthub.identity.config")
+@org.springframework.scheduling.annotation.EnableScheduling
 public class IdentityServiceApplication {
 
     public static void main(String[] args) {

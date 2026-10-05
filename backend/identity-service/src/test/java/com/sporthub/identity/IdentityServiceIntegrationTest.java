@@ -40,6 +40,7 @@ import static org.mockito.Mockito.reset;
         "sporthub.identity.frontend-base-url=http://localhost:3000",
         "sporthub.identity.mail-from=no-reply@sporthub.local",
         "sporthub.identity.secure-cookie=false"
+        ,"sporthub.identity.notification-delay-ms=3600000","sporthub.identity.admin-expiry-delay-ms=3600000"
 })
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class IdentityServiceIntegrationTest {
@@ -78,6 +79,8 @@ class IdentityServiceIntegrationTest {
     @Autowired org.springframework.test.web.servlet.MockMvc http;
     @Autowired com.sporthub.identity.service.SessionValidationService sessionValidation;
     @Autowired com.sporthub.identity.security.JwtService jwtService;
+    @Autowired AdminAccountService adminAccounts;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockBean MailDeliveryService mailDelivery;
 
     private final Map<String, String> verificationCodes = new ConcurrentHashMap<>();
@@ -244,6 +247,25 @@ class IdentityServiceIntegrationTest {
         return userRepository.findById(result.userId()).orElseThrow();
     }
 
+    @Test
+    void adminLockAndRoleChangeRevokeEverySessionAndAuditCannotBeModified() {
+        var admin=activate(uniqueEmail("admin-controls"));admin.getRoles().add(Role.ADMIN);userRepository.saveAndFlush(admin);
+        var adminSession=authService.login(new LoginRequest(admin.getEmail(),"Password123!"),metadata);var actor=jwtService.parseAccessToken(adminSession.response().accessToken());
+        var user=activate(uniqueEmail("lock-target"));var session=authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata);var principal=jwtService.parseAccessToken(session.response().accessToken());
+        var locked=adminAccounts.lock(user.getId(),new com.sporthub.identity.web.dto.AdminAccountDtos.LockInput("Test policy violation","SEVEN_DAYS"),actor,metadata);assertThat(locked.status()).isEqualTo(AccountStatus.LOCKED);assertThat(locked.lockedUntil()).isAfter(Instant.now());
+        assertThatThrownBy(()->sessionValidation.validate(principal)).isInstanceOf(IllegalArgumentException.class);assertThatThrownBy(()->authService.refresh(session.refreshToken(),metadata)).isInstanceOf(IdentityException.class);
+        adminAccounts.unlock(user.getId(),new com.sporthub.identity.web.dto.AdminAccountDtos.Reason("Reviewed"),actor,metadata);assertThatThrownBy(()->sessionValidation.validate(principal)).isInstanceOf(IllegalArgumentException.class);
+        var newSession=authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata);adminAccounts.roles(user.getId(),new com.sporthub.identity.web.dto.AdminAccountDtos.RolesInput(java.util.Set.of(Role.CUSTOMER,Role.STAFF),"Assigned staff role"),actor,metadata);
+        assertThatThrownBy(()->sessionValidation.validate(jwtService.parseAccessToken(newSession.response().accessToken()))).isInstanceOf(IllegalArgumentException.class);
+        var detail=adminAccounts.detail(user.getId(),actor);assertThat(detail.account().roles()).contains(Role.CUSTOMER,Role.STAFF);assertThat(detail.audit()).extracting(com.sporthub.identity.web.dto.AdminAccountDtos.Audit::action).contains("ADMIN_ACCOUNT_LOCKED","ADMIN_ACCOUNT_UNLOCKED","ADMIN_ROLES_CHANGED");
+        assertThatThrownBy(()->jdbc.update("DELETE FROM audit_log WHERE entity_type='USER' AND entity_id=?",user.getId())).isInstanceOf(org.springframework.dao.DataAccessException.class);
+        assertThatThrownBy(()->adminAccounts.search(null,null,null,principal)).isInstanceOf(IdentityException.class);assertThatThrownBy(()->adminAccounts.lock(admin.getId(),new com.sporthub.identity.web.dto.AdminAccountDtos.LockInput("Self","PERMANENT"),actor,metadata)).isInstanceOf(IdentityException.class);
+    }
+    @Test
+    void expiredTemporaryLockAllowsFreshLoginAndKeepsSessionsRevoked(){
+        var admin=activate(uniqueEmail("expiry-admin"));admin.getRoles().add(Role.ADMIN);userRepository.saveAndFlush(admin);var actor=new com.sporthub.identity.security.AuthenticatedUser(admin.getId(),admin.getEmail(),java.util.Set.of(Role.ADMIN),UUID.randomUUID());var user=activate(uniqueEmail("expiry-target"));var session=authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata);
+        adminAccounts.lock(user.getId(),new com.sporthub.identity.web.dto.AdminAccountDtos.LockInput("Temporary","SEVEN_DAYS"),actor,metadata);jdbc.update("UPDATE users SET locked_until=NOW()-interval '1 second' WHERE id=?",user.getId());adminAccounts.expireLocks();assertThat(userRepository.findById(user.getId()).orElseThrow().getStatus()).isEqualTo(AccountStatus.ACTIVE);assertThatThrownBy(()->authService.refresh(session.refreshToken(),metadata)).isInstanceOf(IdentityException.class);assertThat(authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata).response().user().status()).isEqualTo(AccountStatus.ACTIVE);
+    }
     @Test
     void phoneOnlyRegistrationVerifiesAndCanLogin() {
         String phone = uniquePhone();

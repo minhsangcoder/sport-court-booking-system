@@ -39,6 +39,8 @@ public class MailDeliveryService {
                 """.formatted(code, properties.frontendBaseUrl(), challengeId, expiresAt));
     }
 
+    public void sendNotification(String recipient,String subject,String body){send(recipient,subject,body);}
+
     private void send(String recipient, String subject, String body) {
         if (recipient.startsWith("+")) {
             if (!demoSmsEnabled) throw new com.sporthub.identity.exception.IdentityException(

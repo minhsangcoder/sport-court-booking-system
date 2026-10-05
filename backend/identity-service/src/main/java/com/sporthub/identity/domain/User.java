@@ -28,6 +28,7 @@ public class User {
     @Column(name = "phone_verified", nullable = false) private boolean phoneVerified;
     @Column(name = "last_login_at") private Instant lastLoginAt;
     @Column(name = "locked_at") private Instant lockedAt;
+    @Column(name = "locked_until") private Instant lockedUntil;
     @Column(name = "lock_reason", length = 500) private String lockReason;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;

@@ -29,11 +29,17 @@ class PaymentIntegrationTest {
  @Autowired PaymentService service;@Autowired PaymentRepository repo;@Autowired DemoPaymentProvider provider;@Autowired ObjectMapper json;
  @Autowired GroupRefundConsumer refunds;
  @Autowired TransferRefundConsumer transferRefunds;
+ @Autowired com.sporthub.payment.web.PaymentMonitoringController monitoring;
+ @MockBean com.sporthub.common.security.RemoteIdentity identity;
  @MockBean PayableClient payable;@MockBean ReliableOutbox outbox;
  Caller user;UUID booking;
  @BeforeEach void setup(){user=new Caller(UUID.randomUUID(),"Customer",Set.of("CUSTOMER"),Map.of());booking=UUID.randomUUID();when(payable.payable(eq(booking),isNull(),any())).thenReturn(json.valueToTree(Map.of("bookingId",booking,"payerId",user.id(),"amount",150000,"currency","VND","expiresAt",Instant.now().plusSeconds(600),"purpose","BOOKING")));}
  String key(){return UUID.randomUUID().toString();}
  Callback callback(Payment p,String status){return new Callback(p.id(),p.providerReference(),"TX-"+p.id(),p.amount(),p.currency(),status,Instant.now().getEpochSecond());}
+ @Test void monitoringRequiresAdminAndShowsVerifiedCallbackAndActualAggregates(){
+  var p=service.create(new CreatePayment(booking,null),key(),user,"token");var c=callback(p,"SUCCESS");service.callback(c,provider.sign(c));var request=new org.springframework.mock.web.MockHttpServletRequest();when(identity.current(request)).thenReturn(user);assertThatThrownBy(()->monitoring.detail(p.id(),request)).isInstanceOf(ForbiddenException.class);
+  when(identity.current(request)).thenReturn(new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of()));assertThat(monitoring.list(p.id().toString(),"SUCCESS",null,request).getData()).hasSize(1);assertThat((List<?>)monitoring.detail(p.id(),request).getData().get("callbacks")).hasSize(1);assertThat(monitoring.statistics(null,null,request).getData().get("orders")).isInstanceOf(List.class);
+ }
  @Test void transferPaymentEscrowAndRefundReviewRetainVerifiedPayer(){
   UUID acquisition=UUID.randomUUID(),seller=UUID.randomUUID();when(payable.transfer(eq(acquisition),any())).thenReturn(json.valueToTree(Map.of("bookingId",booking,"payerId",user.id(),"sellerId",seller,"acquisitionId",acquisition,"amount",100000,"currency","VND","expiresAt",Instant.now().plusSeconds(600),"purpose","TRANSFER")));
   String key=key();var input=new CreatePayment(booking,null,acquisition);var p=service.create(input,key,user,"token");assertThat(service.create(input,key,user,"token").id()).isEqualTo(p.id());var c=callback(p,"SUCCESS");service.callback(c,provider.sign(c));service.callback(c,provider.sign(c));var escrow=repo.jdbc().queryForList("SELECT * FROM transfer_escrow WHERE payment_id=?",p.id());assertThat(escrow).hasSize(1);assertThat(escrow.get(0).get("state")).isEqualTo("HELD_POLICY_BLOCKED");assertThat(escrow.get(0).get("seller_id")).isEqualTo(seller);

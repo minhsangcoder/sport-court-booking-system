@@ -30,9 +30,11 @@ class BookingIntegrationTest {
  @AfterAll static void stop(){if(postgres!=null)postgres.stop();}
  @Autowired BookingService service;@Autowired BookingRepository repo;@Autowired PaymentOutcomeConsumer consumer;@Autowired ObjectMapper json;
  @MockBean BookingDependencies dependencies;@MockBean Clock clock;
+ @MockBean com.sporthub.common.security.RemoteIdentity identity;
  @MockBean ReliableOutbox outbox;
  @Autowired GroupService groups;
  @Autowired TransferLeaseService transfers;
+ @Autowired com.sporthub.booking.web.BookingMonitoringController monitoring;
  Instant now=Instant.parse("2026-10-05T00:00:00Z"),start=now.plusSeconds(3600),end=now.plusSeconds(7200);
  UUID court,facility;Caller user;JsonNode quote;
  @BeforeEach void setup(){court=UUID.randomUUID();facility=UUID.randomUUID();user=customer();when(clock.instant()).thenReturn(now);when(clock.getZone()).thenReturn(ZoneOffset.UTC);
@@ -42,6 +44,11 @@ class BookingIntegrationTest {
  HoldInput input(){return new HoldInput(court,start,end,new BigDecimal("150000"));}
  String key(){return UUID.randomUUID().toString();}
  com.fasterxml.jackson.databind.JsonNode success(Booking b,UUID payment){return json.valueToTree(DomainEvent.create("payment.completed",1,"payment-service",payment,Map.of("bookingId",b.id(),"paymentId",payment,"payerId",user.id(),"amount",b.amount(),"currency","VND","status","SUCCESS","paidAt",now,"purpose","BOOKING")));}
+ @Test void adminMonitoringReportsRealDataWithoutGrantingUsageAndRejectsCustomers(){
+  var h=service.hold(input(),key(),user,"token",false);var b=service.create(new CreateInput(h.id(),null,null),key(),user,"token",false);consumer.apply(success(b,UUID.randomUUID()));var request=new org.springframework.mock.web.MockHttpServletRequest();when(identity.current(request)).thenReturn(user);assertThatThrownBy(()->monitoring.list(b.id(),null,null,request)).isInstanceOf(ForbiddenException.class);
+  var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());when(identity.current(request)).thenReturn(admin);assertThat(monitoring.list(b.id(),null,null,request).getData()).hasSize(1);assertThat(monitoring.detail(b.id(),request).getData().checkinToken()).isNull();assertThat(monitoring.statistics(null,null,request).getData().get("states")).isInstanceOf(List.class);
+  var owner=new Caller(UUID.randomUUID(),"Owner",Set.of("OWNER"),Map.of());when(identity.current(request)).thenReturn(owner);assertThat((List<?>)monitoring.ownerReport(facility,now.minusSeconds(86400),end.plusSeconds(86400),request).getData().get("courts")).hasSize(1);
+ }
  @Test void transferLeasePreservesSnapshotAndRevokesPreviousQrExactlyOnce(){
   var h=service.hold(input(),key(),user,"token",false);var b=service.create(new CreateInput(h.id(),null,null),key(),user,"token",false);consumer.apply(success(b,UUID.randomUUID()));
   when(clock.instant()).thenReturn(start.minusSeconds(600));String oldQr=service.detail(b.id(),user,"token").checkinToken();UUID listing=UUID.randomUUID(),acquisition=UUID.randomUUID();var buyer=customer();
