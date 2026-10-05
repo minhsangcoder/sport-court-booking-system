@@ -5,11 +5,12 @@ import { api,ApiError } from '@/lib/api'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import type { Facility,FacilityInput } from './types'
-export function FacilityForm({facility,onSaved}:{facility?:Facility;onSaved?:()=>void}){
+export function FacilityForm({facility,onSaved,redirectPath}:{facility?:Facility;onSaved?:()=>void;redirectPath?:string}){
  const router=useRouter();const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [fields,setFields]=useState<Record<string,string>>({})
  async function save(event:React.FormEvent<HTMLFormElement>){event.preventDefault();if(busy)return;setBusy(true);setError('');setFields({});const form=new FormData(event.currentTarget);const text=(name:string)=>String(form.get(name)??'').trim()
   const body:FacilityInput={name:text('name'),phone:text('phone'),addressLine:text('addressLine'),province:text('province'),district:text('district'),ward:text('ward'),description:text('description'),timezone:text('timezone'),amenities:text('amenities').split(',').map(x=>x.trim()).filter(Boolean)}
-  try{const saved=await api<Facility>(facility?`/owner/facilities/${facility.id}`:'/owner/facilities',{method:facility?'PUT':'POST',body:JSON.stringify(body)});onSaved?.();router.push(`/owner/facilities/${saved.id}`)}
+  body.latitude=facility?.latitude;body.longitude=facility?.longitude
+  try{const saved=await api<Facility>(facility?`/owner/facilities/${facility.id}`:'/owner/facilities',{method:facility?'PUT':'POST',body:JSON.stringify(body)});onSaved?.();router.push(redirectPath??`/owner/facilities/${saved.id}`)}
   catch(err){setError(err instanceof Error?err.message:'Không thể lưu cơ sở.');if(err instanceof ApiError)setFields(Object.fromEntries(err.fieldErrors.map(f=>[f.field,f.message])))}finally{setBusy(false)}
  }
  function field(name:keyof FacilityInput,label:string,max:number,required=true){return <label className="grid gap-2 text-sm font-medium">{label}<Input name={name} defaultValue={String(facility?.[name]??(name==='timezone'?'Asia/Ho_Chi_Minh':''))} maxLength={max} required={required} disabled={busy} aria-invalid={!!fields[name]}/>{fields[name]&&<span className="text-xs text-red-700">{fields[name]}</span>}</label>}

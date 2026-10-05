@@ -11,9 +11,9 @@ import { weekdays,type Hours,type ScheduleException } from './types'
 type Interval=Pick<Hours,'dayOfWeek'|'opensAt'|'closesAt'|'slotMinutes'>
 const defaultInterval:Interval={dayOfWeek:1,opensAt:'06:00',closesAt:'22:00',slotMinutes:60}
 export function SchedulePage(){
- const {facility}=useFacility();const hours=useApi<Hours[]>(`/schedules/facilities/${facility.id}/hours`)
+ const {facility,basePath}=useFacility();const hours=useApi<Hours[]>(`/schedules/facilities/${facility.id}/hours`)
  const courts=useApi<Court[]>(`/owner/facilities/${facility.id}/courts`);const [scope,setScope]=useState('')
- return <section className="space-y-6"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-2xl font-bold">Lịch mở cửa</h2><p className="mt-2 text-sm text-slate-500">Giờ theo {facility.timezone}. Sân dùng lịch cơ sở khi chưa có lịch riêng.</p></div><Link className="rounded-full bg-emerald-600 px-5 py-2 text-sm text-white" href={`/owner/facilities/${facility.id}/schedule/preview`}>Xem trước lịch và giá</Link></div>
+ return <section className="space-y-6"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-2xl font-bold">Lịch mở cửa</h2><p className="mt-2 text-sm text-slate-500">Giờ theo {facility.timezone}. Sân dùng lịch cơ sở khi chưa có lịch riêng.</p></div><Link className="rounded-full bg-emerald-600 px-5 py-2 text-sm text-white" href={`${basePath}/schedule/preview`}>Xem trước lịch và giá</Link></div>
   <label className="grid max-w-sm gap-2 text-sm">Phạm vi lịch<select className="rounded-lg border bg-white p-3" value={scope} onChange={e=>setScope(e.target.value)}><option value="">Toàn cơ sở</option>{courts.data?.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
   {(hours.error||courts.error)&&<p role="alert" className="text-red-700">{hours.error||courts.error}<button className="ml-3 underline" onClick={()=>{hours.reload();courts.reload()}}>Thử lại</button></p>}
   {hours.loading?<p role="status">Đang tải lịch…</p>:hours.data&&<HoursEditor key={scope+JSON.stringify(hours.data)} facilityId={facility.id} courtId={scope} initial={hours.data.filter(h=>(h.courtId||'')===scope)} reload={hours.reload}/>}

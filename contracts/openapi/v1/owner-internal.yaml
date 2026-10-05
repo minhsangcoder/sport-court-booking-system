@@ -1,0 +1,398 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SportHub private Owner onboarding coordination",
+    "version": "1.0.0",
+    "description": "No Gateway route. HMAC authenticates SERVICE|method|full /api/v1 path|epoch seconds|SHA-256(exact UTF-8 body), accepts timestamps within 300 seconds. Shared service key comes only from configuration, must be at least 32 characters. Body-bound signatures and idempotent operations permit safe retries; no user Bearer is persisted."
+  },
+  "paths": {
+    "/internal/owner-applications/committed": {
+      "servers": [
+        {
+          "url": "http://identity-service:8081/api/v1"
+        }
+      ],
+      "post": {
+        "operationId": "committedOwnerApplications",
+        "summary": "Return only application IDs with committed APPROVED state.",
+        "security": [
+          {
+            "serviceSignature": [],
+            "serviceTime": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommittedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service-owned data envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./components/schemas.yaml#/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed command"
+          },
+          "403": {
+            "description": "Invalid/expired signature or mismatched binding"
+          },
+          "409": {
+            "description": "State/readiness/conflicting preparation"
+          },
+          "503": {
+            "description": "Required dependency unavailable"
+          }
+        }
+      }
+    },
+    "/internal/owner-applications/{applicationId}/{command}": {
+      "servers": [
+        {
+          "url": "http://facility-service:8082/api/v1"
+        }
+      ],
+      "post": {
+        "operationId": "coordinateFirstFacility",
+        "summary": "Idempotent first-facility initialization, snapshot submission and review preparation. Prepared ACTIVE resources remain private until the Identity commit gate opens.",
+        "security": [
+          {
+            "serviceSignature": [],
+            "serviceTime": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FacilityCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service-owned data envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./components/schemas.yaml#/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed command"
+          },
+          "403": {
+            "description": "Invalid/expired signature or mismatched binding"
+          },
+          "409": {
+            "description": "State/readiness/conflicting preparation"
+          },
+          "503": {
+            "description": "Required dependency unavailable"
+          }
+        }
+      },
+      "parameters": [
+        {
+          "name": "applicationId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "command",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "create",
+              "own-view",
+              "view",
+              "submit",
+              "APPROVE",
+              "REJECT",
+              "SUPPLEMENT_REQUIRED"
+            ]
+          }
+        }
+      ]
+    },
+    "/internal/schedules/application-snapshot": {
+      "servers": [
+        {
+          "url": "http://schedule-service:8083/api/v1"
+        }
+      ],
+      "post": {
+        "operationId": "freezeApplicationConfiguration",
+        "summary": "Freeze or release first-facility schedule configuration under a local transaction lock.",
+        "security": [
+          {
+            "serviceSignature": [],
+            "serviceTime": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleSnapshotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service-owned data envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./components/schemas.yaml#/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed command"
+          },
+          "403": {
+            "description": "Invalid/expired signature or mismatched binding"
+          },
+          "409": {
+            "description": "State/readiness/conflicting preparation"
+          },
+          "503": {
+            "description": "Required dependency unavailable"
+          }
+        }
+      }
+    },
+    "/internal/owner-wallets/prepare": {
+      "servers": [
+        {
+          "url": "http://payment-service:8085/api/v1"
+        }
+      ],
+      "post": {
+        "operationId": "prepareOwnerWallet",
+        "summary": "Prepare the zero-balance wallet once; conflicting approval/application/commission is 409.",
+        "security": [
+          {
+            "serviceSignature": [],
+            "serviceTime": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletPrepareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service-owned data envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./components/schemas.yaml#/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed command"
+          },
+          "403": {
+            "description": "Invalid/expired signature or mismatched binding"
+          },
+          "409": {
+            "description": "State/readiness/conflicting preparation"
+          },
+          "503": {
+            "description": "Required dependency unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "serviceSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Service-Signature"
+      },
+      "serviceTime": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Service-Time",
+        "description": "Unix epoch seconds"
+      }
+    },
+    "schemas": {
+      "CommittedRequest": {
+        "type": "object",
+        "required": [
+          "applicationIds"
+        ],
+        "properties": {
+          "applicationIds": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "FacilityCommand": {
+        "type": "object",
+        "required": [
+          "facilityId",
+          "userId"
+        ],
+        "properties": {
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "facility": {
+            "$ref": "./facility.yaml#/components/schemas/FacilityInput"
+          }
+        },
+        "description": "Create requires facility. Review/view commands require actorId. Facility and applicant must match the immutable application binding."
+      },
+      "ScheduleSnapshotRequest": {
+        "type": "object",
+        "required": [
+          "applicationId",
+          "facilityId",
+          "timezone",
+          "courts"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "release": {
+            "type": "boolean",
+            "default": false
+          },
+          "courts": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "required": [
+                "courtId",
+                "sportCategoryId",
+                "enabled",
+                "maintenance"
+              ],
+              "properties": {
+                "courtId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sportCategoryId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "maintenance": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "startsAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "endsAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Signed Facility context. Freeze verifies configured hours/prices and future playable slots, then serializes writes. release=true reopens supplement/rejected configuration; empty court list is allowed only for release."
+      },
+      "WalletPrepareRequest": {
+        "type": "object",
+        "required": [
+          "applicationId",
+          "userId",
+          "commissionPercent"
+        ],
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "commissionPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 0.01
+          }
+        },
+        "description": "Idempotent zero-balance VND wallet and logical beneficiary reference only; no payout/settlement."
+      }
+    }
+  }
+}

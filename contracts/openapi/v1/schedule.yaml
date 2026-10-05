@@ -3,7 +3,7 @@
   "info": {
     "title": "SportHub Schedule and Pricing",
     "version": "1.0.0",
-    "description": "Facility ownership is checked through REST. Preview evaluates schedule eligibility only; Booking owns occupancy. Configuration history is retained; equal price precedence blocks quoting."
+    "description": "Facility ownership is checked through REST. Preview evaluates schedule eligibility only; Booking owns occupancy. Configuration history is retained; equal price precedence blocks quoting. Scoped first-facility applicants can configure their own draft/supplement schedules. Submitted application configuration is frozen locally; privileged writes resume only after Identity commits approval. Assigned Staff with SCHEDULE_READ retain read access and cannot write pricing."
   },
   "servers": [
     {

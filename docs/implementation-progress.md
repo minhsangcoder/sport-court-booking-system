@@ -31,6 +31,7 @@ Technical tracking only. `Document/` remains read-only and authoritative for bus
 ## Verification
 
 - Owner onboarding backend resume: full `mvn -o package` PASS, 76 tests, zero failures/errors/skips (Identity 19 lifecycle/security/race tests; Facility 9; Schedule 5; Payment 8; four additional migration tests; existing Common/Gateway/Booking/Transfer regressions). Each of Identity V6, Facility V7, Schedule V3 and Payment V5 passes installation in an empty dedicated schema, upgrade from its previous version, Flyway validate and zero failed history. Demo databases are not changed by these tests. Runtime images and Owner frontend verification are still pending.
+- Owner onboarding frontend/contracts: separate Customer apply/status/legal/facility workspace and Admin queue/detail/review pages use real Gateway APIs. Facility workspace components retain the existing design and limit applicant navigation to the registration configuration. `pnpm lint`, `pnpm typecheck`, `pnpm build` PASS. Identity/Facility/Schedule and new private `owner-internal` contracts validate with pinned generator 7.15.0. Runtime/browser/E2E proof remains pending.
 
 - Baseline checkout: `0fa3181ba42e150c35fc63a07b42f8c435e1924a`.
 - Verification commands and results will be recorded per milestone; no feature is DONE from code existence alone.

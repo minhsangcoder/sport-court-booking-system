@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SportHub Identity API",
-    "version": "1.1.0",
-    "description": "Contract for SportHub account, authentication, profile, owner-application and\nfacility-scoped staff-binding capabilities. Authentication and profile are\nimplemented. Owner application and staff binding remain planned capabilities.\nPhone challenges require a configured SMS adapter; local/demo delivery may use\nMailpit and is explicitly labelled as a demo SMS transport.\n"
+    "version": "1.2.0",
+    "description": "Implemented authentication, profile, durable first-facility Owner applications and facility-scoped Staff bindings. Protected application reads are uncached and Admin detail reads are audited. Private signed service coordination is documented in owner-internal.yaml and has no Gateway route."
   },
   "servers": [
     {
@@ -459,41 +459,63 @@
       }
     },
     "/owner-applications": {
-      "post": {
+      "get": {
         "tags": [
           "Owner applications"
         ],
-        "operationId": "submitOwnerApplication",
-        "summary": "Submit an owner application with the first facility profile",
-        "description": "The Owner role is granted only after a later Admin approval workflow.",
+        "operationId": "listOwnOwnerApplications",
+        "summary": "List own application statuses",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/CorrelationId"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/OwnerApplicationRequest"
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationListResponse"
+                }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         },
+        "description": "Authenticated applicant scope enforced by backend. "
+      },
+      "post": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "createOwnerApplicationDraft",
+        "summary": "Create a draft and initialize the first private facility",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
-          "202": {
-            "description": "Owner application accepted for review",
-            "headers": {
-              "X-Correlation-Id": {
-                "$ref": "#/components/headers/CorrelationId"
-              }
-            },
+          "201": {
+            "description": "Success; Cache-Control: no-store",
             "content": {
               "application/json": {
                 "schema": {
@@ -508,11 +530,28 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
           "409": {
             "$ref": "#/components/responses/Conflict"
           },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntity"
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "Authenticated applicant scope enforced by backend. Verified active CUSTOMER without OWNER. Only one open application; rejection permits a new application. Facility initialization can be retried if a dependency is unavailable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerApplicationRequest"
+              }
+            }
           }
         }
       }
@@ -984,6 +1023,481 @@
           }
         }
       }
+    },
+    "/owner-applications/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "getOwnOwnerApplication",
+        "summary": "Get own protected application detail",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "Authenticated applicant scope enforced by backend. "
+      }
+    },
+    "/owner-applications/{id}/initialize": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "initializeOwnerApplicationFacility",
+        "summary": "Retry first-facility initialization",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "Authenticated applicant scope enforced by backend. "
+      }
+    },
+    "/owner-applications/{id}/legal": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "put": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "updateOwnerApplicationLegal",
+        "summary": "Update legal data in draft or supplement state",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "Authenticated applicant scope enforced by backend. ",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerApplicationLegal"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/owner-applications/{id}/submit": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "submitOwnerApplication",
+        "summary": "Freeze and submit the first-facility application",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "Authenticated applicant scope enforced by backend. "
+      }
+    },
+    "/admin/owner-applications/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "getAdminOwnerApplication",
+        "summary": "Read protected detail and append an access audit",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "ADMIN role enforced by backend. "
+      }
+    },
+    "/admin/owner-applications/{id}/decision": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "decideOwnerApplication",
+        "summary": "Approve, reject or request supplement",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "ADMIN role enforced by backend. A repeated identical approval is idempotent. A conflicting decision is rejected. APPROVED revokes prior sessions: sign in again for current OWNER authorization.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerApplicationDecision"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/owner-applications/{id}/retry": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "retryOwnerApplicationDecision",
+        "summary": "Retry a durable in-progress operation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "ADMIN role enforced by backend. "
+      }
+    },
+    "/admin/owner-applications": {
+      "get": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "listAdminOwnerApplications",
+        "summary": "Review queue ordered oldest submission first",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        },
+        "description": "ADMIN role enforced by backend. ",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            },
+            "description": "Business, facility, account name or phone."
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/OwnerApplicationState"
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1109,6 +1623,16 @@
             }
           }
         },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "./components/schemas.yaml#/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Protected application data key or a required service is unavailable. No private data is returned.",
         "content": {
           "application/json": {
             "schema": {
@@ -1289,101 +1813,16 @@
       },
       "OwnerApplicationRequest": {
         "type": "object",
-        "additionalProperties": false,
         "required": [
-          "ownerDetails",
-          "firstFacility"
+          "legal",
+          "facility"
         ],
         "properties": {
-          "ownerDetails": {
-            "$ref": "#/components/schemas/OwnerDetails"
+          "legal": {
+            "$ref": "#/components/schemas/OwnerApplicationLegal"
           },
-          "firstFacility": {
-            "$ref": "#/components/schemas/FirstFacilityApplication"
-          }
-        }
-      },
-      "OwnerDetails": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "businessName"
-        ],
-        "properties": {
-          "businessName": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 255
-          },
-          "taxCode": {
-            "type": "string",
-            "minLength": 5,
-            "maxLength": 50
-          },
-          "verificationDocumentObjectKeys": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 10,
-            "uniqueItems": true,
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 500
-            },
-            "description": "Existing MinIO object keys; this endpoint does not upload files."
-          }
-        }
-      },
-      "FirstFacilityApplication": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "name",
-          "phone",
-          "address"
-        ],
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 255
-          },
-          "phone": {
-            "type": "string",
-            "pattern": "^\\+[1-9][0-9]{7,14}$"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "maxLength": 254
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 2000
-          },
-          "address": {
-            "$ref": "#/components/schemas/AddressInput"
-          },
-          "sportTypes": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 20,
-            "uniqueItems": true,
-            "items": {
-              "type": "string",
-              "minLength": 2,
-              "maxLength": 80
-            }
-          },
-          "imageObjectKeys": {
-            "type": "array",
-            "maxItems": 20,
-            "uniqueItems": true,
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 500
-            }
+          "facility": {
+            "$ref": "#/components/schemas/OwnerApplicationFacility"
           }
         }
       },
@@ -1613,23 +2052,64 @@
         "type": "object",
         "required": [
           "id",
-          "status",
-          "submittedAt"
+          "userId",
+          "facilityId",
+          "businessName",
+          "facilityName",
+          "state"
         ],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
-          "status": {
+          "userId": {
             "type": "string",
-            "enum": [
-              "PENDING"
-            ]
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "businessName": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "facilityName": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "state": {
+            "$ref": "#/components/schemas/OwnerApplicationState"
           },
           "submittedAt": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1200
+          },
+          "commissionPercent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100
+          },
+          "lastError": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 300
           }
         }
       },
@@ -1771,9 +2251,6 @@
           },
           {
             "type": "object",
-            "required": [
-              "data"
-            ],
             "properties": {
               "data": {
                 "$ref": "#/components/schemas/OwnerApplication"
@@ -2032,6 +2509,310 @@
             "type": "string"
           }
         }
+      },
+      "OwnerApplicationState": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "SUBMITTING",
+          "PENDING_APPROVAL",
+          "SUPPLEMENT_REQUIRED",
+          "DECIDING",
+          "APPROVING",
+          "APPROVED",
+          "REJECTED"
+        ],
+        "description": "SUBMITTING, DECIDING and APPROVING are durable processing states; retries preserve the original operation. Only APPROVED opens publication and grants OWNER."
+      },
+      "OwnerApplicationLegal": {
+        "type": "object",
+        "properties": {
+          "representativeName": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "identityNumber": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "businessName": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "businessLicense": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "taxCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "bankName": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "bankAccountHolder": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "bankAccountNumber": {
+            "type": "string",
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "representativeName",
+          "identityNumber",
+          "businessName",
+          "bankName",
+          "bankAccountHolder",
+          "bankAccountNumber"
+        ],
+        "description": "Protected legal data. Encrypted at rest, available only to the applicant and audited ADMIN detail reads; never present in list/public responses."
+      },
+      "OwnerApplicationFacility": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "addressLine": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "province": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "district": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "ward": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 5000
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "amenities": {
+            "type": "array",
+            "maxItems": 30,
+            "items": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        },
+        "required": [
+          "name",
+          "phone",
+          "addressLine",
+          "province",
+          "district",
+          "ward",
+          "timezone",
+          "latitude",
+          "longitude"
+        ]
+      },
+      "OwnerApplicationFacilityDetail": {
+        "type": "object",
+        "properties": {
+          "facility": {
+            "$ref": "./facility.yaml#/components/schemas/FacilityView"
+          },
+          "courts": {
+            "type": "array",
+            "items": {
+              "$ref": "./facility.yaml#/components/schemas/CourtView"
+            }
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "./facility.yaml#/components/schemas/FacilityReview"
+            }
+          },
+          "audit": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "possibleDuplicates": {
+            "type": "array",
+            "items": {
+              "$ref": "./facility.yaml#/components/schemas/FacilityView"
+            }
+          }
+        },
+        "required": [
+          "facility",
+          "courts",
+          "reviews"
+        ]
+      },
+      "OwnerApplicationDetail": {
+        "type": "object",
+        "required": [
+          "application",
+          "legal",
+          "facility",
+          "history",
+          "audit"
+        ],
+        "properties": {
+          "application": {
+            "$ref": "#/components/schemas/OwnerApplication"
+          },
+          "legal": {
+            "$ref": "#/components/schemas/OwnerApplicationLegal"
+          },
+          "facility": {
+            "$ref": "#/components/schemas/OwnerApplicationFacilityDetail"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "submittedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "facilitySnapshot": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "audit": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "actorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "details": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "OwnerApplicationDecision": {
+        "type": "object",
+        "required": [
+          "action",
+          "reason"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "REJECT",
+              "SUPPLEMENT_REQUIRED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200,
+            "description": "At least 20 trimmed characters for rejection/supplement."
+          },
+          "commissionPercent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100,
+            "multipleOf": 0.01,
+            "description": "Required explicit Admin input for APPROVE; no default commission."
+          }
+        }
+      },
+      "OwnerApplicationDetailResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/OwnerApplicationDetail"
+              }
+            }
+          }
+        ]
+      },
+      "OwnerApplicationListResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OwnerApplication"
+                }
+              }
+            }
+          }
+        ]
       }
     }
   }
