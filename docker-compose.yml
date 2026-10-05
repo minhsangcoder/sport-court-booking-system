@@ -127,6 +127,7 @@ services:
       IDENTITY_DB_URL: jdbc:postgresql://postgres:5432/identity_db
       MAIL_HOST: mailpit
       DEMO_SMS_ENABLED: ${DEMO_SMS_ENABLED:-false}
+      FRONTEND_BASE_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -340,6 +341,12 @@ services:
     depends_on:
       api-gateway:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/ > /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
     networks: [sporthub]
 
 networks:
