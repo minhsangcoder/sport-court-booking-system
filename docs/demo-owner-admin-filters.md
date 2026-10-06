@@ -25,7 +25,7 @@ Text is trimmed and blank input is absent. SQL wildcard characters match literal
 
 ## Security limitation
 
-UC 8.2 names legal representative search. That name is encrypted with the other legal data and is different from the plaintext account full name. Search supports existing account fields; it does not decrypt the queue, scan ciphertext as plaintext, create plaintext copies or expose legal data in summary responses. Authorized audited detail views still display the legal representative. Encrypted-name search needs a separate approved security/search design if required later.
+Canonical `base-bussines.pdf` UC-8.2 requires status filtering and protected detail, not representative-name search. Extended filters are useful implementation enhancements. That name is encrypted with the other legal data and is different from the plaintext account full name. Search supports existing account fields; it does not decrypt the queue, scan ciphertext as plaintext, create plaintext copies or expose legal data in summary responses. Authorized audited detail views still display the legal representative. Encrypted-name search needs a separate approved security/search design if required later.
 
 ## Verify and prepare private fixtures
 

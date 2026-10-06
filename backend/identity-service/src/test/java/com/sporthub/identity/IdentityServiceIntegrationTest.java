@@ -511,6 +511,73 @@ class IdentityServiceIntegrationTest {
         return applications.search(searchCriteria(p),admin).items().stream().map(OwnerApplicationDtos.Summary::id).toList();
     }
 
+    @Test void ownerHistoryRevisionTimelinePreservesReasonsActorsTransitionsAndSubmissionLinks(){
+        var user=activate(uniqueEmail("history-revision"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(applicationInput(),actor);
+        applications.submit(app.id(),actor,null);
+        String reason="Please provide clearer verification documents for review";
+        applications.decide(app.id(),new OwnerApplicationDtos.Decision("SUPPLEMENT_REQUIRED",reason,null),admin);
+        var legal=applicationLegal();applications.save(app.id(),new OwnerApplicationDtos.Legal(legal.representativeName(),"HISTORY-PRIVATE-IDENTITY",legal.businessName(),legal.businessLicense(),legal.taxCode(),legal.bankName(),legal.bankAccountHolder(),"HISTORY-PRIVATE-BANK"),actor);
+        applications.submit(app.id(),actor,null);applications.decide(app.id(),approval(),admin);applications.decide(app.id(),approval(),admin);
+        var history=applications.history(app.id(),0,100,admin);
+        assertThat(history.items()).hasSize(8);
+        assertThat(history.items()).allSatisfy(e->assertThat(e.metadataAvailable()).isTrue());
+        var revision=history.items().stream().filter(e->e.action().equals("OWNER_APPLICATION_SUPPLEMENT_REQUIRED")).findFirst().orElseThrow();
+        assertThat(revision.actorId()).isEqualTo(admin.userId());assertThat(revision.actorName()).isNotBlank();assertThat(revision.reason()).isEqualTo(reason);assertThat(revision.fromState()).isEqualTo("DECIDING");assertThat(revision.toState()).isEqualTo("SUPPLEMENT_REQUIRED");
+        var updated=history.items().stream().filter(e->e.action().equals("OWNER_APPLICATION_UPDATED")).findFirst().orElseThrow();
+        assertThat(updated.changedFields()).containsExactly("identityNumber","bankAccountNumber");
+        var submitted=history.items().stream().filter(e->e.action().equals("OWNER_APPLICATION_SUBMITTED")).toList();assertThat(submitted).hasSize(2);
+        assertThat(submitted).allSatisfy(e->assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_application_submissions WHERE id=? AND application_id=?",Integer.class,e.submissionId(),app.id())).isEqualTo(1));
+        assertThat(submitted).extracting(OwnerApplicationDtos.HistoryEntry::submissionOrigin).containsExactlyInAnyOrder("DRAFT","SUPPLEMENT_REQUIRED");
+        assertThat(history.items().stream().filter(e->e.action().equals("OWNER_APPLICATION_APPROVED"))).hasSize(1);
+        String stored=jdbc.queryForObject("SELECT string_agg(coalesce(old_value::text,'') || new_value::text,' ') FROM audit_log WHERE entity_id=?",String.class,app.id());
+        assertThat(stored).doesNotContain("HISTORY-PRIVATE-IDENTITY","HISTORY-PRIVATE-BANK","TEST-IDENTITY-PRIVATE","TEST-BANK-PRIVATE");
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().valueToTree(history).toString()).doesNotContain("private_payload","private_snapshot","HISTORY-PRIVATE-IDENTITY","HISTORY-PRIVATE-BANK");
+    }
+    @Test void ownerHistoryUnchangedLegalSaveDoesNotCreateFalseRevision(){
+        var user=activate(uniqueEmail("history-noop"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(applicationInput(),actor);
+        String encrypted=jdbc.queryForObject("SELECT private_payload FROM owner_applications WHERE id=?",String.class,app.id());
+        applications.save(app.id(),applicationLegal(),actor);
+        assertThat(jdbc.queryForObject("SELECT private_payload FROM owner_applications WHERE id=?",String.class,app.id())).isEqualTo(encrypted);
+        assertThat(applications.history(app.id(),0,20,admin).items()).extracting(OwnerApplicationDtos.HistoryEntry::action).containsExactly("OWNER_APPLICATION_CREATED");
+    }
+    @Test void ownerHistoryPagingIsDeterministicAndViewAuditsCannotHideEdits(){
+        var user=activate(uniqueEmail("history-pages"));var admin=applicationAdmin();var app=applications.create(applicationInput(),applicant(user));
+        java.util.List<UUID> ids=new java.util.ArrayList<>();long auditPrefix=UUID.randomUUID().getMostSignificantBits();
+        for(int i=0;i<105;i++){var id=new UUID(auditPrefix,i+1);ids.add(id);jdbc.update("INSERT INTO audit_log(id,user_id,action,entity_type,entity_id,new_value,created_at) VALUES(?,?,'OWNER_APPLICATION_UPDATED','OWNER_APPLICATION',?,'{}'::jsonb,'2020-01-01T00:00:00Z')",id,user.getId(),app.id());}
+        for(int i=0;i<110;i++)jdbc.update("INSERT INTO audit_log(id,user_id,action,entity_type,entity_id,new_value) VALUES(?,?,'ADMIN_OWNER_APPLICATION_VIEWED','OWNER_APPLICATION',?,'{}'::jsonb)",UUID.randomUUID(),admin.userId(),app.id());
+        var first=applications.history(app.id(),0,100,admin);var second=applications.history(app.id(),1,100,admin);
+        assertThat(first.totalElements()).isEqualTo(106);assertThat(first.totalPages()).isEqualTo(2);assertThat(second.items()).hasSize(6);
+        assertThat(first.items().get(1).id()).isEqualTo(ids.getLast());assertThat(second.items().getLast().id()).isEqualTo(ids.getFirst());
+        assertThat(first.items()).extracting(OwnerApplicationDtos.HistoryEntry::id).isEqualTo(applications.history(app.id(),0,100,admin).items().stream().map(OwnerApplicationDtos.HistoryEntry::id).toList());
+        assertThat(second.items()).allSatisfy(e->{assertThat(e.metadataAvailable()).isFalse();assertThat(e.fromState()).isNull();assertThat(e.toState()).isNull();});
+        assertThat(applications.history(app.id(),2,100,admin).items()).isEmpty();
+    }
+    @Test void ownerHistoryLegacyProjectionDoesNotInventMetadataOrReturnArbitraryPayload(){
+        var user=activate(uniqueEmail("history-legacy"));var admin=applicationAdmin();var app=applications.create(applicationInput(),applicant(user));
+        jdbc.update("INSERT INTO audit_log(id,user_id,action,entity_type,entity_id,new_value) VALUES(?,?,'OWNER_APPLICATION_UPDATED','OWNER_APPLICATION',?,?::jsonb)",UUID.randomUUID(),user.getId(),app.id(),"{\"identityNumber\":\"LEGACY-SECRET\",\"changedFields\":[\"identityNumber\",\"password\"],\"state\":\"UNKNOWN\",\"submissionId\":\"invalid\"}");
+        var e=applications.history(app.id(),0,20,admin).items().getFirst();assertThat(e.metadataAvailable()).isFalse();assertThat(e.toState()).isNull();assertThat(e.submissionId()).isNull();assertThat(e.changedFields()).containsExactly("identityNumber");
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules().valueToTree(e).toString()).doesNotContain("LEGACY-SECRET","password");
+    }
+    @Test void ownerHistoryAuthorizationPaginationValidationAndMissingApplication() throws Exception {
+        var user=activate(uniqueEmail("history-guard"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(applicationInput(),actor);
+        assertThatThrownBy(()->applications.history(app.id(),0,20,actor)).isInstanceOfSatisfying(IdentityException.class,e->assertThat(e.getStatus()).isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN));
+        assertThatThrownBy(()->applications.history(UUID.randomUUID(),0,20,admin)).isInstanceOfSatisfying(IdentityException.class,e->assertThat(e.getStatus()).isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND));
+        String adminToken=authService.login(new LoginRequest(admin.email(),"Password123!"),metadata).response().accessToken();
+        String path="/api/v1/admin/owner-applications/"+app.id()+"/history";
+        for(var p:java.util.List.of(Map.of("page","-1"),Map.of("size","0"),Map.of("size","101"),Map.of("page","invalid"))){var req=org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path).header("Authorization","Bearer "+adminToken);p.forEach(req::param);http.perform(req).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());}
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path).header("Authorization","Bearer "+adminToken)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","no-store"));
+        String customerToken=authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata).response().accessToken();
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path).header("Authorization","Bearer "+customerToken)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+    }
+    @Test void ownerHistoryDetailAccountSummaryIsAdminOnlyAndReadDoesNotGrantOwner() throws Exception {
+        var user=activate(uniqueEmail("history-account"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(applicationInput(),actor);
+        var d=applications.detail(app.id(),admin,true);assertThat(d.applicant().id()).isEqualTo(user.getId());assertThat(d.applicant().email()).isEqualTo(user.getEmail());assertThat(d.applicant().status()).isEqualTo("ACTIVE");
+        assertThat(applications.detail(app.id(),actor,false).applicant()).isNull();
+        applications.history(app.id(),0,20,admin);assertThat(profileService.get(user.getId()).roles()).containsExactly(Role.CUSTOMER);assertThat(applications.own(actor).getFirst().state()).isEqualTo("DRAFT");
+        String token=authService.login(new LoginRequest(admin.email(),"Password123!"),metadata).response().accessToken();
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/admin/owner-applications/"+app.id()).header("Authorization","Bearer "+token)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.data.applicant.email").value(user.getEmail()));
+    }
     @Test void ownerSearchWithoutFiltersPreservesLegacyArrayOrderAndSummaryProjection(){
         var admin=applicationAdmin();var legacy=applications.search(null,null,admin);var page=applications.search(searchCriteria(Map.of("size","100")),admin);
         assertThat(page.items()).isEqualTo(legacy);

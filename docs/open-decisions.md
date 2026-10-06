@@ -1,10 +1,10 @@
 # SportHub open decisions
 
-This file records unresolved decisions that must not be silently encoded as business behavior.
+This file records unresolved decisions that must not be silently encoded as business behavior. `base-bussines.pdf` supersedes older source assumptions; see `implementation-progress.md` Requirements source for the canonical reconciliation.
 
 ## Refund policy
 
-The primary thesis text states that a paid cancellation receives no refund, while the UC-5 specification and architecture blueprint describe time-based refund tiers. Financial cancellation/refund execution remains BLOCKED_RULE. Core booking/payment/group/transfer contracts document the implemented flow and durable requests for review; they do not select a refund percentage.
+Canonical FR-5.4/UC-6.8 require eligible per-payment refunds, at-most-once execution, retained history and possible manual Admin review. NFR-7.1 requires configurable refund percentages. Exact policy defaults, tiers and financial execution/accounting remain BLOCKED_RULE; old-source no-refund versus fixed-tier contradictions are obsolete. Existing durable requests do not execute a financial policy.
 
 ## Staff permission catalog
 
@@ -16,7 +16,7 @@ Resolved technically for UC 8.2–8.4: Identity owns a durable, leased coordinat
 
 ## Admin account hierarchy
 
-Account controls use the approved ADMIN role. A reasoned change to ordinary CUSTOMER/OWNER/STAFF accounts revokes all sessions and records immutable before/after audit. Self changes and changes to an existing ADMIN target are rejected. Detailed Root Admin/equal-rank rules remain BLOCKED_RULE until that hierarchy is approved; no extra role labels are introduced. Read-only monitoring/reporting can proceed.
+Account controls use the approved ADMIN role. A reasoned change to ordinary CUSTOMER/OWNER/STAFF accounts revokes all sessions and records immutable before/after audit. Self changes and changes to an existing ADMIN target are rejected. The canonical PDF defines no Root Admin/equal-rank hierarchy; extra hierarchy rules remain BLOCKED_RULE, no extra role labels are introduced. Read-only monitoring/reporting can proceed.
 
 ## Identity role persistence
 
@@ -24,8 +24,12 @@ Resolved by the required multi-role implementation: Identity V2 introduces `user
 
 ## Transfer policy and settlement
 
-Facility V3 stores explicit Owner-configured enablement and minimum lead time per facility; an unconfigured facility cannot create/acquire a Transfer listing. Individual Transfer usage rights are implemented through a durable Transfer-to-Booking REST saga. Payment records escrow as HELD_POLICY_BLOCKED because sources disagree on release after handoff versus after play. No automatic seller payout occurs. Paid Group ownership/membership changes remain BLOCKED_RULE and are rejected before listing creation.
+Facility V3 stores explicit Owner-configured enablement and minimum lead time per facility; an unconfigured facility cannot create/acquire a Transfer listing. Individual Transfer usage rights are implemented through a durable Transfer-to-Booking REST saga. Canonical UC-7.5 BR-2/UC-7.6 require holding buyer funds until successful handoff and accounting seller proceeds after handoff according to platform financial policy; after-play timing from old sources is obsolete. Payment still records HELD_POLICY_BLOCKED: settlement/accounting implementation is incomplete, and commission/payout/dispute details remain BLOCKED_RULE. No automatic seller payout occurs. Canonical UC-6.4 permits confirmed paid split revisions with member notices; payment delta/refund mechanics remain blocked. Paid Group membership/Transfer ownership changes require separate rules and are rejected before listing creation. No financial implementation is part of the Owner-history milestone.
 
 ## MinIO Community Edition image provenance
 
 MinIO Community Edition is now distributed upstream as source-only. Local Compose therefore uses a community automation that rebuilds the pinned upstream release, with the multi-architecture image itself pinned by digest. Before any production deployment, the team must choose and document a trusted supply path: build and sign the image internally, mirror a verified artifact in a controlled registry, or select an approved S3-compatible alternative.
+
+## Staff pricing source conflict
+
+Canonical UC-3.3/UC-3.4 BR-1 restrict pricing writes to Owner and permit Staff read-only access. This specific rule overrides broad Owner/Staff FR wording and the UC-3.2 delegated-pricing phrase. Current Owner-only pricing writes are compatible; no Staff write permission is added.

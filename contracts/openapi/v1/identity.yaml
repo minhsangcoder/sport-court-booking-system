@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SportHub Identity API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Implemented authentication, profile, durable first-facility Owner applications and facility-scoped Staff bindings. Protected application reads are uncached and Admin detail reads are audited. Private signed service coordination is documented in owner-internal.yaml and has no Gateway route."
   },
   "servers": [
@@ -1690,6 +1690,77 @@
           }
         ]
       }
+    },
+    "/admin/owner-applications/{id}/history": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Owner applications"
+        ],
+        "operationId": "getAdminOwnerApplicationHistory",
+        "summary": "Read paginated application revision and decision history",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success; Cache-Control: no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerApplicationHistoryPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "description": "ADMIN only, no-store, audited access. Business events ordered created_at DESC then UUID DESC; view audits excluded. Count/items use one snapshot with joined current actor names, never legal values/encrypted payloads. Invalid page/size returns 400, unknown application 404. Submission snapshots remain in detail.history.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2714,7 +2785,7 @@
           "APPROVED",
           "REJECTED"
         ],
-        "description": "SUBMITTING, DECIDING and APPROVING are durable processing states; retries preserve the original operation. Only APPROVED opens publication and grants OWNER."
+        "description": "SUBMITTING, DECIDING and APPROVING are durable processing states; retries preserve the original operation. Only APPROVED opens publication and grants OWNER. Canonical base-bussines terms map PENDING_APPROVAL to PENDING_REVIEW and SUPPLEMENT_REQUIRED to REQUIRE_REVISION. These are equivalent meanings, not additional persisted states; existing wire values stay compatible. DRAFT and processing states are preparation/technical states outside the four-state Admin review classification."
       },
       "OwnerApplicationLegal": {
         "type": "object",
@@ -2937,6 +3008,9 @@
                 }
               }
             }
+          },
+          "applicant": {
+            "$ref": "#/components/schemas/OwnerApplicationApplicant"
           }
         }
       },
@@ -3053,6 +3127,201 @@
             "properties": {
               "data": {
                 "$ref": "#/components/schemas/OwnerApplicationPage"
+              }
+            }
+          }
+        ]
+      },
+      "OwnerApplicationApplicant": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "Admin-only minimal account summary; null on applicant detail. Current account name, not decrypted legal representative.",
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "phone",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "OwnerApplicationHistoryEntry": {
+        "type": "object",
+        "required": [
+          "id",
+          "actorId",
+          "actorName",
+          "action",
+          "occurredAt",
+          "reason",
+          "changedFields",
+          "submissionId",
+          "metadataAvailable",
+          "fromState",
+          "toState",
+          "submissionOrigin"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "actorName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Current profile name; actorId preserves recorded identity."
+          },
+          "action": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "changedFields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "representativeName",
+                "identityNumber",
+                "businessName",
+                "businessLicense",
+                "taxCode",
+                "bankName",
+                "bankAccountHolder",
+                "bankAccountNumber"
+              ]
+            }
+          },
+          "submissionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "metadataAvailable": {
+            "type": "boolean",
+            "description": "Valid recorded before/after state exists. Older records are not inferred/backfilled."
+          },
+          "fromState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerApplicationState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "toState": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerApplicationState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "submissionOrigin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerApplicationState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "OwnerApplicationHistoryPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalElements",
+          "totalPages"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerApplicationHistoryEntry"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "OwnerApplicationHistoryPageResponse": {
+        "allOf": [
+          {
+            "$ref": "./components/schemas.yaml#/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/OwnerApplicationHistoryPage"
               }
             }
           }

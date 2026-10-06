@@ -22,5 +22,9 @@ public final class OwnerApplicationDtos {
  public record SearchCriteria(String q,String state,String applicant,String facility,String submittedFrom,String submittedTo,
   String reviewedFrom,String reviewedTo,String reviewedBy,String applicationId,String sort,String page,String size){}
  public record SearchPage(List<Summary> items,int page,int size,long totalElements,long totalPages){}
- public record Detail(Summary application,Legal legal,JsonNode facility,List<Map<String,Object>> history,List<Map<String,Object>> audit){}
+ public record Applicant(UUID id,String fullName,String email,String phone,String status){}
+ public record HistoryEntry(UUID id,UUID actorId,String actorName,String action,Instant occurredAt,
+  String fromState,String toState,String reason,List<String> changedFields,UUID submissionId,String submissionOrigin,boolean metadataAvailable){}
+ public record HistoryPage(List<HistoryEntry> items,int page,int size,long totalElements,long totalPages){}
+ public record Detail(Summary application,Legal legal,JsonNode facility,List<Map<String,Object>> history,List<Map<String,Object>> audit,Applicant applicant){}
 }

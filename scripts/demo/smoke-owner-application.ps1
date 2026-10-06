@@ -73,6 +73,7 @@ if($LeavePending){Write-Output "PASS pending prepared: applicant=$email applicat
 Reject 400 POST "/admin/owner-applications/$id/decision" @{action='REJECT';reason='short'} $admin.accessToken
 $supplement=@{action='SUPPLEMENT_REQUIRED';reason='Please provide complete and legible location and identity documents'}
 if((Request POST "/admin/owner-applications/$id/decision" $supplement $admin.accessToken).state -ne 'SUPPLEMENT_REQUIRED'){throw 'Supplement did not reopen application'}
+$input.legal.identityNumber='OWNER-SMOKE-IDENTITY-REVISED'
 Request PUT "/owner-applications/$id/legal" $input.legal $customer.accessToken|Out-Null
 Request PUT "/schedules/facilities/$facilityId/hours" @{intervals=$hours} $customer.accessToken|Out-Null
 if((Request POST "/owner-applications/$id/submit" $null $customer.accessToken).state -ne 'PENDING_APPROVAL'){throw 'Resubmission failed'}
@@ -95,6 +96,20 @@ if((Sql identity_db "SELECT count(*) FROM audit_log WHERE entity_id='$id' AND ac
 if((Sql payment_db "SELECT count(*) FROM owner_wallets WHERE owner_id='$userId' AND application_id='$id' AND available_balance=0 AND commission_percent=5") -ne '1'){throw 'Wallet preparation invalid'}
 $final=Request GET "/admin/owner-applications/$id" $null $admin.accessToken
 if($final.history.Count -ne 2 -or @($final.audit|Where-Object action -eq 'ADMIN_OWNER_APPLICATION_VIEWED').Count -lt 1){throw 'Submission history or sensitive access audit missing'}
+if($final.applicant.id -ne $userId -or $final.applicant.email -ne $email){throw 'Admin applicant account summary missing'}
+$timeline=Request GET "/admin/owner-applications/$id/history?page=0&size=100" $null $admin.accessToken
+if($timeline.totalElements -ne 8 -or @($timeline.items|Where-Object action -eq 'OWNER_APPLICATION_APPROVED').Count -ne 1){throw 'Revision history or approval replay history invalid'}
+$revision=@($timeline.items|Where-Object action -eq 'OWNER_APPLICATION_SUPPLEMENT_REQUIRED')[0]
+if($revision.reason -ne $supplement.reason -or $revision.actorId -ne $admin.user.id -or $revision.toState -ne 'SUPPLEMENT_REQUIRED'){throw 'Reviewer/reason/state missing from history'}
+if(@($timeline.items|Where-Object {$_.submissionOrigin -eq 'SUPPLEMENT_REQUIRED' -and $_.submissionId}).Count -ne 1){throw 'Resubmission event missing'}
+if(@($timeline.items|Where-Object {$_.action -eq 'OWNER_APPLICATION_UPDATED' -and $_.changedFields -contains 'identityNumber'}).Count -ne 1){throw 'Edit metadata missing'}
+if(($timeline|ConvertTo-Json -Depth 12) -match 'OWNER-SMOKE-IDENTITY|OWNER-SMOKE-BANK|private_snapshot|private_payload'){throw 'History exposes sensitive values'}
+Reject 403 GET "/admin/owner-applications/$id/history" $null $owner.accessToken
+Reject 400 GET "/admin/owner-applications/$id/history?size=101" $null $admin.accessToken
+$page=Request GET "/admin/owner-applications/$id/history?page=1&size=3" $null $admin.accessToken
+if($page.page -ne 1 -or $page.items.Count -ne 3 -or $page.totalElements -ne 8){throw 'History pagination invalid'}
+if((Sql identity_db "SELECT count(*) FROM audit_log WHERE entity_id='$id' AND action='OWNER_APPLICATION_APPROVED' AND old_value->>'state'='APPROVING' AND new_value->>'state'='APPROVED'") -ne '1'){throw 'Safe before/after approval audit missing'}
+@{applicationId=$id;facilityId=$facilityId;applicantEmail=$email}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $demoRoot 'tmp/demo/owner-history-fixture.json') -Encoding utf8
 $notice=Notice 'Owner application APPROVED';if($notice -notmatch 'Sign in again'){throw 'Approval guide missing'}
 Request PUT "/owner/courts/$($court.id)" @{code='OWNER-APP-1';name='Controlled application court';sportCategoryId=$category.id;enabled=$false} $owner.accessToken|Out-Null
-Write-Output 'PASS: real Owner draft/encrypted DB/scoped applicant workspace/frozen submission/supplement/resubmit/locked applicant/admin review/idempotent approval/zero wallet/new Owner session/publication/audit/Mailpit guide. Fixture court disabled.'
+Write-Output 'PASS: real Owner draft/encrypted DB/scoped applicant workspace/frozen submission/revision/edit/resubmit/locked applicant/admin review/idempotent approval/zero wallet/new Owner session/publication/safe audit/paged history/account/Mailpit guide. Fixture court disabled.'
