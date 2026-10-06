@@ -433,6 +433,17 @@ class IdentityServiceIntegrationTest {
         ((com.fasterxml.jackson.databind.node.ObjectNode)operational.path("facility")).put("contactEmail","post-approval@example.test");
         var approved=applications.detail(app.id(),admin,true);assertThat(approved.facility().path("facility").path("contactEmail").asText()).isEqualTo("post-approval@example.test");assertThat(approved.reviewSnapshot().path("facility").path("contactEmail").asText()).isEqualTo("new@example.test");assertThat(approved.history()).hasSize(2);
     }
+    @Test void locationOperationalEditAfterApprovalKeepsImmutableApplicationSubmission() throws Exception {
+        var user=activate(uniqueEmail("location-snapshot"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(applicationInput(),actor);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper();var snapshot=mapper.readTree("{\"facility\":{\"name\":\"First facility\",\"latitude\":21,\"longitude\":105}}");
+        org.mockito.Mockito.when(applicationDependencies.facility(eq(app.id()),eq("submit"),anyMap(),any())).thenReturn(mapper.createObjectNode().set("snapshot",snapshot));
+        applications.submit(app.id(),actor,null);applications.decide(app.id(),approval(),admin);
+        var operational=mapper.readTree("{\"facility\":{\"name\":\"First facility\",\"latitude\":22,\"longitude\":106}}");
+        org.mockito.Mockito.when(applicationDependencies.facility(eq(app.id()),eq("view"),anyMap(),any())).thenReturn(operational);
+        var detail=applications.detail(app.id(),admin,true);assertThat(detail.facility().path("facility").path("latitude").asInt()).isEqualTo(22);
+        assertThat(detail.reviewSnapshot().path("facility").path("latitude").asInt()).isEqualTo(21);assertThat(detail.history()).singleElement().satisfies(h->assertThat(((com.fasterxml.jackson.databind.JsonNode)h.get("facilitySnapshot")).path("facility").path("longitude").asInt()).isEqualTo(105));
+        assertThat(jdbc.queryForObject("SELECT facility_snapshot->'facility'->>'latitude' FROM owner_application_submissions WHERE application_id=?",String.class,app.id())).isEqualTo("21");
+    }
     @Test void contactEmailLegacySnapshotsStayMissingAndNoChangeIsFabricated() throws Exception {
         var user=activate(uniqueEmail("contact-legacy"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(applicationInput(),actor);
         assertThat(applications.detail(app.id(),admin,true).reviewSnapshot()).isNull();

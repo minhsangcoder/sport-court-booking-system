@@ -41,7 +41,7 @@ class FacilityIntegrationTest {
  private Caller owner(){return new Caller(UUID.randomUUID(),"Owner",Set.of("OWNER","CUSTOMER"),Map.of());}
  @Test void firstFacilityIsScopedFrozenAndHiddenUntilIdentityCommitsEvenAfterLocalPreparation() throws Exception {
   UUID application=UUID.randomUUID(),facility=UUID.randomUUID(),user=UUID.randomUUID();var customer=new Caller(user,"Applicant",Set.of("CUSTOMER"),Map.of(facility,Set.of("APPLICATION_READ","APPLICATION_EDIT")));var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());
-  service.createFirst(application,facility,user,input("First facility"));service.createFirst(application,facility,user,input("Ignored repeat"));
+  service.createFirst(application,facility,user,locationInput("First facility","21","105"));service.createFirst(application,facility,user,input("Ignored repeat"));
   assertThat(jdbc.queryForObject("SELECT count(*) FROM first_facility_applications WHERE application_id=?",Integer.class,application)).isEqualTo(1);
   assertThatThrownBy(()->service.create(input("No Owner grant"),customer)).isInstanceOf(ForbiddenException.class);
   assertThatThrownBy(()->service.ownedDetail(facility,new Caller(user,"No binding",Set.of("CUSTOMER"),Map.of()))).isInstanceOf(ForbiddenException.class);
@@ -62,6 +62,9 @@ class FacilityIntegrationTest {
   assertThat(service.publicDetail(facility).status()).isEqualTo("ACTIVE");
   var approvedOwner=new Caller(user,"Owner",Set.of("CUSTOMER","OWNER"),Map.of());assertThat(service.writeAccess(facility,approvedOwner).id()).isEqualTo(facility);
   assertThat(service.search("First facility")).anyMatch(f->f.id().equals(facility));
+  service.update(facility,locationInput("First facility","22","106"),approvedOwner);
+  assertThat(service.publicDetail(facility).latitude()).isEqualByComparingTo("22");
+  assertThat(reviews.reviews(facility).getFirst().snapshot().path("facility").path("latitude").decimalValue()).isEqualByComparingTo("21");
   assertThat(jdbc.queryForObject("SELECT count(*) FROM facility_audit WHERE facility_id=? AND action='ADMIN_FACILITY_APPROVE'",Integer.class,facility)).isEqualTo(1);
  }
  private FacilityInput input(String name){return new FacilityInput(name,"+84901234567","Address","Province","District","Ward","Description","Asia/Ho_Chi_Minh",null,null,Set.of("Parking"));}
@@ -187,6 +190,59 @@ class FacilityIntegrationTest {
   jdbc.update("UPDATE facilities SET status='ACTIVE' WHERE id=?",f.id());
   for(var value:List.of(service.publicDetail(f.id()),service.search(f.name()),service.context(court.id(),null),service.context(court.id(),owner)))assertThat(json.writeValueAsString(value)).doesNotContain("contactEmail","hidden@example.test");
   assertThat(json.writeValueAsString(service.ownedDetail(f.id(),owner))).contains("contactEmail","hidden@example.test");
+ }
+
+ private FacilityInput locationInput(String name,String latitude,String longitude){return new FacilityInput(name,"+84901234567","Address","Province","District","Ward","Description","Asia/Ho_Chi_Minh",latitude==null?null:new java.math.BigDecimal(latitude),longitude==null?null:new java.math.BigDecimal(longitude),Set.of("Parking"),"private@example.test");}
+ @Test void locationUpdateReloadPreservesOmittedPairAndUsesExistingStoragePrecision() throws Exception {
+  var actor=owner();var f=service.create(locationInput("Location","21.028","105.78"),actor);
+  var saved=service.update(f.id(),locationInput("Location edited","21.032123456","105.791234567"),actor);
+  assertThat(saved.latitude()).isEqualByComparingTo("21.0321235");assertThat(service.ownedDetail(f.id(),actor).longitude()).isEqualByComparingTo("105.7912346");
+  var legacy=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(input("Old client"));legacy.remove(List.of("latitude","longitude"));
+  var dto=json.treeToValue(legacy,FacilityInput.class);assertThat(dto.latitudeProvided()).isFalse();
+  service.update(f.id(),dto,actor);assertThat(service.ownedDetail(f.id(),actor).latitude()).isEqualByComparingTo(saved.latitude());
+  assertThat(jdbc.queryForObject("SELECT details FROM facility_audit WHERE facility_id=? AND action='FACILITY_UPDATED' ORDER BY occurred_at LIMIT 1",String.class,f.id())).isEqualTo("{\"changedFields\":[\"location\"]}");
+  assertThat(jdbc.queryForObject("SELECT count(*) FROM facility_audit WHERE facility_id=? AND actor_id=? AND occurred_at IS NOT NULL",Integer.class,f.id(),actor.id())).isEqualTo(3);
+ }
+ @Test void locationZeroBoundariesAndExplicitNullPairAreValid() throws Exception {
+  var actor=owner();var f=service.create(locationInput("Zero","0","0"),actor);
+  assertThat(service.ownedDetail(f.id(),actor).latitude()).isZero();assertThat(service.ownedDetail(f.id(),actor).longitude()).isZero();
+  service.update(f.id(),locationInput("Boundary","-90","180"),actor);assertThat(service.ownedDetail(f.id(),actor).longitude()).isEqualByComparingTo("180");
+  service.update(f.id(),locationInput("Boundary","90","-180"),actor);assertThat(service.ownedDetail(f.id(),actor).latitude()).isEqualByComparingTo("90");
+  var clear=json.treeToValue(json.valueToTree(locationInput("Clear",null,null)),FacilityInput.class);service.update(f.id(),clear,actor);
+  assertThat(service.ownedDetail(f.id(),actor).latitude()).isNull();assertThat(service.ownedDetail(f.id(),actor).longitude()).isNull();
+ }
+ @Test void locationInvalidRangesMalformedNumbersAndHalfPairsReturn400WithoutSaving() throws Exception {
+  var actor=owner();org.mockito.Mockito.when(identity.current(org.mockito.ArgumentMatchers.any())).thenReturn(actor);
+  var f=service.create(locationInput("Unchanged","21","105"),actor);
+  var invalid=new ArrayList<com.fasterxml.jackson.databind.node.ObjectNode>();
+  for(var pair:List.of(new String[]{"90.1","105"},new String[]{"-90.1","105"},new String[]{"21","180.1"},new String[]{"21","-180.1"},new String[]{null,"105"},new String[]{"21",null}))invalid.add(json.valueToTree(locationInput("Invalid",pair[0],pair[1])));
+  for(var field:List.of("latitude","longitude")){
+   var missing=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(locationInput("Invalid","21","105"));missing.remove(field);invalid.add(missing);
+   for(var value:List.<com.fasterxml.jackson.databind.JsonNode>of(json.valueToTree("not-a-number"),json.valueToTree("NaN"),json.valueToTree(true),json.createObjectNode(),json.createArrayNode())){var body=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(locationInput("Invalid","21","105"));body.set(field,value);invalid.add(body);}
+  }
+  for(var body:invalid)http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/owner/facilities/"+f.id()).contentType("application/json").content(body.toString())).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+  assertThatThrownBy(()->service.update(f.id(),locationInput("Invalid","91","105"),actor)).isInstanceOf(IllegalArgumentException.class);
+  assertThatThrownBy(()->service.update(f.id(),locationInput("Invalid",null,"105"),actor)).isInstanceOf(IllegalArgumentException.class);
+  assertThat(service.ownedDetail(f.id(),actor).name()).isEqualTo("Unchanged");assertThat(service.ownedDetail(f.id(),actor).latitude()).isEqualByComparingTo("21");
+ }
+ @Test void locationCannotBeChangedByForeignOwnerOrStaffWithoutFacilityEditPermission() throws Exception {
+  var actor=owner();var f=service.create(locationInput("Scoped","21","105"),actor);
+  var staff=new Caller(actor.id(),"Staff",Set.of("STAFF","CUSTOMER"),Map.of(f.id(),Set.of("BOOKING_READ","SCHEDULE_READ")));
+  for(var denied:List.of(owner(),staff,new Caller(actor.id(),"Customer",Set.of("CUSTOMER"),Map.of()))){
+   org.mockito.Mockito.when(identity.current(org.mockito.ArgumentMatchers.any())).thenReturn(denied);
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/v1/owner/facilities/"+f.id()).contentType("application/json").content(json.writeValueAsString(locationInput("Forged","22","106")))).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+  }
+  assertThat(service.ownedDetail(f.id(),actor).latitude()).isEqualByComparingTo("21");
+ }
+ @Test void locationPublicSearchReflectsOperationalUpdateWithoutPublishingPrivateFacilityOrContact() throws Exception {
+  var actor=owner();var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());var f=service.create(locationInput("Public location "+UUID.randomUUID(),"21","105"),actor);
+  var category=service.createCategory(new CategoryInput("Location sport "+UUID.randomUUID(),true),admin);var court=service.createCourt(f.id(),new CourtInput("MAP","Location court",category.id(),null,true),actor);
+  for(var status:List.of("DRAFT","PENDING_APPROVAL","REJECTED")){
+   jdbc.update("UPDATE facilities SET status=? WHERE id=?",status,f.id());assertThat(service.search(f.name())).noneMatch(v->v.id().equals(f.id()));assertThatThrownBy(()->service.publicDetail(f.id())).isInstanceOf(ResourceNotFoundException.class);
+  }
+  jdbc.update("UPDATE facilities SET status='ACTIVE' WHERE id=?",f.id());service.update(f.id(),locationInput(f.name(),"22","106"),actor);
+  assertThat(service.search(f.name())).singleElement().satisfies(v->assertThat(v.latitude()).isEqualByComparingTo("22"));assertThat(service.publicDetail(f.id()).longitude()).isEqualByComparingTo("106");
+  for(var value:List.of(service.search(f.name()),service.publicDetail(f.id()),service.context(court.id(),null)))assertThat(json.writeValueAsString(value)).doesNotContain("contactEmail","private@example.test","identityNumber","bankAccountNumber");
  }
 
  @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;

@@ -10,6 +10,10 @@ Canonical FR-5.4/UC-6.8 require eligible per-payment refunds, at-most-once execu
 
 Resolved by explicit user approval on 2026-10-05: `BOOKING_READ`, `BOOKING_CREATE_COUNTER`, `BOOKING_CHECK_IN`, `BOOKING_COMPLETE`, `SCHEDULE_READ`. Owner grants each capability within a specific facility. Backend must require both an active binding and the matching permission. These names do not grant pricing write access.
 
+## Delegated Staff facility editing (UC-2.2)
+
+Canonical UC-2.2 names Owner and authorized Staff, with facility management permission required. The explicitly approved Staff catalog above has no facility-edit capability. Owner location editing is implemented; Staff without such a capability continues to receive 403. Delegated facility editing remains PARTIAL/BLOCKED_RULE until an explicit compatible capability is agreed. Do not use generic STAFF membership or BOOKING/SCHEDULE permissions as a facility-write bypass. This does not change the resolved Owner-only pricing rule.
+
 ## Owner application orchestration
 
 Resolved technically for UC 8.2–8.4: Identity owns a durable, leased coordinator. Signed private REST commands prepare the first Facility and a zero-balance Payment wallet idempotently. Identity's final transaction grants OWNER, stores APPROVED, revokes old sessions and records the decision/notification. Facility publication and privileged writes check the committed application through Identity's private API. Prepared resources remain private if a dependency fails or the applicant is locked; retries resume without repeating the decision. Schedule serializes configuration snapshots and writes with its own database lock. Each service reads only its own database. Commission is an explicit Admin input; this does not resolve settlement/refund policies.

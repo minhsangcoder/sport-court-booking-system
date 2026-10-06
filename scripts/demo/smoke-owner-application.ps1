@@ -103,6 +103,9 @@ Request PUT "/schedules/facilities/$facilityId/hours" @{intervals=$hours} $owner
 if((Sql identity_db "SELECT count(*) FROM user_roles WHERE user_id='$userId' AND role='OWNER'") -ne '1'){throw 'Owner role duplicated'}
 if((Sql identity_db "SELECT count(*) FROM audit_log WHERE entity_id='$id' AND action='OWNER_APPLICATION_APPROVED'") -ne '1'){throw 'Approval audit duplicated'}
 if((Sql payment_db "SELECT count(*) FROM owner_wallets WHERE owner_id='$userId' AND application_id='$id' AND available_balance=0 AND commission_percent=5") -ne '1'){throw 'Wallet preparation invalid'}
+$locationBefore=@{latitude=$input.facility.latitude;longitude=$input.facility.longitude}
+try {
+$input.facility.latitude=21.0321234;$input.facility.longitude=105.7912345
 $input.facility.contactEmail='operational+facility@example.test'
 Request PUT "/owner/facilities/$facilityId" $input.facility $owner.accessToken|Out-Null
 if((Request GET "/owner/facilities/$facilityId" $null $owner.accessToken).contactEmail -ne $input.facility.contactEmail){throw 'Post-approval Owner contact edit did not persist'}
@@ -130,6 +133,14 @@ $page=Request GET "/admin/owner-applications/$id/history?page=1&size=3" $null $a
 if($page.page -ne 1 -or $page.items.Count -ne 3 -or $page.totalElements -ne 8){throw 'History pagination invalid'}
 if((Sql identity_db "SELECT count(*) FROM audit_log WHERE entity_id='$id' AND action='OWNER_APPLICATION_APPROVED' AND old_value->>'state'='APPROVING' AND new_value->>'state'='APPROVED'") -ne '1'){throw 'Safe before/after approval audit missing'}
 @{applicationId=$id;facilityId=$facilityId;applicantEmail=$email}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $demoRoot 'tmp/demo/owner-history-fixture.json') -Encoding utf8
+if($final.facility.facility.latitude -ne $input.facility.latitude -or $final.reviewSnapshot.facility.latitude -ne $locationBefore.latitude -or @($final.history|Where-Object {$_.facilitySnapshot.facility.longitude -ne $locationBefore.longitude}).Count){throw 'Operational location edit changed immutable application snapshots'}
+if((Request GET "/facilities/$facilityId").longitude -ne $input.facility.longitude){throw 'Public facility did not read operational location'}
+if((Sql identity_db "SELECT count(*) FROM owner_application_submissions WHERE application_id='$id' AND (facility_snapshot->'facility'->>'latitude')::numeric=$($locationBefore.latitude) AND (facility_snapshot->'facility'->>'longitude')::numeric=$($locationBefore.longitude)") -ne '2'){throw 'Immutable coordinate snapshots missing in Identity DB'}
+} finally {
+ $input.facility.latitude=$locationBefore.latitude;$input.facility.longitude=$locationBefore.longitude
+ try { Request PUT "/owner/facilities/$facilityId" $input.facility $owner.accessToken|Out-Null }
+ finally { Request PUT "/owner/courts/$($court.id)" @{code='OWNER-APP-1';name='Controlled application court';sportCategoryId=$category.id;enabled=$false} $owner.accessToken|Out-Null }
+}
 $notice=Notice 'Owner application APPROVED';if($notice -notmatch 'Sign in again'){throw 'Approval guide missing'}
 Request PUT "/owner/courts/$($court.id)" @{code='OWNER-APP-1';name='Controlled application court';sportCategoryId=$category.id;enabled=$false} $owner.accessToken|Out-Null
-Write-Output 'PASS: real Owner draft/encrypted DB/scoped applicant workspace/frozen submission/revision/edit/resubmit/locked applicant/admin review/idempotent approval/zero wallet/new Owner session/publication/contact persistence/immutable V1-V2/post-approval edit/public privacy/safe audit/paged history/account/Mailpit guide. Fixture court disabled.'
+Write-Output 'PASS: real Owner draft/encrypted DB/scoped applicant workspace/frozen submission/revision/edit/resubmit/locked applicant/admin review/idempotent approval/zero wallet/new Owner session/publication/contact persistence/immutable V1-V2/post-approval coordinates A-B/immutable coordinate history/coordinate restore/public privacy/safe audit/paged history/account/Mailpit guide. Fixture court disabled.'

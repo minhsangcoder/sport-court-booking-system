@@ -3359,14 +3359,22 @@
             "maxLength": 80
           },
           "latitude": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": -90,
-            "maximum": 90
+            "maximum": 90,
+            "description": "Paired with the other coordinate. Zero is valid; stored with seven decimal places."
           },
           "longitude": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": -180,
-            "maximum": 180
+            "maximum": 180,
+            "description": "Paired with the other coordinate. Zero is valid; stored with seven decimal places."
           },
           "amenities": {
             "type": "array",
@@ -3397,7 +3405,8 @@
           "ward",
           "timezone"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Location is a paired optional value. On PUT, omitting both latitude and longitude preserves the stored location; supply both numeric values to replace it, or both null to clear it (existing nullable location semantics). One missing/null coordinate is invalid. Values use existing NUMERIC(10,7) storage precision. Address text is independent of map coordinates. Backend ownership/applicant and publication guards apply; STAFF alone grants no edit access."
       },
       "FacilityView": {
         "type": "object",
@@ -3442,12 +3451,18 @@
             "maxLength": 80
           },
           "latitude": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": -90,
             "maximum": 90
           },
           "longitude": {
-            "type": "number",
+            "type": [
+              "number",
+              "null"
+            ],
             "minimum": -180,
             "maximum": 180
           },

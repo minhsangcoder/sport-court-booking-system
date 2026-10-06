@@ -1,4 +1,4 @@
-export type Facility = {id:string;ownerId:string;name:string;phone:string;addressLine:string;province:string;district:string;ward:string;description?:string;timezone:string;latitude?:number;longitude?:number;status:string;amenities:string[];version:number}
+export type Facility = {id:string;ownerId:string;name:string;phone:string;addressLine:string;province:string;district:string;ward:string;description?:string;timezone:string;latitude?:number|null;longitude?:number|null;status:string;amenities:string[];version:number}
 export type FacilityProfile = Facility & {contactEmail?:string|null}
 export type Category = {id:string;name:string;active:boolean}
 export type Court = {id:string;facilityId:string;sportCategoryId:string;code:string;name:string;description?:string;enabled:boolean;version:number}
