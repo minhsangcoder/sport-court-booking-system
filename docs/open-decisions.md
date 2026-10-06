@@ -6,6 +6,14 @@ This file records unresolved decisions that must not be silently encoded as busi
 
 Canonical FR-5.4/UC-6.8 require eligible per-payment refunds, at-most-once execution, retained history and possible manual Admin review. NFR-7.1 requires configurable refund percentages. Exact policy defaults, tiers and financial execution/accounting remain BLOCKED_RULE; old-source no-refund versus fixed-tier contradictions are obsolete. Existing durable requests do not execute a financial policy.
 
+## UC-6.7 reminder frequency, recipients and asynchronous success
+
+Resolved technical decisions within the explicitly authorized nonfinancial scope: only the stored Group Booking Owner sends manual reminders; facility OWNER/STAFF/Admin roles add no override. Other active unpaid allocated members are recipients; Owner's own share is conservatively excluded. Eligibility follows the current contribution model (GROUP_PENDING/PENDING before deadline); confirmed groups have fully collected contributions, no post-confirmation collection mode. No partial payment engine or automatic reminder scheduler is introduced.
+
+NFR-7.1 requires configuration but specifies no interval. GROUP_REMINDER_MIN_INTERVAL / booking.group.payment-reminder.min-interval defaults to PT15M only as an implementation configuration default, with minimum PT1S to preserve duplicate-request protection. Override with another ISO-8601 duration and restart Booking. Tests prove PT30S/PT2M behavior changes without code changes; the UI has no cooldown constant. This is not a new fixed financial/business policy.
+
+Success/last_reminder_at means committed Booking outbox acceptance, atomically with metadata/history under the payment lock. No timestamp is written when enqueue fails; the whole batch can be retried. After acceptance, existing RabbitMQ outbox/inbox dedup, Identity notification retry and DLQ operations apply; SMTP failure does not erase a correctly accepted reminder or advance its timestamp again. No delivery-state API/in-app channel exists, so UI explicitly claims queued, not delivered. Payment may arrive after acceptance or be in inter-service transit; amount/deadline are the authoritative Booking snapshot at acceptance and the notice points to the current group status. Manual browser failure injection is not verified; rollback/retry and SMTP failure recovery are integration-tested.
+
 ## Staff permission catalog
 
 Resolved by explicit user approval on 2026-10-05: `BOOKING_READ`, `BOOKING_CREATE_COUNTER`, `BOOKING_CHECK_IN`, `BOOKING_COMPLETE`, `SCHEDULE_READ`. Owner grants each capability within a specific facility. Backend must require both an active binding and the matching permission. These names do not grant pricing write access.

@@ -55,6 +55,8 @@ booking:
   group:
     deadline-seconds: ${GROUP_PAYMENT_DEADLINE_SECONDS:1800} # DEMO_DEFAULT configurable deadline
     min-lead-seconds: ${GROUP_MIN_LEAD_SECONDS:7200} # UC-6.1 configurable minimum lead time
+    payment-reminder:
+      min-interval: ${GROUP_REMINDER_MIN_INTERVAL:PT15M} # IMPLEMENTATION_DEFAULT, not a canonical policy value
 
 sporthub:
   events:

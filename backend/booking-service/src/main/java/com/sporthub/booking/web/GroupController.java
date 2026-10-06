@@ -25,4 +25,5 @@ public class GroupController {
     @PutMapping("/{id}/allocations") public ApiResponse<Group> split(@PathVariable UUID id,@Valid @RequestBody Split input,HttpServletRequest r){return ApiResponse.success(service.split(id,input,identity.current(r)));}
     @GetMapping("/{id}/members/{memberId}/payable") public ApiResponse<Payable> payable(@PathVariable UUID id,@PathVariable UUID memberId,HttpServletRequest r){return ApiResponse.success(service.payable(id,memberId,identity.current(r)));}
     @PostMapping("/{id}/cancel") public ApiResponse<Group> cancel(@PathVariable UUID id,@Valid @RequestBody CancelInput input,HttpServletRequest r){return ApiResponse.success(service.cancel(id,input,identity.current(r)));}
+    @PostMapping("/{id}/payment-reminders") public ApiResponse<ReminderResult> remind(@PathVariable UUID id,@Valid @RequestBody PaymentReminders input,HttpServletRequest r){return ApiResponse.success(service.remind(id,input,identity.current(r)));}
 }

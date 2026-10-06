@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "SportHub Booking",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "servers": [
     {
@@ -1589,6 +1589,77 @@
           }
         }
       }
+    },
+    "/groups/{id}/payment-reminders": {
+      "post": {
+        "operationId": "sendGroupPaymentReminders",
+        "tags": [
+          "Group Booking"
+        ],
+        "summary": "Booking Owner manually reminds unpaid other members",
+        "description": "UC-6.7. Group owner ID only; Facility OWNER/STAFF has no override. Requires allocated GROUP_PENDING/PENDING before contribution deadline. Under payment/expiry lock, paid, inactive, self and cooldown members are skipped individually. All mode examines current active other members. Timestamp/history/outbox commit atomically. Enqueue failure rolls back the batch for retry. 200 means accepted into Booking outbox, not delivered; existing broker/contact delivery retries handle later failures. No financial mutation.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentReminderSelection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-member acceptance/skip, including paid-race and cooldown with server nextReminderAt.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PaymentReminderResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid/ambiguous/empty selection, duplicate/null IDs or malformed UUID"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Only this Booking Owner may send"
+          },
+          "404": {
+            "description": "Group not found"
+          },
+          "409": {
+            "description": "Contribution window/state closed or costs not allocated"
+          },
+          "503": {
+            "description": "Outbox acceptance failed; batch rolled back, retry permitted"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2128,7 +2199,8 @@
           "active",
           "amountDue",
           "amountPaid",
-          "paymentState"
+          "paymentState",
+          "reminderEligible"
         ],
         "properties": {
           "id": {
@@ -2166,6 +2238,34 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "lastReminderAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Last successful local outbox acceptance, not delivery confirmation; null for legacy/never reminded members."
+          },
+          "nextReminderAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Server/config derived earliest next acceptance."
+          },
+          "reminderEligible": {
+            "type": "boolean",
+            "description": "Current server eligibility; submission revalidates under the payment lock."
+          },
+          "reminderBlockedReason": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "SELF",
+              "WINDOW_CLOSED",
+              "NO_ALLOCATION",
+              "PAID",
+              "COOLDOWN",
+              "NOT_MEMBER"
+            ]
           }
         }
       },
@@ -2447,6 +2547,132 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "PaymentReminderSelection": {
+        "type": "object",
+        "description": "Choose unique memberIds (1..50), or remindAll=true without memberIds. Server resolves amount, deadline and payment state. Self reminders excluded. Configured per-member cooldown plus payment lock prevents concurrent bursts; no Idempotency-Key required.",
+        "properties": {
+          "memberIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "remindAll": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "memberIds",
+                "remindAll"
+              ],
+              "properties": {
+                "remindAll": {
+                  "enum": [
+                    true
+                  ]
+                }
+              }
+            },
+            {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "memberIds"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "remindAll"
+                    ],
+                    "properties": {
+                      "remindAll": {
+                        "enum": [
+                          true
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "PaymentReminderMemberResult": {
+        "type": "object",
+        "required": [
+          "memberId",
+          "outcome"
+        ],
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED",
+              "SKIPPED"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "SELF",
+              "WINDOW_CLOSED",
+              "NO_ALLOCATION",
+              "PAID",
+              "COOLDOWN",
+              "NOT_MEMBER"
+            ]
+          },
+          "lastReminderAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "nextReminderAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "PaymentReminderResult": {
+        "type": "object",
+        "required": [
+          "acceptedCount",
+          "skippedCount",
+          "members"
+        ],
+        "properties": {
+          "acceptedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skippedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaymentReminderMemberResult"
+            }
           }
         }
       }

@@ -24,6 +24,7 @@ import java.util.concurrent.*;
 
 @SpringBootTest(properties={"spring.rabbitmq.username=test","spring.rabbitmq.password=test","spring.rabbitmq.listener.simple.auto-startup=false",
  "spring.data.redis.password=test","SERVICE_CALL_SECRET=test-service-call-key-longer-than-thirty-two-characters","JWT_SECRET=test-signing-key-longer-than-thirty-two-characters","sporthub.events.outbox.enabled=false","booking.expiry-delay-ms=3600000"})
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class BookingIntegrationTest {
  static PostgreSQLContainer<?> postgres;
  @DynamicPropertySource static void db(DynamicPropertyRegistry p){String url=System.getenv("SPORTHUB_BOOKING_TEST_DB_URL");if(url!=null){p.add("spring.datasource.url",()->url);p.add("spring.datasource.username",()->System.getenv("SPORTHUB_TEST_DB_USER"));p.add("spring.datasource.password",()->System.getenv("SPORTHUB_TEST_DB_PASSWORD"));}else{postgres=new PostgreSQLContainer<>("postgres:16-alpine");postgres.start();p.add("spring.datasource.url",postgres::getJdbcUrl);p.add("spring.datasource.username",postgres::getUsername);p.add("spring.datasource.password",postgres::getPassword);}}
@@ -35,6 +36,8 @@ class BookingIntegrationTest {
  @MockBean com.sporthub.common.security.RemoteIdentity identity;
  @MockBean ReliableOutbox outbox;
  @Autowired GroupService groups;
+ @Autowired org.springframework.test.web.servlet.MockMvc http;
+ @Autowired org.springframework.transaction.PlatformTransactionManager txManager;
  @Autowired TransferLeaseService transfers;
  @Autowired com.sporthub.booking.web.BookingMonitoringController monitoring;
  Instant now=Instant.parse("2026-10-05T00:00:00Z"),start=now.plusSeconds(3600),end=now.plusSeconds(7200);
@@ -154,5 +157,101 @@ class BookingIntegrationTest {
   g=groups.split(g.id(),new Split("EQUAL",null),user);
   assertThat(g.members().stream().filter(m->m.userId().equals(user.id())).findFirst().orElseThrow().amountDue()).isEqualByComparingTo("50001");
   assertThat(g.members().stream().map(m->m.amountDue()).reduce(BigDecimal.ZERO,BigDecimal::add)).isEqualByComparingTo("150001");
+ }
+ Group reminderGroup(Caller... others){court=UUID.randomUUID();((com.fasterxml.jackson.databind.node.ObjectNode)quote).put("courtId",court.toString());var g=groups.create(groupInput(),key(),user,"token");String code=groups.invite(g.id(),user).code();for(var other:others)g=groups.join(new JoinGroup(code),other);return groups.split(g.id(),new Split("EQUAL",null),user);}
+ Member recipient(Group g,Caller actor){return g.members().stream().filter(m->m.userId().equals(actor.id())).findFirst().orElseThrow();}
+ PaymentReminders selected(UUID... ids){return new PaymentReminders(List.of(ids),false);}
+ @Test void reminderOneRecordsAcceptanceAndServerContentWithoutChangingFinances(){
+  var other=customer();var g=reminderGroup(other);var m=recipient(g,other);var result=groups.remind(g.id(),selected(m.id()),user);
+  assertThat(result.acceptedCount()).isEqualTo(1);assertThat(result.members().getFirst().lastReminderAt()).isEqualTo(now);
+  var after=groups.detail(g.id(),user);assertThat(after.booking()).isEqualTo(g.booking());assertThat(after.totalPaid()).isEqualByComparingTo(g.totalPaid());
+  assertThat(after.members()).extracting(Member::amountDue,Member::amountPaid,Member::paymentState,Member::paymentRequestedAt).containsExactlyElementsOf(g.members().stream().map(x->org.assertj.core.groups.Tuple.tuple(x.amountDue(),x.amountPaid(),x.paymentState(),x.paymentRequestedAt())).toList());
+  assertThat(recipient(after,other).lastReminderAt()).isEqualTo(now);assertThat(recipient(after,other).reminderBlockedReason()).isEqualTo("COOLDOWN");
+  verify(outbox).record(eq(com.sporthub.common.event.RabbitMQConfig.EXCHANGE_BOOKING),argThat(e->{var p=json.valueToTree(e.payload());return e.eventType().equals("booking.group.payment.reminder")&&p.path("recipientId").asText().equals(other.id().toString())&&p.path("amount").decimalValue().compareTo(m.amountDue())==0&&p.path("deadline").asText().equals(g.deadline().toString());}));
+  assertThat(repo.history(g.id()).stream().filter(h->h.action().equals("GROUP_PAYMENT_REMINDER_ACCEPTED"))).hasSize(1);
+ }
+ @Test void reminderMultipleAndAllExcludeSelfPaidAndCooldown(){
+  var a=customer();var b=customer();var c=customer();var g=reminderGroup(a,b,c);var ma=recipient(g,a);var mb=recipient(g,b);var mc=recipient(g,c);
+  consumer.apply(contribution(g,mc,c,UUID.randomUUID()));
+  var result=groups.remind(g.id(),selected(ma.id(),mb.id(),mc.id(),recipient(g,user).id(),UUID.randomUUID()),user);
+  assertThat(result.acceptedCount()).isEqualTo(2);assertThat(result.skippedCount()).isEqualTo(3);
+  assertThat(result.members()).extracting(ReminderMemberResult::reason).contains("PAID","SELF","NOT_MEMBER");
+  var all=groups.remind(g.id(),new PaymentReminders(null,true),user);assertThat(all.acceptedCount()).isZero();assertThat(all.skippedCount()).isEqualTo(3);
+  assertThat(all.members()).extracting(ReminderMemberResult::reason).containsExactly("COOLDOWN","COOLDOWN","PAID");
+  verify(outbox,times(2)).record(any(),any());
+ }
+ @Test void reminderAllSelectsEligibleMembersAndZeroShareIsSkipped(){
+  var a=customer();var b=customer();var g=reminderGroup(a,b);
+  g=groups.split(g.id(),new Split("CUSTOM",List.of(new Allocation(recipient(g,user).id(),new BigDecimal("75000")),new Allocation(recipient(g,a).id(),new BigDecimal("75000")),new Allocation(recipient(g,b).id(),BigDecimal.ZERO))),user);
+  var result=groups.remind(g.id(),new PaymentReminders(null,true),user);assertThat(result.acceptedCount()).isEqualTo(1);assertThat(result.members()).extracting(ReminderMemberResult::reason).contains("PAID");
+ }
+ @Test void reminderSkipsMemberWhoPaidAfterOwnerRead(){
+  var a=customer();var b=customer();var g=reminderGroup(a,b);var stale=recipient(g,a);assertThat(stale.reminderEligible()).isTrue();
+  consumer.apply(contribution(g,stale,a,UUID.randomUUID()));
+  var result=groups.remind(g.id(),selected(stale.id(),recipient(g,b).id()),user);
+  assertThat(result.acceptedCount()).isEqualTo(1);assertThat(result.members().getFirst().reason()).isEqualTo("PAID");
+  assertThat(recipient(groups.detail(g.id(),user),a).lastReminderAt()).isNull();
+  verify(outbox,never()).record(any(),argThat(e->json.valueToTree(e.payload()).path("recipientId").asText().equals(a.id().toString())));
+ }
+ @Test void reminderRejectsClosedStatesDeadlinesAndUnallocatedGroups(){
+  var a=customer();var draft=groups.create(groupInput(),key(),user,"token");UUID draftId=draft.id();
+  assertThatThrownBy(()->groups.remind(draftId,new PaymentReminders(null,true),user)).isInstanceOf(ConflictException.class);
+  for(String state:List.of("CANCELLED","COMPLETED","EXPIRED","CONFIRMED","CHECKED_IN")){
+   user=customer();
+   var g=reminderGroup(a);repo.jdbc().update("UPDATE bookings SET status=? WHERE id=?",state,g.id());
+   assertThatThrownBy(()->groups.remind(g.id(),selected(recipient(g,a).id()),user)).isInstanceOf(ConflictException.class);
+  }
+  for(String state:List.of("GROUP_CANCELLED","GROUP_EXPIRED","CONFIRMED")){
+   user=customer();
+   var g=reminderGroup(a);repo.jdbc().update("UPDATE booking_groups SET state=? WHERE id=?",state,g.id());
+   assertThatThrownBy(()->groups.remind(g.id(),selected(recipient(g,a).id()),user)).isInstanceOf(ConflictException.class);
+  }
+  var g=reminderGroup(a);when(clock.instant()).thenReturn(g.deadline());
+  assertThatThrownBy(()->groups.remind(g.id(),selected(recipient(g,a).id()),user)).isInstanceOf(ConflictException.class);
+  verifyNoInteractions(outbox);
+ }
+ @Test void reminderInactiveMembersAndInvalidSelectionsCannotEnqueue(){
+  var a=customer();var g=reminderGroup(a);var m=recipient(g,a);groups.leave(g.id(),a);groups.split(g.id(),new Split("EQUAL",null),user);
+  assertThat(groups.remind(g.id(),selected(m.id()),user).members().getFirst().reason()).isEqualTo("NOT_MEMBER");
+  for(var input:List.of(new PaymentReminders(null,false),selected(),new PaymentReminders(List.of(m.id()),true),new PaymentReminders(Arrays.asList(m.id(),m.id()),false),new PaymentReminders(Arrays.asList((UUID)null),false)))
+   assertThatThrownBy(()->groups.remind(g.id(),input,user)).isInstanceOf(IllegalArgumentException.class);
+  verifyNoInteractions(outbox);
+ }
+ @Test void reminderHttpAuthorizationValidationAndErrors()throws Exception{
+  var a=customer();var g=reminderGroup(a);var request=org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/groups/"+g.id()+"/payment-reminders").contentType("application/json").content("{\"remindAll\":true}");
+  when(identity.current(any())).thenThrow(new UnauthorizedException("Authentication required"));http.perform(request).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+  for(var caller:List.of(a,customer(),new Caller(UUID.randomUUID(),"Owner",Set.of("OWNER"),Map.of()),new Caller(UUID.randomUUID(),"Staff",Set.of("STAFF"),Map.of()))){doReturn(caller).when(identity).current(any());http.perform(request).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());}
+  doReturn(user).when(identity).current(any());http.perform(request).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+  http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/groups/"+g.id()+"/payment-reminders").contentType("application/json").content("{\"memberIds\":[null]}")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+  assertThatThrownBy(()->groups.remind(UUID.randomUUID(),new PaymentReminders(null,true),user)).isInstanceOf(ResourceNotFoundException.class);
+ }
+ @Test void reminderEnqueueFailureRollsBackBatchAndCanRetry(){
+  var a=customer();var b=customer();var g=reminderGroup(a,b);var calls=new java.util.concurrent.atomic.AtomicInteger();
+  doAnswer(i->{if(calls.incrementAndGet()==2)throw new IllegalStateException("Controlled enqueue failure");DomainEvent<?> event=i.getArgument(1);repo.jdbc().update("INSERT INTO event_outbox(event_id,exchange,routing_key,body) VALUES(?,?,?,?::jsonb)",event.eventId(),i.getArgument(0),event.eventType(),repo.write(event));return null;}).when(outbox).record(any(),any());
+  assertThatThrownBy(()->groups.remind(g.id(),new PaymentReminders(null,true),user)).isInstanceOf(org.springframework.web.server.ResponseStatusException.class).hasMessageContaining("503");
+  assertThat(groups.detail(g.id(),user).members()).allMatch(m->m.lastReminderAt()==null);
+  assertThat(repo.history(g.id()).stream().filter(h->h.action().equals("GROUP_PAYMENT_REMINDER_ACCEPTED"))).isEmpty();
+  assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM event_outbox WHERE body->>'aggregateId'=?",Integer.class,g.id().toString())).isZero();
+  doNothing().when(outbox).record(any(),any());assertThat(groups.remind(g.id(),new PaymentReminders(null,true),user).acceptedCount()).isEqualTo(2);
+ }
+ @Test void reminderDeadlineCrossingDuringBatchRollsBackEarlierAcceptances(){
+  var a=customer();var b=customer();var g=reminderGroup(a,b);
+  doAnswer(i->{DomainEvent<?> event=i.getArgument(1);repo.jdbc().update("INSERT INTO event_outbox(event_id,exchange,routing_key,body) VALUES(?,?,?,?::jsonb)",event.eventId(),i.getArgument(0),event.eventType(),repo.write(event));when(clock.instant()).thenReturn(g.deadline());return null;}).when(outbox).record(any(),any());
+  assertThatThrownBy(()->groups.remind(g.id(),new PaymentReminders(null,true),user)).isInstanceOf(ConflictException.class);
+  assertThat(groups.detail(g.id(),user).members()).allMatch(m->m.lastReminderAt()==null);
+  assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM event_outbox WHERE body->>'aggregateId'=?",Integer.class,g.id().toString())).isZero();
+  assertThat(repo.history(g.id()).stream().filter(h->h.action().equals("GROUP_PAYMENT_REMINDER_ACCEPTED"))).isEmpty();
+ }
+ @Test void reminderConcurrentRequestsAcceptOnlyOnce()throws Exception{
+  var a=customer();var g=reminderGroup(a);var m=recipient(g,a);var ready=new CountDownLatch(2);var go=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
+  try{var futures=new ArrayList<Future<ReminderResult>>();for(int i=0;i<2;i++)futures.add(pool.submit(()->{ready.countDown();go.await();return groups.remind(g.id(),selected(m.id()),user);}));ready.await(5,TimeUnit.SECONDS);go.countDown();int accepted=0;for(var f:futures)accepted+=f.get(10,TimeUnit.SECONDS).acceptedCount();assertThat(accepted).isEqualTo(1);verify(outbox,times(1)).record(any(),any());}finally{pool.shutdownNow();}
+ }
+ @Test void reminderWaitsForConcurrentPaymentCommitThenSkips()throws Exception{
+  var a=customer();var b=customer();var g=reminderGroup(a,b);var m=recipient(g,a);var payment=contribution(g,m,a,UUID.randomUUID());var locked=new CountDownLatch(1);var commit=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
+  try{
+   var pay=pool.submit(()->new org.springframework.transaction.support.TransactionTemplate(txManager).execute(s->{repo.lock(court);consumer.apply(payment);locked.countDown();try{if(!commit.await(5,TimeUnit.SECONDS))throw new IllegalStateException("Test timed out");}catch(InterruptedException ex){throw new IllegalStateException(ex);}return true;}));
+   assertThat(locked.await(5,TimeUnit.SECONDS)).isTrue();var remind=pool.submit(()->groups.remind(g.id(),selected(m.id()),user));
+   commit.countDown();assertThat(pay.get(10,TimeUnit.SECONDS)).isTrue();assertThat(remind.get(10,TimeUnit.SECONDS).members().getFirst().reason()).isEqualTo("PAID");verifyNoInteractions(outbox);
+  }finally{commit.countDown();pool.shutdownNow();}
  }
 }

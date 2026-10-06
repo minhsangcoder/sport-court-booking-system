@@ -218,6 +218,7 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
       GROUP_PAYMENT_DEADLINE_SECONDS: ${GROUP_PAYMENT_DEADLINE_SECONDS:-1800}
       GROUP_MIN_LEAD_SECONDS: ${GROUP_MIN_LEAD_SECONDS:-7200}
+      GROUP_REMINDER_MIN_INTERVAL: ${GROUP_REMINDER_MIN_INTERVAL:-PT15M}
     depends_on:
       postgres:
         condition: service_healthy

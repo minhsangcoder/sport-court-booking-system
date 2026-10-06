@@ -5,8 +5,10 @@ import com.sporthub.booking.web.BookingDtos.*;
 import com.sporthub.booking.repository.BookingRepository;
 import com.sporthub.common.security.RemoteIdentity.Caller;
 import com.sporthub.common.security.Signatures;
+import com.sporthub.common.event.*;
 import com.sporthub.common.exception.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,14 +25,18 @@ public class GroupService {
     private final GroupExpiration expiration;
     private final CheckinQr qr;
     private final Clock clock;
+    private final GroupReminderPolicy reminderPolicy;
+    private final ObjectProvider<ReliableOutbox> outbox;
     private final String secret;
     private final String publicAppUrl;
     private final int deadlineSeconds,minLeadSeconds;
     public GroupService(BookingRepository repo,BookingService bookings,GroupExpiration expiration,CheckinQr qr,Clock clock,
+        GroupReminderPolicy reminderPolicy,ObjectProvider<ReliableOutbox> outbox,
         @Value("${JWT_SECRET}") String secret,@Value("${booking.group.deadline-seconds:1800}") int deadlineSeconds,
         @Value("${booking.group.min-lead-seconds:7200}") int minLeadSeconds,@Value("${APP_PUBLIC_URL:http://localhost:3000}") String publicAppUrl) {
         if(deadlineSeconds<60||minLeadSeconds<deadlineSeconds)throw new IllegalArgumentException("Group deadline must fit inside minimum booking lead time");
         this.repo=repo;this.bookings=bookings;this.expiration=expiration;this.qr=qr;this.clock=clock;
+        this.reminderPolicy=reminderPolicy;this.outbox=outbox;
         this.secret=secret;this.deadlineSeconds=deadlineSeconds;this.minLeadSeconds=minLeadSeconds;this.publicAppUrl=publicAppUrl.replaceAll("/+$","");
     }
     @Transactional public Group create(CreateGroup input,String key,Caller caller,String token) {
@@ -123,6 +129,44 @@ public class GroupService {
         repo.jdbc().update("UPDATE bookings SET status='CANCELLED',version=version+1,updated_at=NOW() WHERE id=?",id);
         release(id);repo.history(id,caller.id(),"GROUP_CANCELLED",Map.of("reason",input.reason()));return load(id);
     }
+    /** Accept notices atomically under the same court lock as payment, expiry and membership. */
+    @Transactional public ReminderResult remind(UUID id,PaymentReminders input,Caller caller) {
+        var selection=input.memberIds();
+        if(input.remindAll()?selection!=null:(selection==null||selection.isEmpty()))
+            throw new IllegalArgumentException("Choose memberIds or remindAll, exclusively");
+        if(selection!=null&&(selection.size()>50||selection.stream().anyMatch(Objects::isNull)||new HashSet<>(selection).size()!=selection.size()))
+            throw new IllegalArgumentException("Member IDs must be unique, non-null and at most 50");
+        lock(id);var group=load(id);owner(group,caller);
+        Instant now=clock.instant();
+        if(!reminderPolicy.windowOpen(group.state(),group.booking().status(),group.deadline(),group.booking().endsAt(),now))
+            throw new ConflictException("Group contribution window is closed");
+        if(!group.allocationsLocked())throw new ConflictException("Group costs must be allocated before reminders");
+        // Load happens after acquiring the payment lock, never from client paid/amount/deadline values.
+        var byId=new HashMap<UUID,Member>();group.members().forEach(m->byId.put(m.id(),m));
+        var ids=input.remindAll()?group.members().stream().filter(m->!m.userId().equals(group.ownerId())).map(Member::id).toList():selection;
+        var results=new ArrayList<ReminderMemberResult>();int accepted=0;
+        for(UUID memberId:ids){
+            now=clock.instant();
+            if(!reminderPolicy.windowOpen(group.state(),group.booking().status(),group.deadline(),group.booking().endsAt(),now))
+                throw new ConflictException("Group contribution window is closed");
+            var m=byId.get(memberId);
+            String reason=m==null?"NOT_MEMBER":reminderPolicy.blockedReason(group.ownerId(),m.userId(),true,true,m.amountDue(),m.amountPaid(),m.lastReminderAt(),now);
+            if(reason!=null){results.add(new ReminderMemberResult(memberId,"SKIPPED",reason,m==null?null:m.lastReminderAt(),m==null?null:m.nextReminderAt()));continue;}
+            var publisher=outbox.getIfAvailable();
+            if(publisher==null)throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"Không thể nhận lời nhắc. Vui lòng thử lại.");
+            var event=DomainEvent.create("booking.group.payment.reminder",1,"booking-service",id,
+                Map.of("groupId",id,"ownerId",caller.id(),"memberId",m.id(),"recipientId",m.userId(),
+                    "amount",m.amountDue().subtract(m.amountPaid()),"currency",group.booking().currency(),
+                    "deadline",group.deadline(),"timezone",group.booking().priceSnapshot().path("timezone").asText("Asia/Ho_Chi_Minh"),
+                    "acceptedAt",now));
+            try{publisher.record(RabbitMQConfig.EXCHANGE_BOOKING,event);}
+            catch(RuntimeException ex){throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"Không thể nhận lời nhắc. Vui lòng thử lại.");}
+            repo.jdbc().update("UPDATE group_members SET last_reminder_at=? WHERE id=?",Timestamp.from(now),m.id());
+            repo.history(id,caller.id(),"GROUP_PAYMENT_REMINDER_ACCEPTED",Map.of("memberId",m.id(),"eventId",event.eventId(),"acceptedAt",now));
+            results.add(new ReminderMemberResult(m.id(),"ACCEPTED",null,now,reminderPolicy.nextAllowedAt(now)));accepted++;
+        }
+        return new ReminderResult(accepted,results.size()-accepted,results);
+    }
     /** Called in the same court-locked inbox transaction as the payment consumer. */
     public void paid(UUID id,UUID payment,UUID payer,JsonNode payload) {
         var group=load(id);UUID memberId=UUID.fromString(payload.path("memberId").asText());
@@ -151,9 +195,14 @@ public class GroupService {
     private Group load(UUID id) {
         var rows=repo.jdbc().queryForList("SELECT * FROM booking_groups WHERE id=?",id);
         if(rows.isEmpty())throw new ResourceNotFoundException("Group not found");var row=rows.get(0);
-        var members=repo.jdbc().query("SELECT * FROM group_members WHERE group_id=? AND active ORDER BY joined_at,id",(r,n)->
-            new Member(r.getObject("id",UUID.class),r.getObject("user_id",UUID.class),r.getString("display_name"),r.getBoolean("active"),r.getBigDecimal("amount_due"),r.getBigDecimal("amount_paid"),r.getString("payment_state"),r.getTimestamp("payment_requested_at")==null?null:r.getTimestamp("payment_requested_at").toInstant()),id);
-        return new Group(id,(UUID)row.get("owner_id"),(String)row.get("name"),(String)row.get("state"),((Timestamp)row.get("deadline")).toInstant(),(Integer)row.get("max_members"),(Boolean)row.get("allocations_locked"),repo.find(id),members,members.stream().map(Member::amountPaid).reduce(BigDecimal.ZERO,BigDecimal::add));
+        var booking=repo.find(id);Instant now=clock.instant();
+        boolean open=reminderPolicy.windowOpen((String)row.get("state"),booking.status(),((Timestamp)row.get("deadline")).toInstant(),booking.endsAt(),now);
+        var members=repo.jdbc().query("SELECT * FROM group_members WHERE group_id=? AND active ORDER BY joined_at,id",(r,n)->{
+            Instant last=BookingRepository.instant(r,"last_reminder_at");
+            String reason=reminderPolicy.blockedReason((UUID)row.get("owner_id"),r.getObject("user_id",UUID.class),open,(Boolean)row.get("allocations_locked"),r.getBigDecimal("amount_due"),r.getBigDecimal("amount_paid"),last,now);
+            return new Member(r.getObject("id",UUID.class),r.getObject("user_id",UUID.class),r.getString("display_name"),r.getBoolean("active"),r.getBigDecimal("amount_due"),r.getBigDecimal("amount_paid"),r.getString("payment_state"),BookingRepository.instant(r,"payment_requested_at"),last,reminderPolicy.nextAllowedAt(last),reason==null,reason);
+        },id);
+        return new Group(id,(UUID)row.get("owner_id"),(String)row.get("name"),(String)row.get("state"),((Timestamp)row.get("deadline")).toInstant(),(Integer)row.get("max_members"),(Boolean)row.get("allocations_locked"),booking,members,members.stream().map(Member::amountPaid).reduce(BigDecimal.ZERO,BigDecimal::add));
     }
     private void addMember(UUID id,Caller caller){repo.jdbc().update("INSERT INTO group_members(id,group_id,user_id,display_name) VALUES(?,?,?,?)",UUID.randomUUID(),id,caller.id(),caller.fullName());}
     private void lock(UUID id){repo.lock(repo.find(id).courtId());}

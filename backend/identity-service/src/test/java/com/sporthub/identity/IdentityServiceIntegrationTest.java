@@ -83,6 +83,8 @@ class IdentityServiceIntegrationTest {
     @Autowired com.sporthub.identity.security.JwtService jwtService;
     @Autowired AdminAccountService adminAccounts;
     @Autowired FacilityNoticeConsumer facilityNotices;
+    @Autowired GroupReminderConsumer groupReminders;
+    @Autowired IdentityNotificationJob notificationJob;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockBean MailDeliveryService mailDelivery;
     @MockBean OwnerApplicationDependencies applicationDependencies;
@@ -382,6 +384,32 @@ class IdentityServiceIntegrationTest {
         facilityNotices.apply(event);facilityNotices.apply(event);((com.fasterxml.jackson.databind.node.ObjectNode)event).put("eventId",UUID.randomUUID().toString());facilityNotices.apply(event);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM identity_notifications WHERE source_key=?",Integer.class,"facility-review:"+review)).isEqualTo(1);
         ((com.fasterxml.jackson.databind.node.ObjectNode)event).put("producer","untrusted-service");assertThatThrownBy(()->facilityNotices.apply(event)).isInstanceOf(org.springframework.amqp.AmqpRejectAndDontRequeueException.class);
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode reminderEvent(User recipient){
+        var json=signupJson;UUID group=UUID.randomUUID();
+        return json.valueToTree(com.sporthub.common.event.DomainEvent.create("booking.group.payment.reminder",1,"booking-service",group,Map.of("groupId",group,"ownerId",UUID.randomUUID(),"memberId",UUID.randomUUID(),"recipientId",recipient.getId(),"amount",50000,"currency","VND","deadline",Instant.parse("2030-01-01T03:00:00Z"),"timezone","Asia/Ho_Chi_Minh","acceptedAt",Instant.now())));
+    }
+    @Test void groupRemindersRouteVerifiedContactRenderAmountDeadlineLinkAndDeduplicate(){
+        var user=activate(uniqueEmail("group-reminder"));var event=reminderEvent(user);groupReminders.apply(event);groupReminders.apply(event);
+        var rows=jdbc.queryForList("SELECT * FROM identity_notifications WHERE source_key=?","group-reminder:"+event.path("eventId").asText());assertThat(rows).hasSize(1);
+        assertThat(rows.getFirst().get("recipient")).isEqualTo(user.getEmail());assertThat(rows.getFirst().get("body").toString()).contains("50.000 VND","01/01/2030 10:00","/customer/groups/"+event.path("payload").path("groupId").asText());
+        ((com.fasterxml.jackson.databind.node.ObjectNode)event).put("producer","untrusted-service");assertThatThrownBy(()->groupReminders.apply(event)).isInstanceOf(org.springframework.amqp.AmqpRejectAndDontRequeueException.class);
+    }
+    @Test void groupReminderDownstreamDeliveryFailureStaysPendingAndExistingJobRetries(){
+        var user=activate(uniqueEmail("reminder-retry"));var event=reminderEvent(user);groupReminders.apply(event);String source="group-reminder:"+event.path("eventId").asText();
+        jdbc.update("UPDATE identity_notifications SET created_at='1970-01-01T00:00:00Z' WHERE source_key=?",source);
+        org.mockito.Mockito.doThrow(new IllegalStateException("Controlled SMTP outage")).when(mailDelivery).sendNotification(eq(user.getEmail()),anyString(),anyString());
+        notificationJob.deliver();var failed=jdbc.queryForMap("SELECT * FROM identity_notifications WHERE source_key=?",source);
+        assertThat(failed.get("state")).isEqualTo("PENDING");assertThat(failed.get("sent_at")).isNull();assertThat(failed.get("attempts")).isEqualTo(1);assertThat(failed.get("last_error")).isEqualTo("IllegalStateException");
+        org.mockito.Mockito.doNothing().when(mailDelivery).sendNotification(eq(user.getEmail()),anyString(),anyString());jdbc.update("UPDATE identity_notifications SET next_attempt_at=NOW() WHERE source_key=?",source);notificationJob.deliver();
+        assertThat(jdbc.queryForMap("SELECT * FROM identity_notifications WHERE source_key=?",source)).containsEntry("state","SENT");groupReminders.apply(event);
+        org.mockito.Mockito.verify(mailDelivery,org.mockito.Mockito.times(2)).sendNotification(eq(user.getEmail()),anyString(),anyString());
+    }
+    @Test void malformedGroupReminderDoesNotCreateInboxOrNotice(){
+        var user=activate(uniqueEmail("invalid-reminder"));var event=reminderEvent(user);((com.fasterxml.jackson.databind.node.ObjectNode)event.path("payload")).put("amount",-1);
+        assertThatThrownBy(()->groupReminders.apply(event)).isInstanceOf(org.springframework.amqp.AmqpRejectAndDontRequeueException.class);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM event_inbox WHERE consumer='group-payment-reminder' AND event_id=?",Integer.class,UUID.fromString(event.path("eventId").asText()))).isZero();
     }
 
     @Autowired OwnerSignupService ownerSignup;
