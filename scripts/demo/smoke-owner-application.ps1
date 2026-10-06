@@ -30,7 +30,7 @@ if($customer.user.roles -contains 'OWNER'){throw 'Applicant already has Owner ro
 if($RegisterOnly){Write-Output "PASS verified Customer registered: applicant=$email";return}
 $admin=Request POST '/auth/login' @{identifier='admin@sporthub.local';password=$values.DEMO_PASSWORD}
 $other=Request POST '/auth/login' @{identifier='customer2@sporthub.local';password=$values.DEMO_PASSWORD}
-$input=@{legal=@{representativeName='Controlled representative';identityNumber='OWNER-SMOKE-IDENTITY';businessName='Controlled Owner '+[Guid]::NewGuid().ToString('N').Substring(0,8);bankName='Demo bank';bankAccountHolder='Controlled representative';bankAccountNumber='OWNER-SMOKE-BANK'};facility=@{name='Controlled first facility';phone='+84901111222';addressLine='Demo-only 420 Owner Application Street';province='Hà Nội';district='Cầu Giấy';ward='Dịch Vọng';description='Controlled Owner onboarding fixture';timezone='Asia/Ho_Chi_Minh';latitude=21.028;longitude=105.78;amenities=@('Bãi đỗ xe')}}
+$input=@{legal=@{representativeName='Controlled representative';identityNumber='OWNER-SMOKE-IDENTITY';businessName='Controlled Owner '+[Guid]::NewGuid().ToString('N').Substring(0,8);bankName='Demo bank';bankAccountHolder='Controlled representative';bankAccountNumber='OWNER-SMOKE-BANK'};facility=@{name='Controlled first facility';phone='+84901111222';contactEmail=' OLD+FACILITY@EXAMPLE.TEST ';addressLine='Demo-only 420 Owner Application Street';province='Hà Nội';district='Cầu Giấy';ward='Dịch Vọng';description='Controlled Owner onboarding fixture';timezone='Asia/Ho_Chi_Minh';latitude=21.028;longitude=105.78;amenities=@('Bãi đỗ xe')}}
 Reject 403 POST '/owner/facilities' $input.facility $customer.accessToken
 $application=Request POST '/owner-applications' $input $customer.accessToken
 $id=[Guid]$application.id;$facilityId=[Guid]$application.facilityId;$userId=[Guid]$customer.user.id
@@ -42,6 +42,8 @@ Reject 403 GET "/owner-applications/$id" $null $other.accessToken
 Reject 403 GET "/admin/owner-applications/$id" $null $customer.accessToken
 Reject 404 GET "/facilities/$facilityId"
 $own=Request GET "/owner-applications/$id" $null $customer.accessToken
+if($own.facility.facility.contactEmail -ne 'old+facility@example.test'){throw 'Initial contact normalization failed'}
+if((Sql facility_db "SELECT contact_email FROM facilities WHERE id='$facilityId'") -ne 'old+facility@example.test'){throw 'Contact persistence missing'}
 if($own.legal.identityNumber -ne $input.legal.identityNumber){throw 'Own protected detail mismatch'}
 if((Sql identity_db "SELECT private_payload NOT LIKE '%OWNER-SMOKE-IDENTITY%' AND private_payload NOT LIKE '%OWNER-SMOKE-BANK%' FROM owner_applications WHERE id='$id'") -ne 't'){throw 'Legal data is not encrypted'}
 $summary=Request GET '/owner-applications' $null $customer.accessToken|ConvertTo-Json -Depth 10
@@ -69,14 +71,21 @@ $queue=@(Request GET "/admin/owner-applications?state=PENDING_APPROVAL&q=$([uri]
 if(@($queue|Where-Object id -eq $id).Count -ne 1){throw 'Admin review queue missing application'}
 $review=Request GET "/admin/owner-applications/$id" $null $admin.accessToken
 if($review.history.Count -ne 1 -or $review.legal.identityNumber -ne $input.legal.identityNumber){throw 'Admin full detail/history missing'}
+if($review.reviewSnapshot.facility.contactEmail -ne 'old+facility@example.test'){throw 'Initial review contact snapshot incorrect'}
 if($LeavePending){Write-Output "PASS pending prepared: applicant=$email application=$id court=$($court.id)";return}
 Reject 400 POST "/admin/owner-applications/$id/decision" @{action='REJECT';reason='short'} $admin.accessToken
 $supplement=@{action='SUPPLEMENT_REQUIRED';reason='Please provide complete and legible location and identity documents'}
 if((Request POST "/admin/owner-applications/$id/decision" $supplement $admin.accessToken).state -ne 'SUPPLEMENT_REQUIRED'){throw 'Supplement did not reopen application'}
 $input.legal.identityNumber='OWNER-SMOKE-IDENTITY-REVISED'
+$input.facility.contactEmail='new+facility@example.test'
+Request PUT "/owner/facilities/$facilityId" $input.facility $customer.accessToken|Out-Null
+$beforeResubmit=Request GET "/admin/owner-applications/$id" $null $admin.accessToken
+if($beforeResubmit.facility.facility.contactEmail -ne $input.facility.contactEmail -or $beforeResubmit.reviewSnapshot.facility.contactEmail -ne 'old+facility@example.test'){throw 'Operational edit mutated current immutable review snapshot'}
 Request PUT "/owner-applications/$id/legal" $input.legal $customer.accessToken|Out-Null
 Request PUT "/schedules/facilities/$facilityId/hours" @{intervals=$hours} $customer.accessToken|Out-Null
 if((Request POST "/owner-applications/$id/submit" $null $customer.accessToken).state -ne 'PENDING_APPROVAL'){throw 'Resubmission failed'}
+$afterResubmit=Request GET "/admin/owner-applications/$id" $null $admin.accessToken
+if($afterResubmit.reviewSnapshot.facility.contactEmail -ne 'new+facility@example.test' -or $afterResubmit.history[1].facilitySnapshot.facility.contactEmail -ne 'old+facility@example.test'){throw 'Revision contact versions were not preserved'}
 Request POST "/admin/accounts/$userId/lock" @{reason='Controlled locked applicant check';duration='SEVEN_DAYS'} $admin.accessToken|Out-Null
 $approval=@{action='APPROVE';reason='Controlled application meets the reviewed legal and facility requirements';commissionPercent=5}
 Reject 409 POST "/admin/owner-applications/$id/decision" $approval $admin.accessToken
@@ -94,7 +103,16 @@ Request PUT "/schedules/facilities/$facilityId/hours" @{intervals=$hours} $owner
 if((Sql identity_db "SELECT count(*) FROM user_roles WHERE user_id='$userId' AND role='OWNER'") -ne '1'){throw 'Owner role duplicated'}
 if((Sql identity_db "SELECT count(*) FROM audit_log WHERE entity_id='$id' AND action='OWNER_APPLICATION_APPROVED'") -ne '1'){throw 'Approval audit duplicated'}
 if((Sql payment_db "SELECT count(*) FROM owner_wallets WHERE owner_id='$userId' AND application_id='$id' AND available_balance=0 AND commission_percent=5") -ne '1'){throw 'Wallet preparation invalid'}
+$input.facility.contactEmail='operational+facility@example.test'
+Request PUT "/owner/facilities/$facilityId" $input.facility $owner.accessToken|Out-Null
+if((Request GET "/owner/facilities/$facilityId" $null $owner.accessToken).contactEmail -ne $input.facility.contactEmail){throw 'Post-approval Owner contact edit did not persist'}
+foreach($path in @("/facilities/$facilityId","/facilities?q=Controlled","/facilities/courts/$($court.id)/context")){
+ $public=Request GET $path
+ if(($public|ConvertTo-Json -Depth 30) -match 'contactEmail|old\+facility@example.test|new\+facility@example.test|operational\+facility@example.test'){throw "Private contact leaked through $path"}
+}
 $final=Request GET "/admin/owner-applications/$id" $null $admin.accessToken
+if($final.reviewSnapshot.facility.contactEmail -ne 'new+facility@example.test' -or $final.history[1].facilitySnapshot.facility.contactEmail -ne 'old+facility@example.test'){throw 'Owner operational edit mutated submission history'}
+if((Sql identity_db "SELECT count(*) FROM owner_application_submissions WHERE application_id='$id' AND facility_snapshot->'facility'->>'contactEmail' IN ('old+facility@example.test','new+facility@example.test')") -ne '2'){throw 'Immutable contact snapshots missing in Identity DB'}
 if($final.history.Count -ne 2 -or @($final.audit|Where-Object action -eq 'ADMIN_OWNER_APPLICATION_VIEWED').Count -lt 1){throw 'Submission history or sensitive access audit missing'}
 if($final.applicant.id -ne $userId -or $final.applicant.email -ne $email){throw 'Admin applicant account summary missing'}
 $timeline=Request GET "/admin/owner-applications/$id/history?page=0&size=100" $null $admin.accessToken
@@ -103,6 +121,8 @@ $revision=@($timeline.items|Where-Object action -eq 'OWNER_APPLICATION_SUPPLEMEN
 if($revision.reason -ne $supplement.reason -or $revision.actorId -ne $admin.user.id -or $revision.toState -ne 'SUPPLEMENT_REQUIRED'){throw 'Reviewer/reason/state missing from history'}
 if(@($timeline.items|Where-Object {$_.submissionOrigin -eq 'SUPPLEMENT_REQUIRED' -and $_.submissionId}).Count -ne 1){throw 'Resubmission event missing'}
 if(@($timeline.items|Where-Object {$_.action -eq 'OWNER_APPLICATION_UPDATED' -and $_.changedFields -contains 'identityNumber'}).Count -ne 1){throw 'Edit metadata missing'}
+if(@($timeline.items|Where-Object {$_.submissionOrigin -eq 'SUPPLEMENT_REQUIRED' -and $_.changedFields -contains 'contactEmail'}).Count -ne 1){throw 'Contact email revision metadata missing'}
+if(($timeline|ConvertTo-Json -Depth 12) -match '@example.test'){throw 'History exposes contact email values'}
 if(($timeline|ConvertTo-Json -Depth 12) -match 'OWNER-SMOKE-IDENTITY|OWNER-SMOKE-BANK|private_snapshot|private_payload'){throw 'History exposes sensitive values'}
 Reject 403 GET "/admin/owner-applications/$id/history" $null $owner.accessToken
 Reject 400 GET "/admin/owner-applications/$id/history?size=101" $null $admin.accessToken
@@ -112,4 +132,4 @@ if((Sql identity_db "SELECT count(*) FROM audit_log WHERE entity_id='$id' AND ac
 @{applicationId=$id;facilityId=$facilityId;applicantEmail=$email}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $demoRoot 'tmp/demo/owner-history-fixture.json') -Encoding utf8
 $notice=Notice 'Owner application APPROVED';if($notice -notmatch 'Sign in again'){throw 'Approval guide missing'}
 Request PUT "/owner/courts/$($court.id)" @{code='OWNER-APP-1';name='Controlled application court';sportCategoryId=$category.id;enabled=$false} $owner.accessToken|Out-Null
-Write-Output 'PASS: real Owner draft/encrypted DB/scoped applicant workspace/frozen submission/revision/edit/resubmit/locked applicant/admin review/idempotent approval/zero wallet/new Owner session/publication/safe audit/paged history/account/Mailpit guide. Fixture court disabled.'
+Write-Output 'PASS: real Owner draft/encrypted DB/scoped applicant workspace/frozen submission/revision/edit/resubmit/locked applicant/admin review/idempotent approval/zero wallet/new Owner session/publication/contact persistence/immutable V1-V2/post-approval edit/public privacy/safe audit/paged history/account/Mailpit guide. Fixture court disabled.'

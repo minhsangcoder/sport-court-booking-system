@@ -14,7 +14,10 @@ public final class OwnerApplicationDtos {
   @NotBlank @Size(max=500) String addressLine,@NotBlank @Size(max=100) String province,@NotBlank @Size(max=100) String district,@NotBlank @Size(max=100) String ward,
   @Size(max=5000) String description,@NotBlank @Size(max=80) String timezone,
   @NotNull @DecimalMin("-90") @DecimalMax("90") BigDecimal latitude,@NotNull @DecimalMin("-180") @DecimalMax("180") BigDecimal longitude,
-  @Size(max=30) Set<@NotBlank @Size(max=100) String> amenities){}
+  @Size(max=30) Set<@NotBlank @Size(max=100) String> amenities,@Email @Size(max=254) String contactEmail){
+  public Facility {contactEmail=com.sporthub.common.dto.ContactEmail.normalize(contactEmail);}
+  public Facility(String name,String phone,String addressLine,String province,String district,String ward,String description,String timezone,BigDecimal latitude,BigDecimal longitude,Set<String> amenities){this(name,phone,addressLine,province,district,ward,description,timezone,latitude,longitude,amenities,null);}
+ }
  public record Create(@NotNull @Valid Legal legal,@NotNull @Valid Facility facility){}
  public record Decision(@Pattern(regexp="APPROVE|REJECT|SUPPLEMENT_REQUIRED") @NotBlank String action,@NotBlank @Size(max=1200) String reason,
   @DecimalMin("0") @DecimalMax("100") @Digits(integer=3,fraction=2) BigDecimal commissionPercent){}
@@ -26,5 +29,5 @@ public final class OwnerApplicationDtos {
  public record HistoryEntry(UUID id,UUID actorId,String actorName,String action,Instant occurredAt,
   String fromState,String toState,String reason,List<String> changedFields,UUID submissionId,String submissionOrigin,boolean metadataAvailable){}
  public record HistoryPage(List<HistoryEntry> items,int page,int size,long totalElements,long totalPages){}
- public record Detail(Summary application,Legal legal,JsonNode facility,List<Map<String,Object>> history,List<Map<String,Object>> audit,Applicant applicant){}
+ public record Detail(Summary application,Legal legal,JsonNode facility,List<Map<String,Object>> history,List<Map<String,Object>> audit,Applicant applicant,JsonNode reviewSnapshot){}
 }

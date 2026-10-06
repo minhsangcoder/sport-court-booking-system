@@ -11,11 +11,11 @@ import java.util.*;
 public class FacilityController {
  private final FacilityService service; private final RemoteIdentity identity;
  public FacilityController(FacilityService service,RemoteIdentity identity){this.service=service;this.identity=identity;}
- @GetMapping("/owner/facilities") public ApiResponse<List<FacilityView>> owned(HttpServletRequest r){return ApiResponse.success(service.owned(identity.current(r)));}
- @PostMapping("/owner/facilities") @ResponseStatus(org.springframework.http.HttpStatus.CREATED) public ApiResponse<FacilityView> create(@Valid @RequestBody FacilityInput i,HttpServletRequest r){return ApiResponse.created(service.create(i,identity.current(r)));}
- @GetMapping("/owner/facilities/{id}") public ApiResponse<FacilityView> detail(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.ownedDetail(id,identity.current(r)));}
- @GetMapping("/owner/facilities/{id}/write-access") public ApiResponse<FacilityView> writeAccess(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.writeAccess(id,identity.current(r)));}
- @PutMapping("/owner/facilities/{id}") public ApiResponse<FacilityView> update(@PathVariable UUID id,@Valid @RequestBody FacilityInput i,HttpServletRequest r){return ApiResponse.success(service.update(id,i,identity.current(r)));}
+ @GetMapping("/owner/facilities") public ApiResponse<List<FacilityProfileView>> owned(HttpServletRequest r){return ApiResponse.success(service.owned(identity.current(r)));}
+ @PostMapping("/owner/facilities") @ResponseStatus(org.springframework.http.HttpStatus.CREATED) public ApiResponse<FacilityProfileView> create(@Valid @RequestBody FacilityInput i,HttpServletRequest r){return ApiResponse.created(service.create(i,identity.current(r)));}
+ @GetMapping("/owner/facilities/{id}") public ApiResponse<FacilityProfileView> detail(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.ownedDetail(id,identity.current(r)));}
+ @GetMapping("/owner/facilities/{id}/write-access") public ApiResponse<FacilityProfileView> writeAccess(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.writeAccess(id,identity.current(r)));}
+ @PutMapping("/owner/facilities/{id}") public ApiResponse<FacilityProfileView> update(@PathVariable UUID id,@Valid @RequestBody FacilityInput i,HttpServletRequest r){return ApiResponse.success(service.update(id,i,identity.current(r)));}
  @GetMapping("/owner/facilities/{id}/courts") public ApiResponse<List<CourtView>> courts(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.ownedCourts(id,identity.current(r)));}
  @PostMapping("/owner/facilities/{id}/courts") @ResponseStatus(org.springframework.http.HttpStatus.CREATED) public ApiResponse<CourtView> addCourt(@PathVariable UUID id,@Valid @RequestBody CourtInput i,HttpServletRequest r){return ApiResponse.created(service.createCourt(id,i,identity.current(r)));}
  @PutMapping("/owner/courts/{id}") public ApiResponse<CourtView> updateCourt(@PathVariable UUID id,@Valid @RequestBody CourtInput i,HttpServletRequest r){return ApiResponse.success(service.updateCourt(id,i,identity.current(r)));}

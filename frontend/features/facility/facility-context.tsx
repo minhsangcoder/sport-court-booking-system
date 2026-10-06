@@ -4,11 +4,11 @@ import { usePathname } from 'next/navigation'
 import { createContext,useContext } from 'react'
 import { useApi } from '@/lib/use-api'
 import { RequireAuth } from '@/features/auth/require-auth'
-import type { Facility } from './types'
-const FacilityContext=createContext<{facility:Facility;reload:()=>void;basePath:string;editable:boolean}|null>(null)
+import type { FacilityProfile } from './types'
+const FacilityContext=createContext<{facility:FacilityProfile;reload:()=>void;basePath:string;editable:boolean}|null>(null)
 export function FacilityShell({id,children,applicationId}:{id:string;children:React.ReactNode;applicationId?:string}){return <RequireAuth roles={applicationId?['CUSTOMER','OWNER']:['OWNER']}><LoadedShell id={id} applicationId={applicationId}>{children}</LoadedShell></RequireAuth>}
 function LoadedShell({id,children,applicationId}:{id:string;children:React.ReactNode;applicationId?:string}){
-  const {data,error,loading,reload}=useApi<Facility>(`/owner/facilities/${id}`);const path=usePathname()
+  const {data,error,loading,reload}=useApi<FacilityProfile>(`/owner/facilities/${id}`);const path=usePathname()
   if(loading)return <p className="p-8" role="status">Đang tải cơ sở…</p>
   if(error||!data)return <div role="alert" className="p-8 text-red-700">{error}<button className="ml-3 underline" onClick={reload}>Thử lại</button></div>
   const base=applicationId?`/owner/application/${applicationId}/facility`:`/owner/facilities/${id}`

@@ -399,6 +399,55 @@ class IdentityServiceIntegrationTest {
     private OwnerApplicationDtos.Legal applicationLegal(){return new OwnerApplicationDtos.Legal("Demo representative","TEST-IDENTITY-PRIVATE","Demo business",null,null,"Demo bank","Demo representative","TEST-BANK-PRIVATE");}
     private OwnerApplicationDtos.Decision approval(){return new OwnerApplicationDtos.Decision("APPROVE","Application reviewed and accepted",new java.math.BigDecimal("5.00"));}
 
+
+    private OwnerApplicationDtos.Create contactApplicationInput(String email){
+        var f=applicationInput().facility();return new OwnerApplicationDtos.Create(applicationLegal(),new OwnerApplicationDtos.Facility(f.name(),f.phone(),f.addressLine(),f.province(),f.district(),f.ward(),f.description(),f.timezone(),f.latitude(),f.longitude(),f.amenities(),email));
+    }
+    private void mockContactSnapshot(UUID id,String email) throws Exception {
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper();var snapshot=mapper.createObjectNode();snapshot.putObject("facility").put("name","First facility").put("contactEmail",email);
+        org.mockito.Mockito.when(applicationDependencies.facility(eq(id),eq("submit"),anyMap(),any())).thenReturn(mapper.createObjectNode().set("snapshot",snapshot));
+    }
+    @Test void contactEmailApplicationValidatesNormalizesAndKeepsAccountCredentialSeparate() throws Exception {
+        var user=activate(uniqueEmail("contact-email"));var actor=applicant(user);
+        assertThatThrownBy(()->applications.create(contactApplicationInput("malformed"),actor)).isInstanceOf(IdentityException.class);
+        var app=applications.create(contactApplicationInput("  Facility+Contact@EXAMPLE.TEST  "),actor);
+        assertThat(jdbc.queryForObject("SELECT initial_facility->>'contactEmail' FROM owner_applications WHERE id=?",String.class,app.id())).isEqualTo("facility+contact@example.test");
+        assertThat(userRepository.findById(user.getId()).orElseThrow().getEmail()).isEqualTo(user.getEmail());
+        mockContactSnapshot(app.id(),"facility+contact@example.test");applications.submit(app.id(),actor,null);
+        assertThat(applications.detail(app.id(),applicationAdmin(),true).reviewSnapshot().path("facility").path("contactEmail").asText()).isEqualTo("facility+contact@example.test");
+        org.mockito.Mockito.verify(applicationDependencies,org.mockito.Mockito.atLeastOnce()).facility(eq(app.id()),eq("create"),argThat(body->((com.fasterxml.jackson.databind.JsonNode)body.get("facility")).path("contactEmail").asText().equals("facility+contact@example.test")),any());
+    }
+    @Test void contactEmailRevisionKeepsSubmittedVersionsAndApprovalReadsImmutableSnapshot() throws Exception {
+        var user=activate(uniqueEmail("contact-revision"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(contactApplicationInput("old@example.test"),actor);
+        mockContactSnapshot(app.id(),"old@example.test");applications.submit(app.id(),actor,null);
+        var mapper=new com.fasterxml.jackson.databind.ObjectMapper();var operational=mapper.readTree("{\"facility\":{\"name\":\"Operational\",\"contactEmail\":\"new@example.test\"}}");
+        org.mockito.Mockito.when(applicationDependencies.facility(eq(app.id()),eq("view"),anyMap(),any())).thenReturn(operational);
+        assertThat(applications.detail(app.id(),admin,true).reviewSnapshot().path("facility").path("contactEmail").asText()).isEqualTo("old@example.test");
+        applications.decide(app.id(),new OwnerApplicationDtos.Decision("SUPPLEMENT_REQUIRED","Please correct the facility contact email",null),admin);
+        mockContactSnapshot(app.id(),"new@example.test");applications.submit(app.id(),actor,null);applications.submit(app.id(),actor,null);
+        var detail=applications.detail(app.id(),admin,true);assertThat(detail.history()).hasSize(2);assertThat(detail.reviewSnapshot().path("facility").path("contactEmail").asText()).isEqualTo("new@example.test");
+        assertThat(detail.history()).anySatisfy(h->assertThat(((com.fasterxml.jackson.databind.JsonNode)h.get("facilitySnapshot")).path("facility").path("contactEmail").asText()).isEqualTo("old@example.test"));
+        var history=applications.history(app.id(),0,20,admin);assertThat(history.items()).filteredOn(e->e.submissionOrigin()!=null&&e.submissionOrigin().equals("SUPPLEMENT_REQUIRED")).singleElement().satisfies(e->assertThat(e.changedFields()).containsExactly("contactEmail"));
+        assertThat(mapper.findAndRegisterModules().writeValueAsString(history)).doesNotContain("old@example.test","new@example.test");
+        applications.decide(app.id(),approval(),admin);applications.decide(app.id(),approval(),admin);
+        ((com.fasterxml.jackson.databind.node.ObjectNode)operational.path("facility")).put("contactEmail","post-approval@example.test");
+        var approved=applications.detail(app.id(),admin,true);assertThat(approved.facility().path("facility").path("contactEmail").asText()).isEqualTo("post-approval@example.test");assertThat(approved.reviewSnapshot().path("facility").path("contactEmail").asText()).isEqualTo("new@example.test");assertThat(approved.history()).hasSize(2);
+    }
+    @Test void contactEmailLegacySnapshotsStayMissingAndNoChangeIsFabricated() throws Exception {
+        var user=activate(uniqueEmail("contact-legacy"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(applicationInput(),actor);
+        assertThat(applications.detail(app.id(),admin,true).reviewSnapshot()).isNull();
+        applications.submit(app.id(),actor,null);assertThat(applications.detail(app.id(),admin,true).reviewSnapshot().path("facility").has("contactEmail")).isFalse();
+        applications.decide(app.id(),new OwnerApplicationDtos.Decision("SUPPLEMENT_REQUIRED","Please complete legacy facility information",null),admin);
+        mockContactSnapshot(app.id(),"introduced@example.test");applications.submit(app.id(),actor,null);
+        assertThat(applications.history(app.id(),0,20,admin).items()).filteredOn(e->e.submissionOrigin()!=null).allSatisfy(e->assertThat(e.changedFields()).isEmpty());
+        assertThat(applications.detail(app.id(),admin,true).history()).anySatisfy(h->assertThat(((com.fasterxml.jackson.databind.JsonNode)h.get("facilitySnapshot")).path("facility").has("contactEmail")).isFalse());
+    }
+    @Test void contactEmailUnchangedResubmitDoesNotMarkAFalseEdit() throws Exception {
+        var user=activate(uniqueEmail("contact-unchanged"));var actor=applicant(user);var admin=applicationAdmin();var app=applications.create(contactApplicationInput("same@example.test"),actor);mockContactSnapshot(app.id(),"same@example.test");applications.submit(app.id(),actor,null);
+        applications.decide(app.id(),new OwnerApplicationDtos.Decision("SUPPLEMENT_REQUIRED","Please provide a clearer location document",null),admin);applications.submit(app.id(),actor,null);
+        assertThat(applications.history(app.id(),0,20,admin).items()).filteredOn(e->e.submissionOrigin()!=null).allSatisfy(e->assertThat(e.changedFields()).isEmpty());
+    }
+
     @Test void ownerApplicationApprovalIsIdempotentAuditedPrivateAndRevokesOldSessions() throws Exception {
         var user=activate(uniqueEmail("application"));var actor=applicant(user);var admin=applicationAdmin();
         var session=authService.login(new LoginRequest(user.getEmail(),"Password123!"),metadata);var oldPrincipal=jwtService.parseAccessToken(session.response().accessToken());

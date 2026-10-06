@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest(properties={"spring.rabbitmq.username=test","spring.rabbitmq.password=test",
  "sporthub.media.access-key=test-access","sporthub.media.secret-key=test-secret","sporthub.media.endpoint=http://localhost:19000","sporthub.events.outbox.delay-ms=3600000"})
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class FacilityIntegrationTest {
  static PostgreSQLContainer<?> postgres;
  @DynamicPropertySource static void database(DynamicPropertyRegistry props){
@@ -27,6 +28,8 @@ class FacilityIntegrationTest {
   else{postgres=new PostgreSQLContainer<>("postgres:16-alpine");postgres.start();props.add("spring.datasource.url",postgres::getJdbcUrl);props.add("spring.datasource.username",postgres::getUsername);props.add("spring.datasource.password",postgres::getPassword);}
  }
  @AfterAll static void stop(){if(postgres!=null)postgres.stop();}
+ @Autowired org.springframework.test.web.servlet.MockMvc http;
+ @Autowired com.fasterxml.jackson.databind.ObjectMapper json;
  @Autowired FacilityService service;
  @Autowired MediaService media;
  @Autowired FacilityReviewService reviews;
@@ -64,7 +67,7 @@ class FacilityIntegrationTest {
  private FacilityInput input(String name){return new FacilityInput(name,"+84901234567","Address","Province","District","Ward","Description","Asia/Ho_Chi_Minh",null,null,Set.of("Parking"));}
 
  @Test void facilityReviewFreezesSubmissionSupportsSupplementAndPublishesExactlyOneDecision(){
-  var owner=owner();var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());var f=service.create(input("Review "+UUID.randomUUID()),owner);
+  var owner=owner();var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());var f=service.create(emailInput("Review "+UUID.randomUUID(),"old@example.test"),owner);
   assertThatThrownBy(()->reviews.submit(f.id(),owner,"Bearer test")).isInstanceOf(ConflictException.class);
   var category=service.createCategory(new CategoryInput("Review sport "+UUID.randomUUID(),true),admin);service.createCourt(f.id(),new CourtInput("R1","Review court",category.id(),null,true),owner);
   var json=new com.fasterxml.jackson.databind.ObjectMapper();org.mockito.Mockito.when(reviewDependencies.hours(f.id(),"Bearer test")).thenReturn(json.createArrayNode());
@@ -78,10 +81,12 @@ class FacilityIntegrationTest {
   assertThatThrownBy(()->reviews.decide(f.id(),"REJECT","short",admin)).isInstanceOf(IllegalArgumentException.class);
   reviews.decide(f.id(),"SUPPLEMENT_REQUIRED","Please provide a clearer location document",admin);
   documents.delete(f.id(),attachment,owner);assertThat(documents.list(f.id(),owner)).isEmpty();assertThat(documents.list(f.id(),admin).getFirst().archived()).isTrue();assertThat(jdbc.queryForObject("SELECT count(*) FROM media_cleanup WHERE object_key=?",Integer.class,"private/review-lease/"+attachment)).isZero();
-  assertThat(service.ownedDetail(f.id(),owner).status()).isEqualTo("DRAFT");service.update(f.id(),input("Supplemented Facility"),owner);
+  assertThat(service.ownedDetail(f.id(),owner).status()).isEqualTo("DRAFT");service.update(f.id(),emailInput("Supplemented Facility","new@example.test"),owner);
   var second=reviews.submit(f.id(),owner,"Bearer test");reviews.decide(f.id(),"APPROVE","The additional facility meets the review criteria",admin);
   assertThat(service.publicDetail(f.id()).name()).isEqualTo("Supplemented Facility");assertThat(reviews.reviews(f.id())).hasSize(2);
   assertThat(reviews.reviews(f.id()).stream().filter(r->r.id().equals(first.id())).findFirst().orElseThrow().snapshot().path("facility").path("name").asText()).startsWith("Review ");
+  assertThat(first.snapshot().path("facility").path("contactEmail").asText()).isEqualTo("old@example.test");assertThat(second.snapshot().path("facility").path("contactEmail").asText()).isEqualTo("new@example.test");
+  service.update(f.id(),emailInput("Supplemented Facility","operational@example.test"),owner);assertThat(reviews.reviews(f.id()).stream().filter(r->r.id().equals(second.id())).findFirst().orElseThrow().snapshot().path("facility").path("contactEmail").asText()).isEqualTo("new@example.test");
   assertThatThrownBy(()->reviews.decide(f.id(),"APPROVE","Repeated approval must not publish twice",admin)).isInstanceOf(ConflictException.class);
   assertThat(jdbc.queryForObject("SELECT count(*) FROM event_outbox WHERE body->>'aggregateId'=?",Integer.class,f.id().toString())).isEqualTo(2);
   assertThatThrownBy(()->jdbc.update("UPDATE facility_reviews SET snapshot='{}'::jsonb WHERE id=?",second.id())).isInstanceOf(org.springframework.dao.DataAccessException.class);
@@ -105,7 +110,7 @@ class FacilityIntegrationTest {
  @Test void facilityCrudRemainsDraftAndOwnerScoped(){
   var owner=owner();var facility=service.create(input("Facility "+UUID.randomUUID()),owner);
   assertThat(facility.status()).isEqualTo("DRAFT");
-  assertThat(service.owned(owner)).extracting(FacilityView::id).contains(facility.id());
+  assertThat(service.owned(owner)).extracting(FacilityProfileView::id).contains(facility.id());
   assertThatThrownBy(()->service.publicDetail(facility.id())).isInstanceOf(ResourceNotFoundException.class);
   assertThatThrownBy(()->service.ownedDetail(facility.id(),owner())).isInstanceOf(ForbiddenException.class);
   assertThat(service.update(facility.id(),input("Updated Facility"),owner).name()).isEqualTo("Updated Facility");
@@ -141,6 +146,49 @@ class FacilityIntegrationTest {
   assertThatThrownBy(()->service.create(input("Denied"),new Caller(UUID.randomUUID(),"Customer",Set.of("CUSTOMER"),Map.of())))
     .isInstanceOf(ForbiddenException.class);
  }
+
+ private FacilityInput emailInput(String name,String email){return new FacilityInput(name,"+84901234567","Address","Province","District","Ward","Description","Asia/Ho_Chi_Minh",null,null,Set.of("Parking"),email);}
+ @Test void contactEmailCreateUpdateNormalizeClearAndLegacyPutPreserveContact() throws Exception {
+  var owner=owner();var f=service.create(emailInput("Contact "+UUID.randomUUID(),"  Local+Contact@EXAMPLE.TEST  "),owner);
+  assertThat(f.contactEmail()).isEqualTo("local+contact@example.test");assertThat(service.ownedDetail(f.id(),owner).contactEmail()).isEqualTo(f.contactEmail());
+  assertThat(jdbc.queryForObject("SELECT contact_email FROM facilities WHERE id=?",String.class,f.id())).isEqualTo(f.contactEmail());
+  assertThat(service.create(input("Old client"),owner).contactEmail()).isNull();
+  var legacy=json.readValue(json.writeValueAsString(input("Old update")).replace(",\"contactEmail\":null",""),FacilityInput.class);
+  assertThat(legacy.contactEmailProvided()).isFalse();assertThat(service.update(f.id(),legacy,owner).contactEmail()).isEqualTo(f.contactEmail());
+  assertThat(service.update(f.id(),emailInput("Updated","second@example.test"),owner).contactEmail()).isEqualTo("second@example.test");
+  var blank=json.readValue(json.writeValueAsString(emailInput("Clear","  ")),FacilityInput.class);assertThat(blank.contactEmailProvided()).isTrue();
+  assertThat(service.update(f.id(),blank,owner).contactEmail()).isNull();
+  assertThat(jdbc.queryForList("SELECT details FROM facility_audit WHERE facility_id=? AND action='FACILITY_UPDATED' ORDER BY occurred_at",String.class,f.id())).contains("{\"changedFields\":[\"contactEmail\"]}").allSatisfy(a->assertThat(a).doesNotContain("@"));
+ }
+ @Test void contactEmailValidationReturnsFieldErrorAndDoesNotPersistMalformedValue() throws Exception {
+  var caller=owner();org.mockito.Mockito.when(identity.current(org.mockito.ArgumentMatchers.any())).thenReturn(caller);
+  for(var value:List.of("bad-email","a@@example.test","a b@example.test","x".repeat(255)+"@example.test")){
+   var body=json.writeValueAsString(emailInput("Invalid contact",value));
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/owner/facilities").contentType("application/json").content(body)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.fieldErrors[0].field").value("contactEmail"));
+  }
+  for(var invalid:List.<com.fasterxml.jackson.databind.JsonNode>of(json.valueToTree(123),json.valueToTree(true),json.createObjectNode(),json.createArrayNode().add("valid@example.test"))){
+   var body=(com.fasterxml.jackson.databind.node.ObjectNode)json.valueToTree(emailInput("Invalid type",null));body.set("contactEmail",invalid);
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/owner/facilities").contentType("application/json").content(body.toString())).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.fieldErrors[0].field").value("contactEmail"));
+  }
+  assertThatThrownBy(()->service.create(emailInput("Invalid","bad-email"),caller)).isInstanceOf(IllegalArgumentException.class);
+  assertThat(service.owned(caller)).isEmpty();
+  // Do not silently strip local-part characters, Unicode or plus tags.
+  var dto=emailInput("Unicode"," ĐỐI.TÁC+Sân@EXAMPLE.TEST ");assertThat(dto.contactEmail()).isEqualTo("đối.tác+sân@example.test");
+ }
+ @Test void contactEmailCannotBeChangedByForeignOwnerOrUnscopedApplicant(){
+  var owner=owner();var f=service.create(emailInput("Scoped","private@example.test"),owner);
+  assertThatThrownBy(()->service.update(f.id(),emailInput("Changed","forged@example.test"),owner())).isInstanceOf(ForbiddenException.class);
+  assertThatThrownBy(()->service.update(f.id(),emailInput("Changed","forged@example.test"),new Caller(owner.id(),"Applicant",Set.of("CUSTOMER"),Map.of()))).isInstanceOf(ForbiddenException.class);
+  assertThat(service.ownedDetail(f.id(),owner).contactEmail()).isEqualTo("private@example.test");
+ }
+ @Test void contactEmailIsAbsentFromPublicSearchDetailAndSharedCourtContext() throws Exception {
+  var owner=owner();var f=service.create(emailInput("Privacy "+UUID.randomUUID(),"hidden@example.test"),owner);
+  var category=service.createCategory(new CategoryInput("Privacy "+UUID.randomUUID(),true),new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of()));var court=service.createCourt(f.id(),new CourtInput("P1","Privacy court",category.id(),null,true),owner);
+  jdbc.update("UPDATE facilities SET status='ACTIVE' WHERE id=?",f.id());
+  for(var value:List.of(service.publicDetail(f.id()),service.search(f.name()),service.context(court.id(),null),service.context(court.id(),owner)))assertThat(json.writeValueAsString(value)).doesNotContain("contactEmail","hidden@example.test");
+  assertThat(json.writeValueAsString(service.ownedDetail(f.id(),owner))).contains("contactEmail","hidden@example.test");
+ }
+
  @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
  @Test void rejectedReplacementPreservesExistingMetadataAndEnforcesOwner(){
   var owner=owner();var facility=service.create(input("Replacement "+UUID.randomUUID()),owner);UUID id=UUID.randomUUID();String key="test/"+id+".png";

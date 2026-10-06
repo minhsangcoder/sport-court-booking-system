@@ -21,7 +21,7 @@ The **Lịch sử thẩm định** tab shows paginated business events: creation
 
 Older events retain their real actor/action/time and existing reason, but missing before/after state or changed-field metadata is explicitly labelled; it is not fabricated or backfilled. Actor names are current profiles, not historical name snapshots; recorded UUIDs retain attribution. Immutable legal snapshots remain encrypted and are not added to timeline responses.
 
-The first-facility event section uses its existing latest-100 audit contract and says so explicitly. Full historical Facility field diffs and unbounded Facility audit access are not implemented by this Identity history slice. Existing returned submission snapshots remain unchanged. The combined Owner account-registration path (UC-1.7) and facility contact email (UC-2.1) remain gaps; this is not a claim that every canonical onboarding requirement is DONE.
+The first-facility event section uses its existing latest-100 audit contract and says so explicitly. Full historical Facility field diffs and unbounded Facility audit access are not implemented by this Identity history slice. Existing returned submission snapshots remain unchanged. The combined Owner account-registration path (UC-1.7) remains a gap; contact email (UC-2.1) is completed in the section below; this is not a claim that every canonical onboarding requirement is DONE.
 
 ## Verification
 
@@ -40,3 +40,26 @@ The onboarding smoke verifies real encrypted persistence, revision/edit/resubmit
 Browser verification on 2026-10-06: real account/detail and eight-event approval timeline; edit field label without its value; both immutable submission cards; facility event section; a private revision fixture with 26 real API-generated events split 20+6 across two history pages without overlap; filtered queue/detail/return preserves keyword/status/page/size; legacy history explicitly marks five missing-metadata records. No browser error/warning logs. Queue/detail/history have no page horizontal overflow at 360 px; detail/history also verified at 390 px. A long synthetic applicant email exposed grid overflow at 360 px, fixed and rechecked. Ignored evidence: `owner-history-desktop.png`, `owner-history-360.png`, `owner-history-390.png`; pagination fixture IDs: `owner-history-paging-fixture.json`. Fixtures are synthetic, and the revision fixture remains Customer/private.
 
 Full backend `mvn -o package`: 94 tests, no failures/errors/skips (88 existing + 6 history tests). Frontend `pnpm lint`, `pnpm typecheck`, `pnpm build`: PASS. Identity OpenAPI v1.4 validation/client regeneration: PASS, with the pre-existing unused AddressInput recommendation; new nullable fields generate correct null unions. Existing discovery smoke also PASS; all 13 Compose containers healthy. Only Identity/frontend images rebuilt/deployed; all demo migrations match I6/F7/S3/B3/P5/T1, with no failed history.
+
+## UC-2.1 private facility contact email
+
+The canonical form (PDF pages 23–24) now accepts **Email liên hệ cơ sở (tùy chọn)**. This is independent of **Email tài khoản**; it is never auto-filled from a credential. Enter a valid email or leave it blank. Backend trims/lowercases consistently with Identity and validates supplied email/max254; new Facility V8 is nullable for existing rows. Old PUT requests without this new property preserve the contact; explicit null/blank clears it. Existing-client create without email still works.
+
+Owner onboarding and `/owner/facilities/new` use real API requests. Edit/supplement forms prefill the current private draft; save/reload reads persisted contact, cancel leaves it unchanged. Owner overview displays the operational contact. Guest facility/search/discovery/court context do not include contactEmail.
+
+Admin **Cơ sở và cấu hình** uses `reviewSnapshot.facility.contactEmail`, the latest immutable submitted version, and never uses account/current operational email as fallback. Before a submission or on an old snapshot, it displays “Chưa có trong phiên bản hồ sơ này”. **Lịch sử thẩm định** shows each immutable submission's email and the safe changed-field label **Email liên hệ cơ sở**. Only field names are stored/displayed in edit audit events; no before/after email values are added to audit.
+
+Run the existing onboarding smoke for initial contact persistence, V1 → requested revision → draft edit (current review still V1) → resubmit V2 → approve/replay → fresh Owner session → operational edit (review remains V2) → Guest privacy. It checks both Facility/Identity DB snapshots and existing lifecycle/history/Mailpit invariants, and disables the approved fixture court afterward. `smoke-facility.ps1` additionally checks ordinary Owner create/update/reload and preservation on a legacy PUT.
+
+```powershell
+./scripts/demo/smoke-owner-application.ps1
+./scripts/demo/smoke-facility.ps1
+./scripts/demo/smoke-facility-review.ps1
+./scripts/demo/smoke-discovery.ps1
+```
+
+Legacy submissions are not backfilled; their absence of contact email and old diff metadata remains visible. Unbounded Facility audit and other historical field diffs remain separate work.
+
+Contact-email verification on 2026-10-06: final full backend 103 tests (0 failure/error/skipped); targeted 10 plus final 4 Facility contact tests; frontend lint/typecheck/build; Facility/Identity/owner-internal OpenAPI validation/generation; isolated fresh/upgrade migrations and live I6/F8/S3/B3/P5/T1 history PASS. All six smokes above (including filters/Admin) PASS; all 13 Compose containers healthy. Only Identity/Facility/frontend rebuilt, with a final Facility-only rebuild for wrong-JSON-type validation. The Facility smoke's direct spoof-header probe now runs inside its isolated container instead of the removed host port 18082, and still requires 401.
+
+Browser proof: real create/submit/revision/edit/resubmit with long contact emails, protected Admin V2/retained V1 and changed-field labels; neutral legacy snapshot; Owner ordinary create/reload/edit/reload/cancel; native validation and server-400 input retention; filtered-list return URL. Onboarding, Owner forms/overview, Admin queue/detail/history checked at 360/390px without page overflow. Saving an unmodified loaded edit form verifies prefill without exposing masked input values in automation logs. Evidence (ignored): `contact-email-history-360.png`, `contact-email-history-390.png`, `contact-email-admin-desktop.png`, `contact-email-ui-fixture.json`. The browser-created application remains pending/private for inspection; approved smoke fixture courts are disabled. Future wider Facility history/diffs and UC-1.7 signup remain separate work.

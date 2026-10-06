@@ -42,7 +42,7 @@
                         "data": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/FacilityView"
+                            "$ref": "#/components/schemas/FacilityProfileView"
                           }
                         }
                       }
@@ -142,7 +142,7 @@
                       ],
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/FacilityView"
+                          "$ref": "#/components/schemas/FacilityProfileView"
                         }
                       }
                     }
@@ -263,7 +263,7 @@
                       ],
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/FacilityView"
+                          "$ref": "#/components/schemas/FacilityProfileView"
                         }
                       }
                     }
@@ -372,7 +372,7 @@
                       ],
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/FacilityView"
+                          "$ref": "#/components/schemas/FacilityProfileView"
                         }
                       }
                     }
@@ -3377,6 +3377,15 @@
               "minLength": 1,
               "maxLength": 100
             }
+          },
+          "contactEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "maxLength": 254,
+            "description": "Optional private facility contact, independent of account email. Trimmed/lowercased like Identity; blank is null. On PUT, omission preserves the existing contact; explicit null/blank clears it."
           }
         },
         "required": [
@@ -3802,7 +3811,7 @@
             ]
           },
           "snapshot": {
-            "type": "object"
+            "$ref": "#/components/schemas/FacilitySnapshot"
           },
           "submittedAt": {
             "type": "string",
@@ -3872,7 +3881,7 @@
         "type": "object",
         "properties": {
           "facility": {
-            "$ref": "#/components/schemas/FacilityView"
+            "$ref": "#/components/schemas/FacilityProfileView"
           },
           "courts": {
             "type": "array",
@@ -3929,6 +3938,67 @@
           "action",
           "reason"
         ]
+      },
+      "FacilityProfileView": {
+        "description": "Private Owner/applicant/Admin profile. Public facility and court-context responses use FacilityView without contactEmail.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FacilityView"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "contactEmail": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "email",
+                "maxLength": 254,
+                "description": "Optional private facility contact, independent of account email. Trimmed/lowercased like Identity; blank is null. On PUT, omission preserves the existing contact; explicit null/blank clears it."
+              }
+            }
+          }
+        ]
+      },
+      "FacilitySnapshot": {
+        "type": "object",
+        "description": "Immutable submitted configuration. Legacy facility snapshots may lack contactEmail; never backfilled from operational/account data.",
+        "properties": {
+          "facility": {
+            "$ref": "#/components/schemas/FacilityProfileView"
+          },
+          "courts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CourtView"
+            }
+          },
+          "hours": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
       }
     }
   }

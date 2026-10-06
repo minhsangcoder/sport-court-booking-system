@@ -2894,6 +2894,15 @@
               "type": "string",
               "maxLength": 100
             }
+          },
+          "contactEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "maxLength": 254,
+            "description": "Optional private facility contact, independent of account email; trim/lowercase, blank becomes null."
           }
         },
         "required": [
@@ -2912,7 +2921,7 @@
         "type": "object",
         "properties": {
           "facility": {
-            "$ref": "./facility.yaml#/components/schemas/FacilityView"
+            "$ref": "./facility.yaml#/components/schemas/FacilityProfileView"
           },
           "courts": {
             "type": "array",
@@ -2978,7 +2987,7 @@
                   "format": "date-time"
                 },
                 "facilitySnapshot": {
-                  "type": "object"
+                  "$ref": "./facility.yaml#/components/schemas/FacilitySnapshot"
                 }
               }
             }
@@ -3011,6 +3020,17 @@
           },
           "applicant": {
             "$ref": "#/components/schemas/OwnerApplicationApplicant"
+          },
+          "reviewSnapshot": {
+            "description": "Latest immutable submission (submittedAt DESC, id DESC); null before the first submission. Use this for reviewed contact data, never the operational profile/account email. Legacy snapshots can omit contactEmail.",
+            "oneOf": [
+              {
+                "$ref": "./facility.yaml#/components/schemas/FacilitySnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -3230,7 +3250,8 @@
                 "taxCode",
                 "bankName",
                 "bankAccountHolder",
-                "bankAccountNumber"
+                "bankAccountNumber",
+                "contactEmail"
               ]
             }
           },

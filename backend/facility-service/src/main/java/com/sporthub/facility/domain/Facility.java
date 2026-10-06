@@ -8,6 +8,7 @@ public class Facility {
  @Id private UUID id=UUID.randomUUID();
  @Column(name="owner_id",nullable=false) private UUID ownerId;
  private String name; private String phone;
+ @Column(name="contact_email",length=254) private String contactEmail;
  @Column(name="address_line") private String addressLine;
  private String province; private String district; private String ward;
  @Column(columnDefinition="text") private String description;

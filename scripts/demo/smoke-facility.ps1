@@ -13,11 +13,17 @@ function Facility-Request([string]$Path,[string]$Method='Get',$Body=$null){
 }
 $facilitySmokeOwned=(Facility-Request '/owner/facilities').data
 if(!$facilitySmokeOwned){throw 'Owner demo seed not available'}
-$facilitySmokeInput=@{name='Smoke '+[Guid]::NewGuid().ToString('N');phone='+84901234567';addressLine='Demo smoke address';province='Hà Nội';district='Cầu Giấy';ward='Dịch Vọng';timezone='Asia/Ho_Chi_Minh';amenities=@('Parking')}
+$facilitySmokeInput=@{name='Smoke '+[Guid]::NewGuid().ToString('N');phone='+84901234567';contactEmail=' CONTACT+CRUD@EXAMPLE.TEST ';addressLine='Demo smoke address';province='Hà Nội';district='Cầu Giấy';ward='Dịch Vọng';timezone='Asia/Ho_Chi_Minh';amenities=@('Parking')}
 $facilitySmokeCreated=(Facility-Request '/owner/facilities' 'Post' $facilitySmokeInput).data
 if($facilitySmokeCreated.status -ne 'DRAFT'){throw 'CRUD unexpectedly bypassed approval'}
+if((Facility-Request "/owner/facilities/$($facilitySmokeCreated.id)").data.contactEmail -ne 'contact+crud@example.test'){throw 'Owner create/reload contact failed'}
+$facilitySmokeInput.contactEmail='updated+crud@example.test'
 $facilitySmokeInput.name+=' Updated'
 Facility-Request "/owner/facilities/$($facilitySmokeCreated.id)" 'Put' $facilitySmokeInput | Out-Null
+if((Facility-Request "/owner/facilities/$($facilitySmokeCreated.id)").data.contactEmail -ne 'updated+crud@example.test'){throw 'Owner edit/reload contact failed'}
+$facilitySmokeLegacy=$facilitySmokeInput.Clone();$facilitySmokeLegacy.Remove('contactEmail')
+Facility-Request "/owner/facilities/$($facilitySmokeCreated.id)" 'Put' $facilitySmokeLegacy | Out-Null
+if((Facility-Request "/owner/facilities/$($facilitySmokeCreated.id)").data.contactEmail -ne 'updated+crud@example.test'){throw 'Legacy PUT erased new contact data'}
 $facilitySmokeCategory=(Facility-Request '/sport-categories').data | Where-Object active | Select-Object -First 1
 $facilitySmokeCourtInput=@{code='SMOKE-1';name='Smoke court';sportCategoryId=$facilitySmokeCategory.id;enabled=$true}
 $facilitySmokeCourt=(Facility-Request "/owner/facilities/$($facilitySmokeCreated.id)/courts" 'Post' $facilitySmokeCourtInput).data
@@ -37,7 +43,11 @@ Facility-Request "/owner/facilities/$($facilitySmokeCreated.id)/images/$($facili
 $facilitySmokeCustomer=(Invoke-RestMethod "$ApiBase/auth/login" -Method Post -ContentType 'application/json' -Body (@{identifier='customer@sporthub.local';password=$facilitySmokePassword}|ConvertTo-Json)).data
 $facilitySmokeDenied=Invoke-WebRequest "$ApiBase/owner/facilities/$($facilitySmokeCreated.id)" -Headers @{Authorization='Bearer '+$facilitySmokeCustomer.accessToken;'X-User-Role'='OWNER';'X-User-Id'=$facilitySmokeLogin.user.id} -SkipHttpErrorCheck
 if($facilitySmokeDenied.StatusCode -ne 403){throw 'Facility ownership/role scope was not enforced'}
-$facilitySmokeDirect=Invoke-WebRequest "http://localhost:18082/api/v1/owner/facilities" -Headers @{'X-User-Role'='OWNER';'X-User-Id'=$facilitySmokeLogin.user.id} -SkipHttpErrorCheck
-if($facilitySmokeDirect.StatusCode -ne 401){throw 'Direct service trusted spoofable identity headers'}
+# App services are isolated in Compose; probe the direct service from its container.
+Push-Location $facilitySmokeRoot
+try {
+ $facilitySmokeDirect=& docker compose exec -T facility-service sh -c 'wget -S -O /dev/null --header="X-User-Role: OWNER" --header="X-User-Id: $1" http://localhost:8082/api/v1/owner/facilities 2>&1 || true' -- $facilitySmokeLogin.user.id
+ if($LASTEXITCODE -ne 0 -or ($facilitySmokeDirect|Out-String) -notmatch 'HTTP/\S+ 401'){throw 'Direct service did not reject spoofable identity headers'}
+} finally { Pop-Location }
 Facility-Request '/auth/logout' 'Post' @{} | Out-Null
-Write-Output 'PASS: owner facility CRUD remains DRAFT; courts/maintenance; real MinIO upload/access/replacement/durable cleanup/delete; customer scope and direct header spoofing rejected.'
+Write-Output 'PASS: owner facility CRUD/contact create/edit/reload/legacy PUT remains DRAFT; courts/maintenance; real MinIO upload/access/replacement/durable cleanup/delete; customer scope and direct header spoofing rejected.'
