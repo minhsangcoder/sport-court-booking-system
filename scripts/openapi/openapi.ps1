@@ -23,7 +23,7 @@ if ($LASTEXITCODE -ne 0) { throw "OpenAPI validation failed for $Contract." }
 if ($Action -eq 'validate') { return }
 
 if ($Action -eq 'frontend') {
-    docker run --rm --volume "${dockerRoot}:/workspace" $generatorImage generate -i $dockerContract -g typescript-fetch -o "/workspace/frontend/src/lib/api/generated/$Contract" --additional-properties=supportsES6=true,npmName=@sporthub/$Contract-api,typescriptThreePlus=true
+    docker run --rm --volume "${dockerRoot}:/workspace" $generatorImage generate -i $dockerContract -g typescript-fetch -o "/workspace/frontend/src/lib/api/generated/$Contract" --global-property skipFormModel=false --additional-properties=supportsES6=true,npmName=@sporthub/$Contract-api,typescriptThreePlus=true
     if ($LASTEXITCODE -ne 0) { throw "Frontend client generation failed for $Contract." }
     return
 }

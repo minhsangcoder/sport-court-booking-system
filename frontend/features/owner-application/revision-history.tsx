@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useApi } from '@/lib/use-api'
 import { Button } from '@/components/ui/button'
 import { Failure } from './application-page'
-import { legalFields } from './apply-page'
+import { legalFields } from './legal-fields'
 import { applicationLabels,type ApplicationDetail,type ApplicationHistoryEntry,type ApplicationHistoryPage } from './types'
 
 const labels:Record<string,string>={

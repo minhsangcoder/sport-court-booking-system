@@ -32,13 +32,21 @@ public class MediaService {
         return jdbc.query("SELECT * FROM facility_images WHERE facility_id=? ORDER BY created_at",(rs,n)->image(
                 rs.getObject("id",UUID.class),rs.getObject("court_id",UUID.class),rs.getString("object_key"),rs.getString("content_type"),rs.getLong("size_bytes")),facilityId);
     }
-    public ImageView upload(UUID facilityId,UUID courtId,MultipartFile file,Caller caller){
+    public ImageView upload(UUID facilityId,UUID courtId,MultipartFile file,Caller caller){return uploadOnce(facilityId,courtId,UUID.randomUUID(),file,caller);}
+    public ImageView uploadOnce(UUID facilityId,UUID courtId,UUID id,MultipartFile file,Caller caller){
+        return transactions.execute(status->uploadWithId(facilityId,courtId,id,file,caller));
+    }
+    private ImageView uploadWithId(UUID facilityId,UUID courtId,UUID id,MultipartFile file,Caller caller){
+        facilities.ownedEntity(facilityId,caller);
+        jdbc.queryForList("SELECT id FROM facilities WHERE id=? FOR UPDATE",UUID.class,facilityId);
+        var existing=jdbc.queryForList("SELECT id FROM facility_images WHERE facility_id=? AND id=?",UUID.class,facilityId,id);
+        if(!existing.isEmpty())return list(facilityId,caller).stream().filter(i->i.id().equals(id)).findFirst().orElseThrow();
         facilities.mutableOwnedEntity(facilityId,caller);
         if(courtId!=null && !facilities.ownedCourt(courtId,caller).facilityId().equals(facilityId))
             throw new IllegalArgumentException("Court does not belong to facility");
         if(file.isEmpty() || file.getSize()>10*1024*1024) throw new IllegalArgumentException("Image must be between 1 byte and 10 MB (demo technical limit)");
-        String type=validateImage(file);
-        UUID id=UUID.randomUUID();String key="facilities/"+facilityId+"/"+id+(type.equals("image/png")?".png":".jpg");
+        String type=com.sporthub.common.upload.UploadValidation.image(file);
+        String key="facilities/"+facilityId+"/"+id+(type.equals("image/png")?".png":".jpg");
         try{
             ensureBucket();
             try(var stream=file.getInputStream()){
@@ -59,7 +67,7 @@ public class MediaService {
         if(jdbc.queryForObject("SELECT count(*) FROM facility_images WHERE id=? AND facility_id=?",Integer.class,imageId,facilityId)==0)
             throw new ResourceNotFoundException("Image not found");
         if(file.isEmpty()||file.getSize()>10*1024*1024)throw new IllegalArgumentException("Image must be between 1 byte and 10 MB");
-        String type=validateImage(file);String key="facilities/"+facilityId+"/"+UUID.randomUUID()+(type.equals("image/png")?".png":".jpg");
+        String type=com.sporthub.common.upload.UploadValidation.image(file);String key="facilities/"+facilityId+"/"+UUID.randomUUID()+(type.equals("image/png")?".png":".jpg");
         try {
             ensureBucket();try(var stream=file.getInputStream()){storage.putObject(PutObjectArgs.builder().bucket(bucket).object(key).contentType(type).stream(stream,file.getSize(),-1).build());}
             UUID court;
@@ -89,18 +97,5 @@ public class MediaService {
     private ImageView image(UUID id,UUID courtId,String key,String type,long size){
         try{return new ImageView(id,courtId,key,signer.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder().method(Method.GET).bucket(bucket).object(key).expiry(900).build()),type,size);}
         catch(Exception ex){throw new IllegalStateException("Image access URL could not be generated",ex);}
-    }
-    private String validateImage(MultipartFile file){
-        try(var input=javax.imageio.ImageIO.createImageInputStream(file.getInputStream())){
-            var readers=javax.imageio.ImageIO.getImageReaders(input);
-            if(!readers.hasNext())throw new IllegalArgumentException("Only JPEG and PNG images are supported");
-            var reader=readers.next();
-            try{
-                reader.setInput(input);String format=reader.getFormatName().toLowerCase(Locale.ROOT);
-                if(!Set.of("png","jpeg","jpg").contains(format))throw new IllegalArgumentException("Only JPEG and PNG images are supported");
-                if((long)reader.getWidth(0)*reader.getHeight(0)>20_000_000)throw new IllegalArgumentException("Image dimensions exceed demo technical limit");
-                return format.equals("png")?"image/png":"image/jpeg";
-            }finally{reader.dispose();}
-        }catch(java.io.IOException ex){throw new IllegalArgumentException("Invalid image content",ex);}
     }
 }

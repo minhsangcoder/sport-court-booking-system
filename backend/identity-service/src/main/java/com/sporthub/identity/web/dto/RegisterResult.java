@@ -9,5 +9,9 @@ public record RegisterResult(
         UUID userId,
         AccountStatus accountStatus,
         UUID verificationChallengeId,
-        Instant verificationExpiresAt) {
+        Instant verificationExpiresAt,
+        OwnerApplicationDtos.Summary ownerApplication,
+        String ownerSetupMessage) {
+    public RegisterResult(UUID userId,AccountStatus accountStatus,UUID verificationChallengeId,Instant verificationExpiresAt){this(userId,accountStatus,verificationChallengeId,verificationExpiresAt,null,null);}
+
 }

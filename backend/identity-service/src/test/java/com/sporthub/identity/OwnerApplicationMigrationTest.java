@@ -14,9 +14,9 @@ class OwnerApplicationMigrationTest {
   try {
    for(boolean upgrade:new boolean[]{false,true}){
     String schema="owner_migration_"+UUID.randomUUID().toString().replace("-","");
-    if(upgrade){var before=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).target("5").load();before.migrate();assertThat(before.info().current().getVersion().toString()).isEqualTo("5");}
+    if(upgrade){var before=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).target("6").load();before.migrate();assertThat(before.info().current().getVersion().toString()).isEqualTo("6");}
     var latest=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).load();latest.migrate();latest.validate();
-    assertThat(latest.info().current().getVersion().toString()).isEqualTo("6");
+    assertThat(latest.info().current().getVersion().toString()).isEqualTo("7");
     try(var connection=DriverManager.getConnection(url,user,password);var statement=connection.createStatement();var results=statement.executeQuery("SELECT count(*) FROM "+schema+".flyway_schema_history WHERE NOT success")){results.next();assertThat(results.getInt(1)).isZero();}
    }
   }finally{if(temporary!=null)temporary.stop();}

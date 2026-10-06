@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { ReviewDocument } from '@/features/facility/document-page'
 import type { Media } from '@/features/facility/types'
-import { legalFields } from './apply-page'
+import { legalFields } from './legal-fields'
 import { Failure } from './application-page'
 import { applicationLabels,type OwnerApplication,type ApplicationDetail,type ApplicationState } from './types'
 export function AdminOwnerApplications({initial}:{initial:ApplicationFilters}){return <RequireAuth roles={['ADMIN']}><AdminOwnerApplicationList initial={initial}/></RequireAuth>}

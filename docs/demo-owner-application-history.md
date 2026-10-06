@@ -63,3 +63,25 @@ Legacy submissions are not backfilled; their absence of contact email and old di
 Contact-email verification on 2026-10-06: final full backend 103 tests (0 failure/error/skipped); targeted 10 plus final 4 Facility contact tests; frontend lint/typecheck/build; Facility/Identity/owner-internal OpenAPI validation/generation; isolated fresh/upgrade migrations and live I6/F8/S3/B3/P5/T1 history PASS. All six smokes above (including filters/Admin) PASS; all 13 Compose containers healthy. Only Identity/Facility/frontend rebuilt, with a final Facility-only rebuild for wrong-JSON-type validation. The Facility smoke's direct spoof-header probe now runs inside its isolated container instead of the removed host port 18082, and still requires 401.
 
 Browser proof: real create/submit/revision/edit/resubmit with long contact emails, protected Admin V2/retained V1 and changed-field labels; neutral legacy snapshot; Owner ordinary create/reload/edit/reload/cancel; native validation and server-400 input retention; filtered-list return URL. Onboarding, Owner forms/overview, Admin queue/detail/history checked at 360/390px without page overflow. Saving an unmodified loaded edit form verifies prefill without exposing masked input values in automation logs. Evidence (ignored): `contact-email-history-360.png`, `contact-email-history-390.png`, `contact-email-admin-desktop.png`, `contact-email-ui-fixture.json`. The browser-created application remains pending/private for inspection; approved smoke fixture courts are disabled. Future wider Facility history/diffs and UC-1.7 signup remain separate work.
+
+## UC-1.7 registration entry point
+
+Open `/register`, leave **Đăng ký trở thành chủ sân** off for ordinary registration. Enable it to supply shared legal/first-facility/map fields, one first court, operating days/hours/slot length/VND price, identity/location legal documents and a facility image. These match current first-submission readiness. File types/limits are existing PDF/JPEG/PNG legal documents, JPEG/PNG image, 10 MB each. Account email and optional facility contact email are separate.
+
+Owner signup uses multipart `POST /api/v1/auth/register`: JSON `request` part plus `identityDocument`, `locationDocument`, `facilityImage`, with UUID `Idempotency-Key`. Normal JSON registration remains compatible. Reuse the original key/body/files/password after a timeout. The page retains its local key/draft on error; OFF sends only ordinary account data. Fields/statuses/roles from the browser cannot grant Owner or choose another applicant.
+
+Application is submitted before contact verification; pending account has no role. Verify through Mailpit/code, then sign in as Customer to the existing application workspace. Admin sees the same list/filter/detail/history. Approval of an unverified/locked applicant is blocked; supplement/reject may happen beforehand. After supplement, edit/resubmit through `/owner/application/{id}`; never register the account again. Approval revokes sessions; sign in again for Owner capability/public first facility.
+
+Identity commits account/encrypted application/receipt together. A post-commit dependency failure returns the created account plus DRAFT recovery message; verify/login, use **Khởi tạo lại cơ sở** if the first resource was unavailable, finish the existing workspace, then submit. Identical signup retry is also safe. DRAFT setup does not retry files automatically; SUBMITTING and approval retain existing durable retries. No Owner/publication occurs during partial setup.
+
+Run against the isolated demo stack:
+
+```powershell
+./scripts/demo/smoke-owner-signup.ps1
+# Optional controlled restart proves the receipt survives a new Identity JVM:
+./scripts/demo/smoke-owner-signup.ps1 -RestartIdentityBeforeRetry
+```
+
+The controlled smoke covers normal OFF, malformed facility/file, tampered privilege fields, account/application/facility/config/file persistence, retry, queue/detail, unverified approval guard, verification, supplement/resubmit, approval replay/session revocation/publication, rejection and audit. Its public court is disabled in finally; fixture metadata goes only into ignored `tmp/demo`.
+
+Verified 2026-10-06: 123 backend tests (zero failures/errors/skips), frontend lint/typecheck/build, Identity/owner-internal validation/client generation, fresh/upgrade Identity V7 and live I7/F8/S3/B3/P5/T1 history, four affected images and 13 healthy containers. Restart signup smoke and seven Auth/Owner Application/filters/Admin/Facility/Facility Review/Discovery regressions pass. The restart smoke reproduced and verified the fix for nondeterministic digests; legacy WIP receipts remain compatible and cannot bypass password/input checks. Browser verified OFF/ON registration, retained input/file errors, verification -> Customer, Admin revision -> same-workspace resubmit -> approval -> new Owner login and real Discovery prices/availability. Form checked at 360/390 px and desktop. Fixture courts disabled, history retained and upload/OTP files removed. Manual downstream outage injection/recovery UI is not claimed verified; service failure/resume/ownership behavior is integration-tested.

@@ -37,3 +37,13 @@ MinIO Community Edition is now distributed upstream as source-only. Local Compos
 ## Staff pricing source conflict
 
 Canonical UC-3.3/UC-3.4 BR-1 restrict pricing writes to Owner and permit Staff read-only access. This specific rule overrides broad Owner/Staff FR wording and the UC-3.2 delegated-pricing phrase. Current Owner-only pricing writes are compatible; no Staff write permission is added.
+
+## UC-1.7 registration and account verification
+
+Resolved within the canonical/current lifecycle: registration can create a linked first-facility application and enter PENDING_APPROVAL before account verification. UC-1.1/1.2 account remains PENDING_VERIFICATION with no roles; only contact verification activates CUSTOMER. Existing login/edit and both approval/final-activation guards require verified ACTIVE account. Revision/rejection can notify the registered contact before verification; neither grants Owner. This preserves verification rules rather than introducing a separate activation path. No unresolved verification timing decision blocks this slice.
+
+UC-1.7 versus UC-2.1 logged-in precondition is interpreted narrowly: first facility is created by server registration orchestration using signed private service commands. Generic Guest Owner/Facility/document APIs stay closed. UC-2.3 applicant-versus-Owner wording and Staff capability/pricing conflicts remain unchanged.
+
+Registration failure/retry is technically resolved using the existing coordinator: Identity account/application/receipt commit locally; downstream setup failure safely retains pending account/private DRAFT, recoverable by identical multipart retry or existing verified workspace. No document bytes/password are kept for background setup recovery. Only existing SUBMITTING/decision operations retry automatically. Current verification expiry/recovery behavior is retained; receipt retention/OTP redesign is outside this task.
+
+UC-1.7 verification completed on 2026-10-06: 123 backend tests, frontend/contract/migration checks, real restart/idempotency signup smoke, seven regression smokes and browser registration/verification/revision/approval/publication pass. A reproduced JVM map-order digest defect was corrected with deterministic serialization and compatible normalization of the twelve early WIP layouts. Missing-facility authenticated workspace recovery is integration-tested; manual downstream outage injection and recovery UI remain unverified. This limitation adds no business rule or public Guest API.

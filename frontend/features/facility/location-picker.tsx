@@ -72,7 +72,7 @@ export function LocationPicker({ value, onChange, disabled = false }: {
 
   return <section className="min-w-0 space-y-3 md:col-span-2" aria-label="Vị trí cơ sở">
     <h2 className="text-lg font-semibold">Vị trí cơ sở</h2>
-    <p id="location-instructions" className="text-sm text-slate-600">Chạm hoặc bấm trên bản đồ để đặt điểm; kéo điểm để điều chỉnh. Dùng phím mũi tên và +/− để di chuyển bản đồ, Enter để chọn tâm bản đồ. Vị trí chỉ được lưu khi bấm Lưu thay đổi.</p>
+    <p id="location-instructions" className="text-sm text-slate-600">Chạm hoặc bấm trên bản đồ để đặt điểm; kéo điểm để điều chỉnh. Dùng phím mũi tên và +/− để di chuyển bản đồ, Enter để chọn tâm bản đồ. Vị trí chỉ được lưu khi gửi hoặc lưu biểu mẫu.</p>
     <div ref={container} className={styles.canvas} role="region" aria-label="Chọn vị trí cơ sở trên bản đồ" aria-describedby="location-instructions" />
     {disabled && <p className="text-sm text-slate-500">Chọn vị trí đang tạm khóa.</p>}
     {!ready && <p role="status" className="text-sm text-slate-500">Đang tải bản đồ…</p>}

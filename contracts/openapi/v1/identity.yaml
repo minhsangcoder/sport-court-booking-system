@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SportHub Identity API",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "Implemented authentication, profile, durable first-facility Owner applications and facility-scoped Staff bindings. Protected application reads are uncached and Admin detail reads are audited. Private signed service coordination is documented in owner-internal.yaml and has no Gateway route."
   },
   "servers": [
@@ -31,10 +31,20 @@
           "Authentication"
         ],
         "operationId": "registerAccount",
-        "summary": "Register a customer account pending verification",
+        "summary": "Register account; optionally submit the first Owner application through server orchestration",
         "parameters": [
           {
             "$ref": "#/components/parameters/CorrelationId"
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Required only when applyAsOwner=true; digest stored in the durable receipt."
           }
         ],
         "requestBody": {
@@ -44,12 +54,31 @@
               "schema": {
                 "$ref": "#/components/schemas/RegisterRequest"
               }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerSignupMultipartRequest"
+              },
+              "encoding": {
+                "request": {
+                  "contentType": "application/json"
+                },
+                "identityDocument": {
+                  "contentType": "application/pdf, image/jpeg, image/png"
+                },
+                "locationDocument": {
+                  "contentType": "application/pdf, image/jpeg, image/png"
+                },
+                "facilityImage": {
+                  "contentType": "image/jpeg, image/png"
+                }
+              }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Account created and verification challenge issued",
+            "description": "Account created or identical Owner signup replayed; the original verification challenge is reused on replay",
             "headers": {
               "X-Correlation-Id": {
                 "$ref": "#/components/headers/CorrelationId"
@@ -66,13 +95,21 @@
           "400": {
             "$ref": "#/components/responses/BadRequest"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "409": {
             "$ref": "#/components/responses/Conflict"
           },
           "429": {
             "$ref": "#/components/responses/TooManyRequests"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable",
+            "description": "Preflight dependency unavailable; no account/application was created. Retry the same request."
           }
-        }
+        },
+        "description": "JSON legacy signup is unchanged; applyAsOwner=true requires multipart. Validated account/application/receipt commit together in Identity, then signed services prepare private first facility. Dependency failure after commit returns 201 with safe DRAFT recovery or SUBMITTING retry; no OWNER is granted. Verify contact before login/edit/approval. Reuse UUID Idempotency-Key and identical request/files/password on retry; conflicting data/password is 409."
       }
     },
     "/auth/verify": {
@@ -1942,6 +1979,37 @@
           },
           "password": {
             "$ref": "#/components/schemas/NewPassword"
+          },
+          "applyAsOwner": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": false,
+            "description": "Absent/false keeps ordinary registration and ignores incidental Owner fields/files. True requires multipart and valid Owner data/files."
+          },
+          "ownerApplication": {
+            "description": "Ignored unless applyAsOwner=true; then must match OwnerSignupApplication. Client identity, role and state fields are never authoritative."
+          }
+        },
+        "if": {
+          "required": [
+            "applyAsOwner"
+          ],
+          "properties": {
+            "applyAsOwner": {
+              "const": true
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "ownerApplication"
+          ],
+          "properties": {
+            "ownerApplication": {
+              "$ref": "#/components/schemas/OwnerSignupApplication"
+            }
           }
         }
       },
@@ -2202,6 +2270,24 @@
           "verificationExpiresAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "ownerApplication": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerApplication"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null for ordinary signup. Same existing Owner lifecycle summary for Owner signup; no legal/document bytes returned."
+          },
+          "ownerSetupMessage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Non-null for safe private DRAFT recovery or durable SUBMITTING retry after a downstream failure. Account still requires verification."
           }
         }
       },
@@ -3347,6 +3433,114 @@
             }
           }
         ]
+      },
+      "OwnerSignupSetup": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "courtCode",
+          "courtName",
+          "sportCategoryId",
+          "days",
+          "opensAt",
+          "closesAt",
+          "slotMinutes",
+          "pricePerSlot"
+        ],
+        "properties": {
+          "courtCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "courtName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180
+          },
+          "sportCategoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "days": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7
+            }
+          },
+          "opensAt": {
+            "type": "string",
+            "example": "06:00",
+            "description": "Local HH:mm; opening precedes closing, whole slots only."
+          },
+          "closesAt": {
+            "type": "string",
+            "example": "22:00"
+          },
+          "slotMinutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 720
+          },
+          "pricePerSlot": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "exclusiveMaximum": 10000000000,
+            "multipleOf": 0.01,
+            "description": "VND price for each slot on the selected weekdays."
+          }
+        }
+      },
+      "OwnerSignupApplication": {
+        "type": "object",
+        "required": [
+          "legal",
+          "facility",
+          "setup"
+        ],
+        "properties": {
+          "legal": {
+            "$ref": "#/components/schemas/OwnerApplicationLegal"
+          },
+          "facility": {
+            "$ref": "#/components/schemas/OwnerApplicationFacility"
+          },
+          "setup": {
+            "$ref": "#/components/schemas/OwnerSignupSetup"
+          }
+        }
+      },
+      "OwnerSignupMultipartRequest": {
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/RegisterRequest"
+          },
+          "identityDocument": {
+            "type": "string",
+            "format": "binary",
+            "description": "Required for Owner signup; max 10 MB, content signature validated; PDF/JPEG/PNG"
+          },
+          "locationDocument": {
+            "type": "string",
+            "format": "binary",
+            "description": "Required for Owner signup; max 10 MB, content signature validated; PDF/JPEG/PNG"
+          },
+          "facilityImage": {
+            "type": "string",
+            "format": "binary",
+            "description": "Required for Owner signup; max 10 MB, content signature validated; JPEG/PNG"
+          }
+        },
+        "description": "Max total 31 MB. Owner option requires all three files."
       }
     }
   }

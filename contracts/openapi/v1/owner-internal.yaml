@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "SportHub private Owner onboarding coordination",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "No Gateway route. HMAC authenticates SERVICE|method|full /api/v1 path|epoch seconds|SHA-256(exact UTF-8 body), accepts timestamps within 300 seconds. Shared service key comes only from configuration, must be at least 32 characters. Body-bound signatures and idempotent operations permit safe retries; no user Bearer is persisted."
   },
   "paths": {
@@ -130,7 +130,9 @@
               "submit",
               "APPROVE",
               "REJECT",
-              "SUPPLEMENT_REQUIRED"
+              "SUPPLEMENT_REQUIRED",
+              "signup-validate",
+              "signup-prepare"
             ]
           }
         }
@@ -237,6 +239,84 @@
           }
         }
       }
+    },
+    "/internal/schedules/application-signup": {
+      "servers": [
+        {
+          "url": "http://schedule-service:8083/api/v1"
+        }
+      ],
+      "post": {
+        "operationId": "prepareSignupConfiguration",
+        "summary": "Prepare one initial schedule/price configuration once under the existing local facility lock; cannot overwrite existing/foreign configuration.",
+        "security": [
+          {
+            "serviceSignature": [],
+            "serviceTime": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "applicationId",
+                  "facilityId",
+                  "userId",
+                  "timezone",
+                  "setup"
+                ],
+                "properties": {
+                  "applicationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "facilityId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "setup": {
+                    "$ref": "./identity.yaml#/components/schemas/OwnerSignupSetup"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Service-owned data envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./components/schemas.yaml#/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed command"
+          },
+          "403": {
+            "description": "Invalid/expired signature or mismatched binding"
+          },
+          "409": {
+            "description": "State/readiness/conflicting preparation"
+          },
+          "503": {
+            "description": "Required dependency unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -295,9 +375,21 @@
           },
           "facility": {
             "$ref": "./facility.yaml#/components/schemas/FacilityInput"
+          },
+          "setup": {
+            "$ref": "./identity.yaml#/components/schemas/OwnerSignupSetup"
+          },
+          "identityDocument": {
+            "$ref": "#/components/schemas/SignupFile"
+          },
+          "locationDocument": {
+            "$ref": "#/components/schemas/SignupFile"
+          },
+          "facilityImage": {
+            "$ref": "#/components/schemas/SignupFile"
           }
         },
-        "description": "Create requires facility. Review/view commands require actorId. Facility and applicant must match the immutable application binding."
+        "description": "Create requires facility. Review/view commands require actorId. Facility and applicant must match the immutable application binding. signup-validate is write-free and requires facility/setup, signup-prepare requires setup plus three files and an existing immutable binding; deterministic resource IDs make retries idempotent. No Guest route."
       },
       "ScheduleSnapshotRequest": {
         "type": "object",
@@ -392,6 +484,24 @@
           }
         },
         "description": "Idempotent zero-balance VND wallet and logical beneficiary reference only; no payout/settlement."
+      },
+      "SignupFile": {
+        "type": "object",
+        "required": [
+          "name",
+          "bytes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display filename only; sanitized in existing Facility storage."
+          },
+          "bytes": {
+            "type": "string",
+            "format": "byte",
+            "description": "Transient base64 file, never persisted in Identity/receipts/audit. Same existing 10 MB content validation and storage paths."
+          }
+        }
       }
     }
   }

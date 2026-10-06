@@ -26,6 +26,18 @@ public class ScheduleService {
     public List<Hours> hours(UUID facility,Caller caller,String token) {reader(facility,caller,token);return repo.hours(facility);}
     public List<ExceptionView> exceptions(UUID facility,Caller caller,String token) {reader(facility,caller,token);return repo.exceptions(facility);}
     public List<PriceRule> rules(UUID facility,Caller caller,String token) {reader(facility,caller,token);return repo.rules(facility);}
+    @Transactional public Map<String,Object> prepareSignup(UUID facility,UUID application,UUID user,String timezone,com.sporthub.common.dto.OwnerSignupSetup setup){
+        setup.validate();var zone=ZoneId.of(timezone);repo.lock(facility);
+        var bindings=repo.jdbc().queryForList("SELECT application_id FROM application_configuration_freeze WHERE facility_id=?",UUID.class,facility);
+        if(!bindings.isEmpty()){if(!application.equals(bindings.getFirst()))throw new ForbiddenException("Configuration belongs to another application");return Map.of("prepared",true);}
+        if(!repo.hours(facility).isEmpty()||!repo.rules(facility).isEmpty())throw new ConflictException("Signup cannot replace existing configuration");
+        for(var day:new TreeSet<>(setup.days())){
+            repo.jdbc().update("INSERT INTO operating_hours(id,facility_id,day_of_week,open_time,close_time,slot_duration_minutes,created_by) VALUES(?,?,?,?,?,?,?)",UUID.randomUUID(),facility,day,time(setup.opensAt()),time(setup.closesAt()),setup.slotMinutes(),user);
+            repo.jdbc().update("INSERT INTO pricing_rules(id,facility_id,day_of_week,start_time,end_time,price_per_slot,priority,label,effective_from,currency,created_by) VALUES(?,?,?,?,?,?,0,'Initial signup price',?,'VND',?)",UUID.randomUUID(),facility,day,time(setup.opensAt()),time(setup.closesAt()),setup.pricePerSlot(),date(LocalDate.now(zone)),user);
+        }
+        repo.jdbc().update("INSERT INTO application_configuration_freeze(facility_id,application_id,frozen) VALUES(?,?,false)",facility,application);
+        audit(facility,new Caller(user,"Applicant",Set.of("CUSTOMER"),Map.of()),"SIGNUP_CONFIGURATION_CREATED",Map.of("applicationId",application));return Map.of("prepared",true);
+    }
     @Transactional public Map<String,Object> freezeApplication(UUID facility,UUID application,List<FacilityClient.Context> contexts){
         repo.lock(facility);var hours=repo.hours(facility);var prices=repo.rules(facility);
         if(hours.isEmpty()||prices.isEmpty())throw new ConflictException("Configure operating hours and prices before submitting");

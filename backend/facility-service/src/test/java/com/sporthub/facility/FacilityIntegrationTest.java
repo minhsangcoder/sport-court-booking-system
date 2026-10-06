@@ -39,6 +39,17 @@ class FacilityIntegrationTest {
  @MockBean RemoteIdentity identity;
  @Autowired com.sporthub.facility.web.TransferPolicyController policies;
  private Caller owner(){return new Caller(UUID.randomUUID(),"Owner",Set.of("OWNER","CUSTOMER"),Map.of());}
+ @Autowired OwnerSignupFacilityService signupFacilities;
+ @Test void ownerSignupFirstCourtIsIdempotentPrivateAndCannotChangeBinding(){
+  UUID application=UUID.randomUUID(),facility=UUID.randomUUID(),user=UUID.randomUUID();service.createFirst(application,facility,user,locationInput("Signup facility","21","105"));UUID category=service.categories().getFirst().id();
+  var setup=new com.sporthub.common.dto.OwnerSignupSetup("SIGNUP","Signup court",category,Set.of(1,2,3,4,5,6,7),java.time.LocalTime.of(6,0),java.time.LocalTime.of(22,0),60,new java.math.BigDecimal("100000"));
+  var first=service.createSignupCourt(application,facility,user,setup);assertThat(service.createSignupCourt(application,facility,user,setup).id()).isEqualTo(first.id());assertThat(jdbc.queryForObject("SELECT count(*) FROM courts WHERE facility_id=?",Integer.class,facility)).isEqualTo(1);assertThatThrownBy(()->service.publicDetail(facility)).isInstanceOf(ResourceNotFoundException.class);assertThatThrownBy(()->service.createSignupCourt(UUID.randomUUID(),facility,user,setup)).isInstanceOf(ForbiddenException.class);
+ }
+ @Test void ownerSignupPreflightChecksExistingFacilityCategoryAndCoordinatesWithoutWriting()throws Exception{
+  var input=json.createObjectNode();input.set("facility",json.valueToTree(locationInput("Preflight","21","105")));input.set("setup",json.valueToTree(Map.of("courtCode","C1","courtName","Court","sportCategoryId",service.categories().getFirst().id(),"days",List.of(1),"opensAt","06:00","closesAt","22:00","slotMinutes",60,"pricePerSlot",100000)));
+  assertThatCode(()->signupFacilities.validate(input)).doesNotThrowAnyException();((com.fasterxml.jackson.databind.node.ObjectNode)input.path("setup")).put("sportCategoryId",UUID.randomUUID().toString());assertThatThrownBy(()->signupFacilities.validate(input)).isInstanceOf(IllegalArgumentException.class);
+  ((com.fasterxml.jackson.databind.node.ObjectNode)input.path("facility")).put("latitude",91);assertThatThrownBy(()->signupFacilities.validate(input)).isInstanceOf(IllegalArgumentException.class);
+ }
  @Test void firstFacilityIsScopedFrozenAndHiddenUntilIdentityCommitsEvenAfterLocalPreparation() throws Exception {
   UUID application=UUID.randomUUID(),facility=UUID.randomUUID(),user=UUID.randomUUID();var customer=new Caller(user,"Applicant",Set.of("CUSTOMER"),Map.of(facility,Set.of("APPLICATION_READ","APPLICATION_EDIT")));var admin=new Caller(UUID.randomUUID(),"Admin",Set.of("ADMIN"),Map.of());
   service.createFirst(application,facility,user,locationInput("First facility","21","105"));service.createFirst(application,facility,user,input("Ignored repeat"));

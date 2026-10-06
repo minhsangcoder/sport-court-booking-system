@@ -26,14 +26,27 @@ public class AuthController {
     static final String REFRESH_COOKIE = "sporthub_refresh";
 
     private final AuthService authService;
+    private final com.sporthub.identity.service.OwnerSignupService ownerSignup;
     private final IdentityProperties properties;
 
-    @PostMapping("/register")
+    @PostMapping(value="/register",consumes="application/json")
     public ResponseEntity<ApiResponse<RegisterResult>> register(
             @Valid @RequestBody RegisterRequest body, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Account created; check Mailpit for the verification email",
                         authService.register(body, RequestMetadata.from(request))));
+    }
+
+    @PostMapping(value="/register",consumes="multipart/form-data")
+    public ResponseEntity<ApiResponse<RegisterResult>> registerOwner(
+            @Valid @RequestPart("request") RegisterRequest body,
+            @RequestHeader(value="Idempotency-Key",required=false) String key,
+            @RequestPart(value="identityDocument",required=false) org.springframework.web.multipart.MultipartFile identity,
+            @RequestPart(value="locationDocument",required=false) org.springframework.web.multipart.MultipartFile location,
+            @RequestPart(value="facilityImage",required=false) org.springframework.web.multipart.MultipartFile image,
+            HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created("Account created; verify your contact before signing in",
+                ownerSignup.register(body,key,identity,location,image,RequestMetadata.from(request))));
     }
 
     @PostMapping("/verify")

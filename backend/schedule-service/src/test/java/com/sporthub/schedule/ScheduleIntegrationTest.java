@@ -39,6 +39,13 @@ class ScheduleIntegrationTest {
     private void hours() {service.replaceHours(facilityId,new HoursInput(null,List.of(new Interval(day.getDayOfWeek().getValue(),LocalTime.of(6,0),LocalTime.of(11,0),60),new Interval(day.getDayOfWeek().getValue(),LocalTime.of(13,0),LocalTime.of(22,0),60))),owner,"token");}
     private PriceInput price(UUID court,UUID category,LocalDate date,int priority,String amount) {return new PriceInput(court,category,date==null?day.getDayOfWeek().getValue():null,date,LocalTime.of(6,0),LocalTime.of(11,0),new BigDecimal(amount),priority,"Rule",day.minusDays(1),day.plusDays(30),"VND");}
     private Instant at(int hour) {return day.atTime(hour,0).atZone(context.timezone()).toInstant();}
+    @Test void ownerSignupConfigurationRetriesAreAtomicBoundAndPlayable(){
+        UUID application=UUID.randomUUID();var setup=new com.sporthub.common.dto.OwnerSignupSetup("C1","Court",categoryId,Set.of(1,2,3,4,5,6,7),LocalTime.of(6,0),LocalTime.of(22,0),60,new BigDecimal("100000"));
+        service.prepareSignup(facilityId,application,owner.id(),"Asia/Ho_Chi_Minh",setup);service.prepareSignup(facilityId,application,owner.id(),"Asia/Ho_Chi_Minh",setup);
+        assertThat(service.hours(facilityId,owner,"token")).hasSize(7);assertThat(service.rules(facilityId,owner,"token")).hasSize(7);assertThat(service.freezeApplication(facilityId,application,List.of(context))).containsKeys("hours","prices");
+        assertThatThrownBy(()->service.prepareSignup(facilityId,UUID.randomUUID(),owner.id(),"Asia/Ho_Chi_Minh",setup)).isInstanceOf(ForbiddenException.class);
+        var invalid=new com.sporthub.common.dto.OwnerSignupSetup("C1","Court",categoryId,Set.of(1),LocalTime.of(6,0),LocalTime.of(7,10),60,new BigDecimal("100000"));UUID empty=UUID.randomUUID();assertThatThrownBy(()->service.prepareSignup(empty,application,owner.id(),"Asia/Ho_Chi_Minh",invalid)).isInstanceOf(IllegalArgumentException.class);assertThat(service.hours(empty,owner,"token")).isEmpty();
+    }
     @Test void applicationSnapshotSerializesConfigurationAndOnlyCommittedOwnerCanWrite(){
         hours();
         for(var interval:List.of(new int[]{6,11},new int[]{13,22}))service.addPrice(facilityId,new PriceInput(null,null,day.getDayOfWeek().getValue(),null,LocalTime.of(interval[0],0),LocalTime.of(interval[1],0),new BigDecimal("100000"),0,"First application price",day.minusDays(10),day.plusDays(30),"VND"),owner,"token");

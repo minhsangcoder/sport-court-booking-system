@@ -35,6 +35,24 @@ public class OwnerApplicationService {
    UUID next=UUID.randomUUID();jdbc.update("INSERT INTO owner_applications(id,user_id,facility_id,business_name,facility_name,private_payload,initial_facility) VALUES(?,?,?,?,?,?,?::jsonb)",next,actor.userId(),UUID.randomUUID(),input.legal().businessName().trim(),input.facility().name().trim(),cipher.seal(write(input.legal()),next),write(input.facility()));audit(next,actor.userId(),"OWNER_APPLICATION_CREATED",null,Map.of("state","DRAFT"));return next;
   });try{ensureFacility(row(id));}catch(RuntimeException ex){jdbc.update("UPDATE owner_applications SET last_error='Facility setup is pending; initialize again safely' WHERE id=?",id);}return summary(row(id));
  }
+ // Package-private trusted registration entry point: no generic Guest application API.
+ UUID createForRegistration(Create input,UUID user){
+  validate(input);return tx.execute(status->{
+   var account=jdbc.queryForMap("SELECT status FROM users WHERE id=? FOR UPDATE",user);
+   if(!account.get("status").equals("PENDING_VERIFICATION"))throw conflict("Registration account must await verification");
+   UUID id=UUID.randomUUID();jdbc.update("INSERT INTO owner_applications(id,user_id,facility_id,business_name,facility_name,private_payload,initial_facility) VALUES(?,?,?,?,?,?,?::jsonb)",id,user,UUID.randomUUID(),input.legal().businessName().trim(),input.facility().name().trim(),cipher.seal(write(input.legal()),id),write(input.facility()));
+   audit(id,user,"OWNER_APPLICATION_CREATED",null,Map.of("state","DRAFT","entryPoint","REGISTRATION"));return id;
+  });
+ }
+ Summary registrationSummary(UUID id){return summary(row(id));}
+ void prepareRegistration(UUID id,Map<String,Object> payload){var data=row(id);ensureFacility(data);var input=command(data,(UUID)data.get("user_id"));input.putAll(payload);dependencies.facility(id,"signup-prepare",input,null);}
+ void registrationSetupFailed(UUID id){jdbc.update("UPDATE owner_applications SET last_error='Owner signup setup is incomplete; initialize the private facility and finish the draft or retry the same registration request' WHERE id=? AND state='DRAFT'",id);}
+ Summary submitRegistration(UUID id){
+  tx.executeWithoutResult(status->{var data=lock(id);if(!state(data).equals("DRAFT"))return;
+   // A pending account may enter review; the existing active() guard still protects approval.
+   jdbc.update("UPDATE owner_applications SET submission_origin='DRAFT',state='SUBMITTING',next_attempt_at=NOW(),last_error=NULL,updated_at=NOW() WHERE id=?",id);
+  });process(id);return summary(row(id));
+ }
  public Summary initialize(UUID id,AuthenticatedUser actor){var data=row(id);own(data,actor);ensureFacility(data);return summary(data);}
  public Summary save(UUID id,Legal input,AuthenticatedUser actor){validate(input);return tx.execute(status->{var data=lock(id);own(data,actor);editable(data);var before=json.valueToTree(legal(data));var after=json.valueToTree(input);var changed=new ArrayList<String>();after.fieldNames().forEachRemaining(field->{if(!Objects.equals(before.get(field),after.get(field)))changed.add(field);});if(changed.isEmpty())return summary(data);jdbc.update("UPDATE owner_applications SET business_name=?,private_payload=?,updated_at=NOW() WHERE id=?",input.businessName().trim(),cipher.seal(write(input),id),id);audit(id,actor.userId(),"OWNER_APPLICATION_UPDATED",Map.of("state",state(data)),Map.of("state",state(data),"changedFields",changed));return summary(row(id));});}
  public Summary submit(UUID id,AuthenticatedUser actor,String token){
@@ -79,7 +97,7 @@ public class OwnerApplicationService {
  private Legal legal(Map<String,Object> data){try{return json.readValue(cipher.open((String)data.get("private_payload"),(UUID)data.get("id")),Legal.class);}catch(IdentityException ex){throw ex;}catch(Exception ex){throw new IllegalStateException(ex);}}
  private Summary summary(Map<String,Object> r){return new Summary((UUID)r.get("id"),(UUID)r.get("user_id"),(UUID)r.get("facility_id"),(String)r.get("business_name"),(String)r.get("facility_name"),state(r),r.get("submitted_at")==null?null:instant(r.get("submitted_at")),(String)r.get("reason"),(java.math.BigDecimal)r.get("commission_percent"),(String)r.get("last_error"));}
  private Instant instant(Object value){return ((java.sql.Timestamp)value).toInstant();}
- private void notice(UUID user,String state,String reason){var u=jdbc.queryForMap("SELECT email,phone,email_verified FROM users WHERE id=?",user);String recipient=Boolean.TRUE.equals(u.get("email_verified"))?(String)u.get("email"):(String)u.get("phone");jdbc.update("INSERT INTO identity_notifications(id,user_id,recipient,subject,body) VALUES(?,?,?,?,?)",UUID.randomUUID(),user,recipient,"SportHub Owner application "+state,"Application decision: "+state+". "+reason+(state.equals("APPROVED")?". Sign in again to manage your facility, schedules and Staff from the Owner portal.":""));}
+ private void notice(UUID user,String state,String reason){var u=jdbc.queryForMap("SELECT email,phone,email_verified FROM users WHERE id=?",user);String recipient=Boolean.TRUE.equals(u.get("email_verified"))||u.get("phone")==null?(String)u.get("email"):(String)u.get("phone");jdbc.update("INSERT INTO identity_notifications(id,user_id,recipient,subject,body) VALUES(?,?,?,?,?)",UUID.randomUUID(),user,recipient,"SportHub Owner application "+state,"Application decision: "+state+". "+reason+(state.equals("APPROVED")?". Sign in again to manage your facility, schedules and Staff from the Owner portal.":""));}
  private void audit(UUID id,UUID actor,String action,Object details){audit(id,actor,action,null,details);}
  private void audit(UUID id,UUID actor,String action,Object before,Object after){jdbc.update("INSERT INTO audit_log(id,user_id,action,entity_type,entity_id,old_value,new_value) VALUES(?,?,?,'OWNER_APPLICATION',?,?::jsonb,?::jsonb)",UUID.randomUUID(),actor,action,id,before==null?null:write(before),write(after));}
  private String safeDependencyMessage(org.springframework.web.client.HttpClientErrorException ex){try{return read(ex.getResponseBodyAsString()).path("message").asText("Facility setup is incomplete");}catch(Exception ignored){return "Facility setup is incomplete";}}

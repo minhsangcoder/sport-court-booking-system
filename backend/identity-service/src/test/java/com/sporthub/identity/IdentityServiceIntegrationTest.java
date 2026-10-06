@@ -384,6 +384,112 @@ class IdentityServiceIntegrationTest {
         ((com.fasterxml.jackson.databind.node.ObjectNode)event).put("producer","untrusted-service");assertThatThrownBy(()->facilityNotices.apply(event)).isInstanceOf(org.springframework.amqp.AmqpRejectAndDontRequeueException.class);
     }
 
+    @Autowired OwnerSignupService ownerSignup;
+    @Autowired com.fasterxml.jackson.databind.ObjectMapper signupJson;
+    private org.springframework.mock.web.MockMultipartFile signupFile(){return new org.springframework.mock.web.MockMultipartFile("file","fixture.png","image/png",java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6T1kAAAAASUVORK5CYII="));}
+    private RegisterRequest signupRequest(String email){
+        var value=(com.fasterxml.jackson.databind.node.ObjectNode)signupJson.valueToTree(contactApplicationInput("facility@example.test"));
+        value.set("setup",signupJson.valueToTree(Map.of("courtCode","C1","courtName","First court","sportCategoryId",UUID.randomUUID(),"days",java.util.List.of(1,2,3,4,5,6,7),"opensAt","06:00","closesAt","22:00","slotMinutes",60,"pricePerSlot",100000)));
+        return new RegisterRequest("Signup applicant",email,null,"Password123!",true,value);
+    }
+    private RegisterResult signup(RegisterRequest request,String key){return ownerSignup.register(request,key,signupFile(),signupFile(),signupFile(),metadata);}
+    @Test void ownerSignupEntersExistingQueueWithoutRoleAndRequiresVerificationBeforeApproval(){
+        var request=signupRequest(uniqueEmail("signup"));var result=signup(request,UUID.randomUUID().toString());var user=userRepository.findById(result.userId()).orElseThrow();
+        assertThat(user.getStatus()).isEqualTo(AccountStatus.PENDING_VERIFICATION);assertThat(user.getRoles()).isEmpty();assertThat(result.ownerApplication().state()).isEqualTo("PENDING_APPROVAL");assertThat(result.ownerApplication().userId()).isEqualTo(user.getId());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_applications WHERE user_id=?",Integer.class,user.getId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT private_payload FROM owner_applications WHERE id=?",String.class,result.ownerApplication().id())).doesNotContain("TEST-IDENTITY-PRIVATE","TEST-BANK-PRIVATE");
+        var admin=applicationAdmin();assertThat(applications.search(searchCriteria(Map.of("state","PENDING_APPROVAL","applicationId",result.ownerApplication().id().toString())),admin).items().stream().map(OwnerApplicationDtos.Summary::id)).contains(result.ownerApplication().id());
+        assertThatThrownBy(()->applications.decide(result.ownerApplication().id(),approval(),admin)).isInstanceOf(IdentityException.class).hasMessageContaining("unverified");
+        authService.verify(new VerificationRequest(null,result.verificationChallengeId(),verificationCodes.get(request.email())),metadata);
+        var session=authService.login(new LoginRequest(request.email(),request.password()),metadata);assertThat(session.response().user().roles()).containsExactly(Role.CUSTOMER);
+        applications.decide(result.ownerApplication().id(),approval(),admin);applications.decide(result.ownerApplication().id(),approval(),admin);
+        assertThat(userRepository.findById(result.userId()).orElseThrow().getRoles()).containsExactlyInAnyOrder(Role.CUSTOMER,Role.OWNER);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM identity_notifications WHERE user_id=?",Integer.class,result.userId())).isEqualTo(1);
+        assertThat(refreshRepository.findAll().stream().filter(t->t.getUser().getId().equals(result.userId())).allMatch(RefreshToken::isRevoked)).isTrue();
+    }
+    @Test void ownerSignupRetriesReuseReceiptChallengeApplicationAndAudit(){
+        var request=signupRequest(uniqueEmail("signup-retry"));String key=UUID.randomUUID().toString();var first=signup(request,key);var repeat=signup(request,key);
+        assertThat(repeat.userId()).isEqualTo(first.userId());assertThat(repeat.verificationChallengeId()).isEqualTo(first.verificationChallengeId());assertThat(repeat.ownerApplication().id()).isEqualTo(first.ownerApplication().id());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_log WHERE entity_id=? AND action='OWNER_APPLICATION_CREATED'",Integer.class,first.ownerApplication().id())).isEqualTo(1);
+        assertThatThrownBy(()->signup(request,UUID.randomUUID().toString())).isInstanceOf(IdentityException.class).hasMessageContaining("already registered");
+        assertThatThrownBy(()->signup(new RegisterRequest(request.fullName(),request.email(),null,"WrongPassword123!",true,request.ownerApplication()),key)).isInstanceOf(IdentityException.class).hasMessageContaining("original registration");
+        var changed=new RegisterRequest("Changed name",request.email(),null,request.password(),true,request.ownerApplication());assertThatThrownBy(()->signup(changed,key)).isInstanceOf(IdentityException.class).hasMessageContaining("original registration");
+    }
+    @Test void ownerSignupConcurrentRequestsCreateOnlyOneAccountApplicationSubmission()throws Exception{
+        var request=signupRequest(uniqueEmail("signup-concurrent"));String key=UUID.randomUUID().toString();var pool=java.util.concurrent.Executors.newFixedThreadPool(2);
+        try{var calls=pool.invokeAll(java.util.List.<java.util.concurrent.Callable<RegisterResult>>of(()->signup(request,key),()->signup(request,key)));var first=calls.get(0).get();assertThat(calls.get(1).get().userId()).isEqualTo(first.userId());assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_application_submissions WHERE application_id=?",Integer.class,first.ownerApplication().id())).isEqualTo(1);}finally{pool.shutdownNow();}
+    }
+    @Test void ownerSignupLegacyReceiptLayoutsNormalizeWithoutDuplicates()throws Exception{
+        var request=signupRequest(uniqueEmail("signup-legacy-receipt"));String key=UUID.randomUUID().toString();var initial=signup(request,key);
+        String canonical=jdbc.queryForObject("SELECT request_hash FROM owner_signup_receipts WHERE user_id=?",String.class,initial.userId());
+        var digest=java.security.MessageDigest.getInstance("SHA-256");String fileDigest=java.util.HexFormat.of().formatHex(digest.digest(signupFile().getBytes()));
+        String[] names={"identityDocument","locationDocument","facilityImage"};
+        for(int first=0;first<3;first++)for(int second=0;second<3;second++)if(first!=second)for(boolean nameFirst:new boolean[]{true,false}){
+            var old=new java.util.LinkedHashMap<String,Object>();old.put("fullName",request.fullName().trim());old.put("email",request.email().trim().toLowerCase(java.util.Locale.ROOT));old.put("phone",request.phone());old.put("owner",signupJson.treeToValue(request.ownerApplication(),OwnerApplicationDtos.Create.class));old.put("setup",signupJson.treeToValue(request.ownerApplication().path("setup"),com.sporthub.common.dto.OwnerSignupSetup.class));
+            for(int index:new int[]{first,second,3-first-second}){var file=new java.util.LinkedHashMap<String,Object>();for(String field:nameFirst?java.util.List.of("name","digest"):java.util.List.of("digest","name"))file.put(field,field.equals("name")?"fixture.png":fileDigest);old.put(names[index],file);}
+            String legacy=java.util.HexFormat.of().formatHex(digest.digest(signupJson.valueToTree(old).toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            jdbc.update("UPDATE owner_signup_receipts SET request_hash=? WHERE user_id=?",legacy,initial.userId());
+            assertThatThrownBy(()->signup(new RegisterRequest("Changed applicant",request.email(),null,request.password(),true,request.ownerApplication()),key)).isInstanceOf(IdentityException.class).hasMessageContaining("original registration");
+            assertThat(jdbc.queryForObject("SELECT request_hash FROM owner_signup_receipts WHERE user_id=?",String.class,initial.userId())).isEqualTo(legacy);
+            assertThat(signup(request,key).userId()).isEqualTo(initial.userId());
+            assertThat(jdbc.queryForObject("SELECT request_hash FROM owner_signup_receipts WHERE user_id=?",String.class,initial.userId())).isEqualTo(canonical);
+        }
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_application_submissions WHERE application_id=?",Integer.class,initial.ownerApplication().id())).isEqualTo(1);
+    }
+    @Test void ownerSignupPreflightAndInvalidFilesCreateNothing(){
+        var request=signupRequest(uniqueEmail("signup-invalid"));var file=signupFile();
+        assertThatThrownBy(()->ownerSignup.register(request,UUID.randomUUID().toString(),new org.springframework.mock.web.MockMultipartFile("file","evil.txt","image/png","invalid".getBytes()),file,file,metadata)).isInstanceOf(IdentityException.class).hasMessageContaining("identityDocument");
+        assertThatThrownBy(()->ownerSignup.register(request,UUID.randomUUID().toString(),new org.springframework.mock.web.MockMultipartFile("file","huge.pdf","application/pdf",new byte[10*1024*1024+1]),file,file,metadata)).isInstanceOf(IdentityException.class).hasMessageContaining("10 MB");
+        assertThatThrownBy(()->signup(new RegisterRequest(request.fullName(),request.email(),null,request.password(),true,signupJson.createObjectNode()),UUID.randomUUID().toString())).isInstanceOf(IdentityException.class);
+        org.mockito.Mockito.when(applicationDependencies.facility(any(),eq("signup-validate"),anyMap(),any())).thenThrow(new org.springframework.web.client.HttpClientErrorException(org.springframework.http.HttpStatus.BAD_REQUEST));
+        assertThatThrownBy(()->signup(request,UUID.randomUUID().toString())).isInstanceOf(IdentityException.class).hasMessageContaining("Invalid first facility");assertThat(userRepository.findByEmailIgnoreCase(request.email())).isEmpty();
+    }
+    @Test void ownerSignupDependencyFailureLeavesSafeDraftAndSameRetryCompletes(){
+        var request=signupRequest(uniqueEmail("signup-downstream"));String key=UUID.randomUUID().toString();org.mockito.Mockito.when(applicationDependencies.facility(any(),eq("signup-prepare"),anyMap(),any())).thenThrow(new IllegalStateException("dependency offline"));
+        var first=signup(request,key);assertThat(first.ownerApplication().state()).isEqualTo("DRAFT");assertThat(first.ownerSetupMessage()).contains("verify");assertThat(userRepository.findById(first.userId()).orElseThrow().getRoles()).isEmpty();
+        org.mockito.Mockito.when(applicationDependencies.facility(any(),eq("signup-prepare"),anyMap(),any())).thenReturn(signupJson.createObjectNode());var repeat=signup(request,key);
+        assertThat(repeat.userId()).isEqualTo(first.userId());assertThat(repeat.ownerApplication().state()).isEqualTo("PENDING_APPROVAL");assertThat(repeat.ownerSetupMessage()).isNull();
+    }
+    @Test void ownerSignupLockedReceiptCannotResumeAndBadAccountCreatesNothing(){
+        var request=signupRequest(uniqueEmail("signup-lock"));String key=UUID.randomUUID().toString();var result=signup(request,key);
+        jdbc.update("UPDATE users SET status='LOCKED' WHERE id=?",result.userId());assertThatThrownBy(()->signup(request,key)).isInstanceOf(IdentityException.class).hasMessageContaining("inactive");
+        String invalidEmail=uniqueEmail("signup-account-invalid");var invalid=new RegisterRequest("A",invalidEmail,null,"short",true,request.ownerApplication());assertThatThrownBy(()->signup(invalid,UUID.randomUUID().toString())).isInstanceOf(IdentityException.class).hasMessageContaining("account information");assertThat(userRepository.findByEmailIgnoreCase(invalidEmail)).isEmpty();
+    }
+    @Test void ownerSignupMissingFacilityResumesInExistingAuthenticatedWorkspace()throws Exception{
+        var request=signupRequest(uniqueEmail("signup-workspace"));
+        org.mockito.Mockito.when(applicationDependencies.facility(any(),eq("create"),anyMap(),any())).thenThrow(new IllegalStateException("facility offline"));
+        var registered=signup(request,UUID.randomUUID().toString());UUID id=registered.ownerApplication().id();UUID facility=registered.ownerApplication().facilityId();
+        assertThat(registered.ownerApplication().state()).isEqualTo("DRAFT");
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/owner-applications/"+id+"/initialize")).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        authService.verify(new VerificationRequest(null,registered.verificationChallengeId(),verificationCodes.get(request.email())),metadata);
+        var account=userRepository.findById(registered.userId()).orElseThrow();
+        assertThatThrownBy(()->applications.initialize(id,applicant(activate(uniqueEmail("other-workspace"))))).isInstanceOf(IdentityException.class).hasMessageContaining("another applicant");
+        org.mockito.Mockito.when(applicationDependencies.facility(any(),eq("create"),anyMap(),any())).thenReturn(signupJson.createObjectNode());
+        var first=applications.initialize(id,applicant(account));var replay=applications.initialize(id,applicant(account));
+        assertThat(first.id()).isEqualTo(id);assertThat(replay.facilityId()).isEqualTo(facility);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_applications WHERE user_id=?",Integer.class,account.getId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_signup_receipts WHERE user_id=?",Integer.class,account.getId())).isEqualTo(1);
+        assertThat(account.getRoles()).containsExactly(Role.CUSTOMER);
+        assertThat(applications.submit(id,applicant(account),null).state()).isEqualTo("PENDING_APPROVAL");
+    }
+    @Test void ownerSignupFalseIgnoresMalformedOwnerDataAndProducesOnlyOrdinaryAccount(){
+        var request=new RegisterRequest("Ordinary applicant",uniqueEmail("signup-off"),null,"Password123!",false,signupJson.getNodeFactory().textNode("malformed ignored"));
+        var result=ownerSignup.register(request,null,null,null,null,metadata);assertThat(result.ownerApplication()).isNull();assertThat(userRepository.findById(result.userId()).orElseThrow().getRoles()).isEmpty();assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_applications WHERE user_id=?",Integer.class,result.userId())).isZero();org.mockito.Mockito.verifyNoInteractions(applicationDependencies);
+    }
+    @Test void ownerSignupTamperingCannotChooseUserOwnerStateOrGrantRole()throws Exception{
+        var request=signupRequest(uniqueEmail("signup-tamper"));var body=(com.fasterxml.jackson.databind.node.ObjectNode)signupJson.valueToTree(request);body.put("role","OWNER");body.put("applicantUserId",UUID.randomUUID().toString());var owner=(com.fasterxml.jackson.databind.node.ObjectNode)body.path("ownerApplication");owner.put("state","APPROVED");owner.put("userId",UUID.randomUUID().toString());((com.fasterxml.jackson.databind.node.ObjectNode)owner.path("facility")).put("ownerId",UUID.randomUUID().toString()).put("status","ACTIVE");
+        var response=http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/auth/register").file(new org.springframework.mock.web.MockMultipartFile("request","request.json","application/json",signupJson.writeValueAsBytes(body))).file(new org.springframework.mock.web.MockMultipartFile("identityDocument","identity.png","image/png",signupFile().getBytes())).file(new org.springframework.mock.web.MockMultipartFile("locationDocument","location.png","image/png",signupFile().getBytes())).file(new org.springframework.mock.web.MockMultipartFile("facilityImage","image.png","image/png",signupFile().getBytes())).header("Idempotency-Key",UUID.randomUUID().toString())).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated()).andReturn();
+        var result=signupJson.readTree(response.getResponse().getContentAsString()).path("data");UUID user=UUID.fromString(result.path("userId").asText());assertThat(userRepository.findById(user).orElseThrow().getRoles()).isEmpty();assertThat(result.path("ownerApplication").path("state").asText()).isEqualTo("PENDING_APPROVAL");assertThat(result.path("ownerApplication").path("userId").asText()).isEqualTo(user.toString());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/owner-applications").contentType("application/json").content(signupJson.writeValueAsString(applicationInput()))).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/auth/register").contentType("application/json").content(signupJson.writeValueAsString(request))).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+    }
+    @Test void ownerSignupRevisionResubmitAndRejectUseExistingLifecycle(){
+        var request=signupRequest(uniqueEmail("signup-revision"));var result=signup(request,UUID.randomUUID().toString());var admin=applicationAdmin();UUID id=result.ownerApplication().id();
+        applications.decide(id,new OwnerApplicationDtos.Decision("SUPPLEMENT_REQUIRED","Please provide a clearer location document",null),admin);authService.verify(new VerificationRequest(null,result.verificationChallengeId(),verificationCodes.get(request.email())),metadata);
+        var user=userRepository.findById(result.userId()).orElseThrow();applications.save(id,applicationLegal(),applicant(user));assertThat(applications.submit(id,applicant(user),null).state()).isEqualTo("PENDING_APPROVAL");applications.decide(id,new OwnerApplicationDtos.Decision("REJECT","The supplied location document is not acceptable",null),admin);
+        assertThat(userRepository.findById(result.userId()).orElseThrow().getRoles()).containsExactly(Role.CUSTOMER);assertThat(jdbc.queryForObject("SELECT count(*) FROM owner_application_submissions WHERE application_id=?",Integer.class,id)).isEqualTo(2);
+    }
+
     private String uniqueEmail(String prefix) {
         return prefix + "+" + UUID.randomUUID() + "@sporthub.local";
     }

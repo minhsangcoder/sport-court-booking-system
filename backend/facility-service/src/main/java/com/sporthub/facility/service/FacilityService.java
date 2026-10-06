@@ -41,6 +41,16 @@ public class FacilityService {
  public Court courtEntity(UUID id){return courts.findById(id).orElseThrow(()->new ResourceNotFoundException("Court not found"));}
  public CourtView ownedCourt(UUID id,Caller caller){var court=courtEntity(id);ownedEntity(court.getFacility().getId(),caller);return courtView(court);}
  public CourtContext context(UUID courtId,Caller caller){var court=courtEntity(courtId);var f=court.getFacility();if(caller==null)publicDetail(f.getId());else ownedEntity(f.getId(),caller);return new CourtContext(view(f),courtView(court),maintenance.findByCourtIdAndCancelledFalseOrderByStartsAt(courtId).stream().map(this::maintenanceView).toList());}
+ public void validateSignupCategory(UUID category){validateCategory(category);}
+ @Transactional public CourtView createSignupCourt(UUID application,UUID facility,UUID user,com.sporthub.common.dto.OwnerSignupSetup input){
+  var actor=new Caller(user,"Applicant",Set.of("CUSTOMER"),Map.of(facility,Set.of("APPLICATION_READ","APPLICATION_EDIT")));
+  var f=ownedEntity(facility,actor);if(!application.equals(applicationId(facility)))throw new ForbiddenException("Application facility binding differs");
+  jdbc.queryForList("SELECT id FROM facilities WHERE id=? FOR UPDATE",UUID.class,facility);
+  UUID id=com.sporthub.common.dto.OwnerSignupSetup.resourceId(application,"court");
+  if(courts.existsById(id))return courtView(courtEntity(id));
+  mutableOwnedEntity(facility,actor);var court=new Court();court.setId(id);court.setFacility(f);
+  assignCourt(court,new CourtInput(input.courtCode(),input.courtName(),input.sportCategoryId(),null,true));courts.saveAndFlush(court);audit(f,actor,"COURT_CREATED");return courtView(court);
+ }
  @Transactional public CourtView createCourt(UUID facilityId,CourtInput input,Caller caller){var c=new Court();c.setFacility(mutableOwnedEntity(facilityId,caller));assignCourt(c,input);courts.saveAndFlush(c);audit(c.getFacility(),caller,"COURT_CREATED");return courtView(c);}
  @Transactional public CourtView updateCourt(UUID id,CourtInput input,Caller caller){var c=courtEntity(id);mutableOwnedEntity(c.getFacility().getId(),caller);if(!c.getSportCategoryId().equals(input.sportCategoryId()) || !c.isEnabled())validateCategory(input.sportCategoryId());assignCourt(c,input);courts.saveAndFlush(c);audit(c.getFacility(),caller,"COURT_UPDATED");return courtView(c);}
  public List<MaintenanceView> windows(UUID courtId,Caller caller){ownedCourt(courtId,caller);return maintenance.findByCourtIdAndCancelledFalseOrderByStartsAt(courtId).stream().map(this::maintenanceView).toList();}

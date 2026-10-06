@@ -12,6 +12,10 @@ import java.util.*;
 public class InternalApplicationScheduleController {
  private final ScheduleService service;private final ObjectMapper json;private final String secret;
  public InternalApplicationScheduleController(ScheduleService service,ObjectMapper json,@Value("${SERVICE_CALL_SECRET:}") String secret){this.service=service;this.json=json;this.secret=secret;}
+ @PostMapping("/api/v1/internal/schedules/application-signup") public ApiResponse<?> signup(@RequestBody String body,HttpServletRequest r)throws Exception{
+  ServiceCalls.verify(secret,r.getMethod(),r.getRequestURI(),r.getHeader("X-Service-Time"),body,r.getHeader("X-Service-Signature"));var data=json.readTree(body);
+  return ApiResponse.success(service.prepareSignup(UUID.fromString(data.path("facilityId").asText()),UUID.fromString(data.path("applicationId").asText()),UUID.fromString(data.path("userId").asText()),data.path("timezone").asText(),json.treeToValue(data.path("setup"),com.sporthub.common.dto.OwnerSignupSetup.class)));
+ }
  @PostMapping("/api/v1/internal/schedules/application-snapshot") public ApiResponse<?> snapshot(@RequestBody String body,HttpServletRequest r)throws Exception{
   ServiceCalls.verify(secret,r.getMethod(),r.getRequestURI(),r.getHeader("X-Service-Time"),body,r.getHeader("X-Service-Signature"));var data=json.readTree(body);UUID facility=UUID.fromString(data.path("facilityId").asText()),application=UUID.fromString(data.path("applicationId").asText());
   if(data.path("release").asBoolean())return ApiResponse.success(service.releaseApplication(facility,application));

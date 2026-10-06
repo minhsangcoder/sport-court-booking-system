@@ -27,6 +27,7 @@ public class AuthService {
 
     @Transactional
     public RegisterResult register(RegisterRequest request, RequestMetadata metadata) {
+        if(request.ownerOption())throw new IdentityException(HttpStatus.BAD_REQUEST,"IDENTITY-OWNER-SIGNUP","Owner signup requires multipart request and verification documents");
         String email = normalizeEmail(request.email());
         String phone = blankToNull(request.phone());
         if (email == null && phone == null) throw new IdentityException(HttpStatus.BAD_REQUEST, "IDENTITY-VALIDATION", "Email or phone is required");

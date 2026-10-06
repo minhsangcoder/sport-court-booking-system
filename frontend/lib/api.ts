@@ -5,7 +5,7 @@ export type UserProfile = {
   avatarUrl?: string | null; dateOfBirth?: string | null;
 }
 export type Session = { accessToken: string; tokenType: string; expiresIn: number; user: UserProfile }
-export type RegisterResult = { userId: string; accountStatus: string; verificationChallengeId: string; verificationExpiresAt: string }
+export type RegisterResult = { userId: string; accountStatus: string; verificationChallengeId: string; verificationExpiresAt: string; ownerApplication?:import('@/features/owner-application/types').OwnerApplication|null;ownerSetupMessage?:string|null }
 type Envelope<T> = { data: T; message: string }
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string,
@@ -49,6 +49,7 @@ export const authApi = {
   },
   register: (body: { fullName: string; email?: string; phone?: string; password: string }) =>
     api<RegisterResult>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+  registerOwner: (body:FormData,key:string) => api<RegisterResult>('/auth/register',{method:'POST',body,headers:{'Idempotency-Key':key}}),
   verify: (body: { verificationToken?: string; challengeId?: string; code?: string }) =>
     api('/auth/verify', { method: 'POST', body: JSON.stringify(body) }),
   forgot: (identifier: string) => api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ identifier }) }),
