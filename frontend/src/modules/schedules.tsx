@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Copy, Plus, Trash2 } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAction, useResource } from "@/lib/hooks";
+import { api } from "@/rebuilt/lib/api";
+import { useAction, useResource } from "@/rebuilt/lib/hooks";
 import {
   type Category,
   type Court,
@@ -17,7 +17,7 @@ import {
   time,
   today,
   weekdays,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -31,7 +31,7 @@ import {
   Select,
   Table,
   TextArea,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 import { useFacility } from "./facilities";
 export function SchedulePage() {
   const { facility: f, editable, base } = useFacility(),
@@ -298,7 +298,7 @@ function HoursEditor({
         (mins(row.closesAt) - mins(row.opensAt)) % row.slotMinutes !== 0
       )
         throw new Error(
-          "Khoảng mở cửa phải chứa các slot trọn vẹn và kết thúc sau khi mở cửa.",
+          "Khoảng mở cửa phải chứa các khung giờ trọn vẹn và kết thúc sau khi mở cửa.",
         );
       if (
         intervals.some(
@@ -435,7 +435,7 @@ function HoursEditor({
         <Notice>
           {scope
             ? "Chưa có lịch riêng. Sân kế thừa giờ hoạt động của cơ sở."
-            : "Chưa có giờ hoạt động. Sân không tạo slot cho những ngày chưa cấu hình."}
+            : "Chưa có giờ hoạt động. Sân không tạo khung giờ cho những ngày chưa cấu hình."}
         </Notice>
       )}
       <Feedback action={action} />
@@ -454,7 +454,7 @@ function HoursEditor({
       >
         <p className="small muted">
           Thay thế {hours.length} khoảng cũ bằng {intervals.length} khoảng mới
-          trong phạm vi đã chọn. Booking đã xác nhận được giữ; bạn cần kiểm tra
+          trong phạm vi đã chọn. Lịch đặt đã xác nhận được giữ; bạn cần kiểm tra
           các lịch phục vụ bị ảnh hưởng.
         </p>
         <Feedback action={action} />
@@ -505,7 +505,7 @@ export function PricingPage() {
       {editable && (
         <Panel
           title={copy ? "Tạo quy tắc từ bản sao" : "Thiết lập quy tắc giá"}
-          description="Giá theo slot, có thời hạn và mức ưu tiên rõ ràng."
+          description="Giá theo khung giờ, có thời hạn và mức ưu tiên rõ ràng."
           action={
             <Link className="text-link small" href={base + "/schedule/preview"}>
               Xem trước giá →
@@ -656,7 +656,7 @@ export function PricingPage() {
                 />
                 <Field
                   name="pricePerSlot"
-                  label="Giá mỗi slot (VND)"
+                  label="Giá mỗi khung giờ (VND)"
                   type="number"
                   min={1}
                   max={9999999999}
@@ -722,7 +722,7 @@ export function PricingPage() {
             headers={[
               "Quy tắc / Phạm vi",
               "Ngày & khung giờ",
-              "Giá / slot",
+              "Giá / khung giờ",
               "Hiệu lực",
               "Trạng thái",
               "Thao tác",
@@ -868,7 +868,7 @@ export function SchedulePreview() {
           onChange={(e) => setDate(e.target.value)}
         />
         <Select
-          label="Trạng thái slot"
+          label="Trạng thái khung giờ"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
@@ -885,7 +885,7 @@ export function SchedulePreview() {
         <ResourceState
           resource={r}
           empty={r.data?.slots.length === 0}
-          emptyTitle="Chưa có slot cấu hình"
+          emptyTitle="Chưa có khung giờ cấu hình"
           emptyDescription="Kiểm tra giờ mở cửa và sân đã được kích hoạt."
         >
           <div className="slot-grid">
@@ -924,7 +924,7 @@ export function SchedulePreview() {
       )}
       <Modal
         open={!!slot}
-        title="Chi tiết slot cấu hình"
+        title="Chi tiết khung giờ cấu hình"
         onClose={() => setSlot(null)}
       >
         {slot && (

@@ -52,6 +52,21 @@ class BookingIntegrationTest {
  HoldInput input(){return new HoldInput(court,start,end,new BigDecimal("150000"));}
  String key(){return UUID.randomUUID().toString();}
 
+ @Test void batchAvailabilityMatchesSingleCourtAndExcludesBookedActiveHoldsButNotExpiredHolds() {
+  var ids=List.of(UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID());String day="2026-10-05";var previews=json.createArrayNode();
+  for(int i=0;i<ids.size();i++) {
+   var p=json.createObjectNode();p.put("courtId",ids.get(i).toString());p.put("timezone","Asia/Ho_Chi_Minh");var slots=p.putArray("slots");slots.addObject().put("startsAt",start.toString()).put("endsAt",end.toString()).put("state","ELIGIBLE").put("amount",100);
+   previews.add(p);when(dependencies.preview(ids.get(i),day)).thenReturn(p);
+   repo.jdbc().update("INSERT INTO slot_reservations(id,court_id,facility_id,holder_id,starts_at,ends_at,expires_at,state,quote) VALUES(?,?,?,?,?,?,?,?,'{}'::jsonb)",UUID.randomUUID(),ids.get(i),facility,user.id(),java.sql.Timestamp.from(start),java.sql.Timestamp.from(end),java.sql.Timestamp.from(i==1?now.minusSeconds(1):now.plusSeconds(600)),i==2?"BOOKED":"HOLD");
+  }
+  when(dependencies.previews(ids,day)).thenReturn(previews);var batch=service.availabilityBatch(ids,day);
+  for(var id:ids)assertThat(batch.get(id)).isEqualTo(service.availability(id,day));
+  assertThat(batch.get(ids.get(0)).path("slots").get(0).path("reason").asText()).isEqualTo("HELD");
+  assertThat(batch.get(ids.get(1)).path("slots").get(0).path("state").asText()).isEqualTo("AVAILABLE");
+  assertThat(batch.get(ids.get(2)).path("slots").get(0).path("reason").asText()).isEqualTo("BOOKED");
+  verify(dependencies,times(1)).previews(ids,day);
+ }
+
  @Test void discoveryUsesRealReservationExclusionsAndPublicSummaries() {
   UUID category=UUID.randomUUID();String day=now.atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalDate().toString();
   when(discoveryDependencies.categories()).thenReturn(json.valueToTree(List.of(Map.of("id",category,"name","Pickleball","active",true))));

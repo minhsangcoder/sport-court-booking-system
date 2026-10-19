@@ -1,4 +1,4 @@
-import { LinkButton } from "@/components/ui";
+import { LinkButton } from "@/rebuilt/components/ui";
 export default function NotFound() {
   return (
     <div className="container narrow empty-state">

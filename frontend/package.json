@@ -9,9 +9,10 @@
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
     "test:auth": "node --test tests/google-auth.test.mjs",
-    "lint": "eslint app components features lib tests",
+    "lint": "eslint .",
     "test": "node --test tests/*.test.mjs",
-    "test:e2e": "node tests/system-e2e.mjs"
+    "test:e2e": "node tests/system-e2e.mjs",
+    "test:discovery": "node tests/facility-search.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

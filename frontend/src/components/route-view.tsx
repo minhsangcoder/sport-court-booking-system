@@ -6,27 +6,27 @@ import {
   SearchPage,
   FacilityPage,
   AvailabilityPage,
-} from "@/modules/discovery";
-import { AuthPage, ProfilePage } from "@/modules/auth";
+} from "@/rebuilt/modules/discovery";
+import { AuthPage, ProfilePage } from "@/rebuilt/modules/auth";
 import {
   BookingsPage,
   BookingDetailPage,
   HoldPage,
   PaymentPage,
-} from "@/modules/booking";
-import { GroupsPage, GroupPage, JoinGroupPage } from "@/modules/groups";
+} from "@/rebuilt/modules/booking";
+import { GroupsPage, GroupPage, JoinGroupPage } from "@/rebuilt/modules/groups";
 import {
   TransferMarket,
   ListingPage,
   ListingForm,
   AcquisitionPage,
-} from "@/modules/transfers";
+} from "@/rebuilt/modules/transfers";
 import {
   OwnerApplyPage,
   ApplicationsPage,
   ApplicationPage,
   ApplicationFacility,
-} from "@/modules/applications";
+} from "@/rebuilt/modules/applications";
 import {
   FacilityWorkspace,
   FacilitiesPage,
@@ -39,19 +39,19 @@ import {
   DocumentsPage,
   ReviewPage,
   TransferPolicyPage,
-} from "@/modules/facilities";
+} from "@/rebuilt/modules/facilities";
 import {
   SchedulePage,
   SchedulePreview,
   PricingPage,
-} from "@/modules/schedules";
+} from "@/rebuilt/modules/schedules";
 import {
   OperationsPage,
   OperationBooking,
   CounterCourt,
   OwnerDashboard,
-} from "@/modules/operations";
-import { FacilityReport, AdminReports } from "@/modules/reports";
+} from "@/rebuilt/modules/operations";
+import { FacilityReport, AdminReports } from "@/rebuilt/modules/reports";
 import {
   AccountsPage,
   AccountPage,
@@ -62,7 +62,7 @@ import {
   AdminPayment,
   SportsPage,
   DisputesPage,
-} from "@/modules/admin";
+} from "@/rebuilt/modules/admin";
 function FacilityScreen({ parts }: { parts: string[] }) {
   switch (parts[0]) {
     case "edit":

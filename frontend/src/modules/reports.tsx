@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useResource } from "@/lib/hooks";
-import { type Court, label, money, localInstant } from "@/lib/domain";
+import { useResource } from "@/rebuilt/lib/hooks";
+import { type Court, label, money, localInstant } from "@/rebuilt/lib/domain";
 import {
   Button,
   ExportButton,
@@ -12,7 +12,7 @@ import {
   ResourceState,
   Stat,
   Table,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 import { useFacility } from "./facilities";
 type CourtReport = {
   court_id: string;
@@ -142,15 +142,15 @@ export function FacilityReport() {
     <div className="stack">
       <RangeFilter onChange={setQuery} />
       <Notice>
-        Booking tính theo giờ bắt đầu chơi. Giá trị booking là giá chốt lúc đặt,
-        chưa phải doanh thu đã tất toán hoặc tiền chi trả cho Owner. API chưa
+        Lịch đặt tính theo giờ bắt đầu chơi. Giá trị lịch đặt là giá chốt lúc đặt,
+        chưa phải doanh thu đã tất toán hoặc tiền chi trả cho chủ sân. API chưa
         cung cấp báo cáo giao dịch cơ sở, hoàn tiền và tỷ lệ khai thác đầy đủ.
       </Notice>
       <ResourceState resource={r}>
         <div className="grid-3">
-          <Stat label="Booking trong kỳ" value={total ?? "—"} />
+          <Stat label="Lịch đặt trong kỳ" value={total ?? "—"} />
           <Stat
-            label="Giá trị booking"
+            label="Giá trị lịch đặt"
             value={value === undefined ? "—" : money(value)}
           />
           <Stat
@@ -159,7 +159,7 @@ export function FacilityReport() {
           />
         </div>
         <Bars
-          title="Booking theo trạng thái"
+          title="Lịch đặt theo trạng thái"
           items={Object.entries(chart ?? {}).map(([name, value]) => ({
             name: label(name),
             value,
@@ -179,7 +179,7 @@ export function FacilityReport() {
               "Sân",
               "Trạng thái",
               "Số booking",
-              "Giá trị booking",
+              "Giá trị lịch đặt",
               "Phút đặt sân",
             ]}
           >
@@ -198,7 +198,7 @@ export function FacilityReport() {
           </Table>
         </Panel>
         <p className="muted small">
-          Nguồn: Booking Service · Kỳ mặc định 30 ngày hoặc khoảng đã chọn · Giá
+          Nguồn: Dịch vụ lịch đặt · Kỳ mặc định 30 ngày hoặc khoảng đã chọn · Giá
           trị gốc của booking, bao gồm các trạng thái trả về.
         </p>
       </ResourceState>
@@ -223,9 +223,9 @@ export function AdminReports({ dashboard = false }: { dashboard?: boolean }) {
   return (
     <>
       <PageHead
-        eyebrow="PLATFORM INTELLIGENCE"
+        eyebrow="Thống kê"
         title={dashboard ? "Toàn cảnh SportHub" : "Báo cáo nền tảng"}
-        description="Theo dõi tài khoản, booking và dòng giao dịch từ từng nguồn nghiệp vụ."
+        description="Theo dõi tài khoản, lịch đặt và giao dịch từ từng nguồn nghiệp vụ."
       />
       <div className="stack">
         <RangeFilter onChange={setQuery} />
@@ -241,7 +241,7 @@ export function AdminReports({ dashboard = false }: { dashboard?: boolean }) {
             }
           />
           <Stat
-            label="Booking được tạo trong kỳ"
+            label="Lịch đặt trong kỳ"
             value={
               bookings.loading
                 ? "Đang tải"
@@ -266,7 +266,7 @@ export function AdminReports({ dashboard = false }: { dashboard?: boolean }) {
         </div>
         <ResourceState resource={bookings}>
           <Bars
-            title="Booking được tạo theo trạng thái"
+            title="Lịch đặt theo trạng thái"
             items={
               bookings.data?.states.map((x) => ({
                 name: label(x.status),
@@ -350,11 +350,11 @@ export function AdminReports({ dashboard = false }: { dashboard?: boolean }) {
         </ResourceState>
         <Notice>
           Giao dịch thành công không đồng nghĩa với doanh thu đã tất toán.
-          Backend chưa thực thi chi trả escrow và hoàn tiền. Booking/giao dịch
+          Backend chưa thực thi chi trả escrow và hoàn tiền. Lịch đặt/giao dịch
           tính theo thời điểm tạo; tài khoản là số liệu hiện tại.
         </Notice>
         <p className="muted small">
-          Nguồn: Identity, Booking & Payment Service · Kỳ mặc định 30 ngày hoặc
+          Nguồn: Tài khoản, lịch đặt và thanh toán · Kỳ mặc định 30 ngày hoặc
           khoảng đã chọn.
         </p>
       </div>

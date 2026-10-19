@@ -1,0 +1,33 @@
+# Dữ liệu demo có ảnh
+
+Chạy backend và frontend trước. Script chỉ ghi vào môi trường local/demo có `DEMO_SEED_ENABLED=true`, dùng credentials từ `.env` bị Git ignore; không đổi logic nghiệp vụ.
+
+```sh
+python3 scripts/demo/seed-showcase.py \
+  --api-base http://127.0.0.1:18080/api/v1 \
+  --manifest tmp/demo/showcase-mac-manifest.json \
+  --frontend-base http://localhost:3000
+```
+
+Script tạo 12 cơ sở theo 4 bộ môn (8 ACTIVE, 2 PENDING_APPROVAL, 1 DRAFT, 1 REJECTED), thêm 2 hồ sơ đăng ký Owner, sân con có mô tả và ảnh, địa chỉ hành chính hai cấp, tọa độ, điện thoại, email liên hệ, tiện ích, lịch 06:00–23:00, giá thường/cao điểm/cuối tuần, chứng từ PDF mô phỏng, phân công Staff, booking, thanh toán demo, nhóm chơi và chuyển nhượng. Trạng thái nghiệp vụ được tạo qua API; bootstrap thêm Customer dùng hash password của Customer demo hiện có.
+
+Ảnh cover/gallery và ảnh của từng sân được upload vào MinIO qua media API. Ảnh là minh họa cho địa điểm giả lập. URL ký được cấp mới khi mở trang, không lưu URL tạm vào dữ liệu fixture. Script không nhân đôi ảnh khi chạy lại, không xóa dữ liệu hiện có. Không dùng cùng manifest cho hai database khác nhau.
+
+Mặc định lần đầu lấy ngày hiện tại tại Việt Nam. Dùng `--date YYYY-MM-DD` để tạo batch booking cho một ngày mới. Dùng `--verify-only` cùng các tham số trên để kiểm tra lại; kết quả và link màn hình nằm ở `tmp/demo/showcase-summary.md`.
+
+Tài khoản `customer`, `customer2`, `owner`, `staff`, `admin` đều có domain `@sporthub.local`; mật khẩu là `DEMO_PASSWORD` trong `.env`. Không ghi mật khẩu hoặc token vào tài liệu/báo cáo. Các Customer bổ sung là `demo.anh`, `demo.huy`, `demo.linh`, `demo.trang`, `demo.quang`, `demo.mai` tại cùng domain.
+
+## Ảnh mới
+
+Công cụ: built-in imagegen. Các file được lưu trong workspace:
+
+- `frontend/public/images/showcase-badminton.png`
+- `frontend/public/images/showcase-football.png`
+
+Prompt cầu lông:
+
+> Use case: photorealistic-natural. Asset type: landscape facility cover and court gallery image for a Vietnamese sports booking demo. Primary request: a realistic wide photograph of a fictional indoor badminton sports hall in Vietnam, showing three clean green badminton courts with correct white court markings, taut badminton nets on slim posts, high roof, side seating, bright diffuse lighting. Composition: eye-level wide angle from the corner, horizontal 16:9, clear full view of the courts and sensible proportions, useful for a listing card and detail gallery. Style: natural architectural sports photography, detailed floor texture, crisp but believable. Constraints: no people, no readable text, no brands or logos, no watermark. This is a fictional demo venue.
+
+Prompt bóng đá:
+
+> Use case: photorealistic-natural. Asset type: landscape facility cover and court gallery image for a Vietnamese sports booking demo. Primary request: a realistic wide photograph of a fictional five-a-side football facility in Vietnam, lush green artificial grass pitch with accurate white football markings, small white goals at both ends, tall perimeter mesh fencing, floodlight poles and modest covered seating, a few trees around the venue. Composition: horizontal 16:9, three-quarter view from the corner including one goal and most of the pitch. Lighting: late-afternoon natural daylight, warm and welcoming, believable architectural sports photography. Constraints: no people, no readable text, no logos, no watermark. This is a fictional demo venue.

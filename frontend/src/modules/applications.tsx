@@ -1,12 +1,12 @@
 "use client";
-import { Photo } from "@/components/photo";
+import { Photo } from "@/rebuilt/components/photo";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
-import { useAction, useResource, formQuery } from "@/lib/hooks";
+import { api } from "@/rebuilt/lib/api";
+import { useAuth } from "@/rebuilt/lib/auth-context";
+import { useAction, useResource, formQuery } from "@/rebuilt/lib/hooks";
 import {
   type ApplicationDetail,
   type DocumentFile,
@@ -15,7 +15,7 @@ import {
   dateTime,
   label,
   shortId,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -32,7 +32,7 @@ import {
   Table,
   Tabs,
   TextArea,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 import {
   ApplicationDisclosure,
   FacilityFields,
@@ -40,8 +40,8 @@ import {
   facilityFrom,
   legalFields,
   legalFrom,
-} from "@/components/domain-forms";
-import { Records } from "@/components/records";
+} from "@/rebuilt/components/domain-forms";
+import { Records } from "@/rebuilt/components/records";
 import { FacilityWorkspace } from "./facilities";
 export function OwnerApplyPage() {
   const { user } = useAuth(),
@@ -63,7 +63,7 @@ export function OwnerApplyPage() {
   return (
     <>
       <PageHead
-        eyebrow="BECOME A PARTNER"
+        eyebrow="Đăng ký chủ sân"
         title="Đưa cơ sở của bạn lên SportHub."
         description="Tạo hồ sơ chủ sân và cơ sở đầu tiên để bắt đầu hành trình đối tác."
       />
@@ -153,7 +153,7 @@ export function ApplicationsPage({ admin = false }: { admin?: boolean }) {
   return (
     <>
       <PageHead
-        eyebrow={admin ? "PARTNER REVIEW" : "YOUR PARTNER JOURNEY"}
+        eyebrow={admin ? "Duyệt hồ sơ chủ sân" : "Hồ sơ của bạn"}
         title={admin ? "Hồ sơ đăng ký chủ sân" : "Hồ sơ đối tác của bạn"}
         description={
           admin
@@ -391,7 +391,7 @@ export function ApplicationPage({
   return (
     <>
       <PageHead
-        eyebrow={admin ? "PARTNER REVIEW" : "PARTNER APPLICATION"}
+        eyebrow={admin ? "Duyệt hồ sơ chủ sân" : "Hồ sơ đăng ký"}
         title={`Hồ sơ #${shortId(id)}`}
         description={a?.businessName}
         action={

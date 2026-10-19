@@ -1,5 +1,5 @@
 "use client";
-import { Button, LinkButton, PageHead, Panel } from "@/components/ui";
+import { Button, LinkButton, PageHead, Panel } from "@/rebuilt/components/ui";
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
     <div className="container narrow">

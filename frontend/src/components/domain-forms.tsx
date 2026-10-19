@@ -1,7 +1,7 @@
 "use client";
-import type { Facility, Legal, Category } from "@/lib/domain";
-import { weekdays } from "@/lib/domain";
-import { useResource } from "@/lib/hooks";
+import type { Facility, Legal, Category } from "@/rebuilt/lib/domain";
+import { weekdays } from "@/rebuilt/lib/domain";
+import { useResource } from "@/rebuilt/lib/hooks";
 import { Field, Notice, ResourceState, Select, TextArea } from "./ui";
 import { LocationPicker } from "./location-picker";
 export const legalFields: [keyof Legal, string, number][] = [
@@ -240,7 +240,7 @@ export function SignupSetup() {
       </Select>
       <Field
         name="pricePerSlot"
-        label="Giá mỗi slot (VND)"
+        label="Giá mỗi khung giờ (VND)"
         type="number"
         min={1}
         max={9999999999}
@@ -263,7 +263,7 @@ export function SignupSetup() {
       />
       <Field
         name="slotMinutes"
-        label="Độ dài slot (phút)"
+        label="Độ dài khung giờ (phút)"
         type="number"
         min={5}
         max={720}
@@ -307,7 +307,7 @@ export function setupFrom(f: FormData) {
     (mins(closesAt) - mins(opensAt)) % slotMinutes !== 0
   )
     throw new Error(
-      "Giờ đóng cửa phải sau giờ mở cửa; khoảng mở cửa phải chia hết cho độ dài slot.",
+      "Giờ đóng cửa phải sau giờ mở cửa; khoảng mở cửa phải chia hết cho độ dài khung giờ.",
     );
   return {
     courtCode: val("courtCode"),
@@ -323,7 +323,7 @@ export function setupFrom(f: FormData) {
 export function ApplicationDisclosure() {
   return (
     <Notice>
-      Hồ sơ pháp lý chỉ dành cho bạn và Admin thẩm định. Quyền Owner được cấp
+      Hồ sơ pháp lý chỉ dành cho bạn và quản trị viên thẩm định. Quyền chủ sân được cấp
       sau khi hồ sơ được phê duyệt.
     </Notice>
   );

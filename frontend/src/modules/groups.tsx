@@ -1,12 +1,12 @@
 "use client";
-import { Photo } from "@/components/photo";
+import { Photo } from "@/rebuilt/components/photo";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Bell, Copy, Plus, Users, Wallet } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
-import { useAction, useIdempotency, useResource } from "@/lib/hooks";
+import { api } from "@/rebuilt/lib/api";
+import { useAuth } from "@/rebuilt/lib/auth-context";
+import { useAction, useIdempotency, useResource } from "@/rebuilt/lib/hooks";
 import {
   type Group,
   type Invite,
@@ -15,7 +15,7 @@ import {
   label,
   money,
   shortId,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -31,13 +31,13 @@ import {
   Stat,
   Tabs,
   TextArea,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 export function GroupsPage() {
   const r = useResource<Group[]>("/groups");
   return (
     <div className="container">
       <PageHead
-        eyebrow="BETTER TOGETHER"
+        eyebrow="Nhóm chơi"
         title="Cùng nhóm, thêm vui."
         description="Lịch chơi chung, chi phí rõ ràng và đồng đội luôn kết nối."
         action={
@@ -182,7 +182,7 @@ function GroupWorkspace({
       splitMode === "CUSTOM" &&
       allocations.reduce((s, x) => s + x.amount, 0) !== g.booking.amount
     ) {
-      action.setError("Tổng chi phí phân bổ phải bằng giá trị booking.");
+      action.setError("Tổng chi phí phân bổ phải bằng giá trị lịch đặt.");
       return;
     }
     await action.run(
@@ -204,7 +204,7 @@ function GroupWorkspace({
   return (
     <>
       <PageHead
-        eyebrow="YOUR TEAM, YOUR GAME"
+        eyebrow="Chi tiết nhóm"
         title={g.name || `Nhóm #${shortId(g.id)}`}
         description={`${dateTime(g.booking.startsAt, g.booking.priceSnapshot.timezone)} · Nhóm ${shortId(g.id)}`}
         action={
@@ -671,7 +671,7 @@ export function JoinGroupPage() {
   return (
     <div className="container narrow">
       <PageHead
-        eyebrow="JOIN THE GAME"
+        eyebrow="Tham gia nhóm"
         title="Có đồng đội đang chờ bạn."
         description="Nhập mã mời hoặc mở liên kết từ người tổ chức để tham gia nhóm."
       />

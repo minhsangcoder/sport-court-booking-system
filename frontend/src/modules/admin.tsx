@@ -1,12 +1,12 @@
 "use client";
-import { Photo } from "@/components/photo";
+import { Photo } from "@/rebuilt/components/photo";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Plus, ShieldCheck, Wallet } from "lucide-react";
-import { api, type Role } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
-import { useAction, useIdempotency, useResource, formQuery } from "@/lib/hooks";
+import { api, type Role } from "@/rebuilt/lib/api";
+import { useAuth } from "@/rebuilt/lib/auth-context";
+import { useAction, useIdempotency, useResource, formQuery } from "@/rebuilt/lib/hooks";
 import {
   type Account,
   type Booking,
@@ -20,7 +20,7 @@ import {
   money,
   shortId,
   label,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -37,8 +37,8 @@ import {
   Table,
   Tabs,
   TextArea,
-} from "@/components/ui";
-import { Records } from "@/components/records";
+} from "@/rebuilt/components/ui";
+import { Records } from "@/rebuilt/components/records";
 const accountStates = [
   "PENDING_VERIFICATION",
   "ACTIVE",
@@ -85,7 +85,7 @@ export function AccountsPage() {
   return (
     <div className="stack">
       <PageHead
-        eyebrow="PEOPLE & ACCESS"
+        eyebrow="Quản lý tài khoản"
         title="Tài khoản nền tảng"
         description="Tra cứu người dùng, kiểm tra phiên và kiểm soát quyền truy cập."
       />
@@ -173,7 +173,7 @@ export function AccountPage({ id }: { id: string }) {
       {a && (
         <div className="stack">
           <PageHead
-            eyebrow="ACCOUNT DETAILS"
+            eyebrow="Thông tin tài khoản"
             title={a.fullName}
             description={"Tài khoản #" + shortId(a.id)}
             action={<Badge state={a.status} />}
@@ -366,7 +366,7 @@ export function AdminFacilities() {
   return (
     <div className="stack">
       <PageHead
-        eyebrow="VENUE DIRECTORY"
+        eyebrow="Quản lý cơ sở"
         title="Cơ sở thể thao"
         description="Kiểm tra hồ sơ cơ sở, lịch sử thẩm định và địa chỉ trùng."
       />
@@ -440,7 +440,7 @@ export function AdminFacility({ id }: { id: string }) {
       {data && (
         <div className="stack">
           <PageHead
-            eyebrow="FACILITY REVIEW"
+            eyebrow="Kiểm duyệt cơ sở"
             title={data.facility.name}
             description={data.facility.addressLine}
             action={<Badge state={data.facility.status} />}
@@ -628,7 +628,7 @@ export function AdminBookings({
     return (
       <>
         <PageHead
-          eyebrow="RECONCILIATION"
+          eyebrow="Đối soát"
           title="Đối soát booking"
           description="Các bản ghi lệch trạng thái do backend ghi nhận; tối đa 200 bản ghi gần nhất."
         />
@@ -647,7 +647,7 @@ export function AdminBookings({
   return (
     <div className="stack">
       <PageHead
-        eyebrow="BOOKING MONITOR"
+        eyebrow="Theo dõi lịch đặt"
         title="Giám sát booking"
         description="Theo dõi trạng thái và nhật ký của lượt đặt trên nền tảng."
       />
@@ -678,13 +678,13 @@ export function AdminBookings({
         </form>
       </Panel>
       <Panel
-        title="Booking gần nhất"
+        title="Lịch đặt gần nhất"
         description="Tối đa 200 booking theo bộ lọc."
       >
         <ResourceState resource={r} empty={r.data?.length === 0}>
           <Table
             headers={[
-              "Booking",
+              "Lịch đặt",
               "Lịch chơi",
               "Nguồn",
               "Giá trị",
@@ -730,7 +730,7 @@ export function AdminPayments() {
   return (
     <div className="stack">
       <PageHead
-        eyebrow="PAYMENT MONITOR"
+        eyebrow="Theo dõi thanh toán"
         title="Giao dịch thanh toán"
         description="Tra cứu đơn thanh toán, callback, escrow và yêu cầu hoàn tiền."
       />
@@ -784,7 +784,7 @@ export function AdminPayments() {
               <tr key={p.id}>
                 <td>
                   <strong>#{shortId(p.id)}</strong>
-                  <small>Booking #{shortId(p.bookingId)}</small>
+                  <small>Lịch đặt #{shortId(p.bookingId)}</small>
                 </td>
                 <td>{label(p.purpose)}</td>
                 <td>{money(p.amount, p.currency)}</td>
@@ -825,7 +825,7 @@ export function AdminPayment({ id }: { id: string }) {
       {p && (
         <div className="stack">
           <PageHead
-            eyebrow="PAYMENT DETAILS"
+            eyebrow="Chi tiết thanh toán"
             title={"Giao dịch #" + shortId(id)}
             description={p.providerReference}
             action={<Badge state={p.status} />}
@@ -835,7 +835,7 @@ export function AdminPayment({ id }: { id: string }) {
               <DetailList
                 items={[
                   [
-                    "Booking",
+                    "Lịch đặt",
                     <Link key="booking" href={"/admin/bookings/" + p.bookingId}>
                       #{shortId(p.bookingId)}
                     </Link>,
@@ -952,7 +952,7 @@ export function SportsPage() {
   return (
     <div className="stack">
       <PageHead
-        eyebrow="SPORT CATALOG"
+        eyebrow="Bộ môn thể thao"
         title="Danh mục thể thao"
         description="Các bộ môn dùng chung cho tìm kiếm, sân và bảng giá."
       />
@@ -1023,7 +1023,7 @@ export function DisputesPage() {
   return (
     <div className="stack">
       <PageHead
-        eyebrow="SUPPORT OPERATIONS"
+        eyebrow="Hỗ trợ khách hàng"
         title="Khiếu nại & tranh chấp"
         description="Chức năng mục tiêu theo tài liệu nghiệp vụ."
       />

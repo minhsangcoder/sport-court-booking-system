@@ -243,6 +243,17 @@ public class ScheduleService {
         reader(facility,caller,token);var context=facilities.context(court,staffReader(facility,caller)?null:token);checkFacility(facility,context);return preview(context,date);
     }
     public Preview publicPreview(UUID court,LocalDate date) {return preview(facilities.context(court,null),date);}
+    public List<Preview> publicPreviews(List<UUID> ids,LocalDate day) {
+        if(ids==null||ids.isEmpty()||ids.size()>200)throw new IllegalArgumentException("Supply 1–200 court IDs");
+        var contexts=facilities.contexts(ids);
+        var facilities=contexts.stream().map(FacilityClient.Context::facilityId).distinct().toList();
+        var hours=repo.hours(facilities).stream().collect(java.util.stream.Collectors.groupingBy(Hours::facilityId));
+        var exceptions=repo.exceptions(facilities).stream().collect(java.util.stream.Collectors.groupingBy(ExceptionView::facilityId));
+        var rules=repo.rules(facilities).stream().collect(java.util.stream.Collectors.groupingBy(PriceRule::facilityId));
+        return contexts.stream().map(context->preview(context,day,
+            calendar(context.facilityId(),context.courtId(),day,hours.getOrDefault(context.facilityId(),List.of()),exceptions.getOrDefault(context.facilityId(),List.of())),
+            rules.getOrDefault(context.facilityId(),List.of()))).toList();
+    }
     private void reader(UUID facility,Caller caller,String token) {
         if(staffReader(facility,caller))return;
         if(caller.hasRole("OWNER")||caller.facilityBindings().getOrDefault(facility,Set.of()).contains("APPLICATION_READ")){facilities.requireReader(facility,token);return;}
@@ -265,10 +276,13 @@ public class ScheduleService {
     }
     private record CalendarDay(boolean closed,List<Interval> intervals){}
     private CalendarDay calendar(UUID facility,UUID court,LocalDate day){
-        var hours=repo.hours(facility);var overrides=hours.stream().filter(h->court!=null&&court.equals(h.courtId())).toList();
+        return calendar(facility,court,day,repo.hours(facility),repo.exceptions(facility));
+    }
+    private CalendarDay calendar(UUID facility,UUID court,LocalDate day,List<Hours> hours,List<ExceptionView> exceptionsForFacility){
+        var overrides=hours.stream().filter(h->court!=null&&court.equals(h.courtId())).toList();
         var base=overrides.isEmpty()?hours.stream().filter(h->h.courtId()==null).toList():overrides;
         var daily=base.stream().filter(h->h.dayOfWeek()==day.getDayOfWeek().getValue()).toList();
-        var allExceptions=repo.exceptions(facility).stream().filter(e->e.date().equals(day) && (e.courtId()==null||e.courtId().equals(court))).toList();
+        var allExceptions=exceptionsForFacility.stream().filter(e->e.date().equals(day) && (e.courtId()==null||e.courtId().equals(court))).toList();
         var courtExceptions=allExceptions.stream().filter(e->court!=null&&court.equals(e.courtId())).toList();
         // A court-specific calendar overrides the general date, including special opening on a facility holiday.
         var exceptions=courtExceptions.isEmpty()?allExceptions.stream().filter(e->e.courtId()==null).toList():courtExceptions;
@@ -281,7 +295,10 @@ public class ScheduleService {
     }
     private Preview preview(FacilityClient.Context context,LocalDate day){return preview(context,day,repo.rules(context.facilityId()));}
     private Preview preview(FacilityClient.Context context,LocalDate day,List<PriceRule> rules) {
-        var facility=context.facilityId();var court=context.courtId();var calendar=calendar(facility,court,day);var intervals=calendar.intervals();boolean closed=calendar.closed();
+        return preview(context,day,calendar(context.facilityId(),context.courtId(),day),rules);
+    }
+    private Preview preview(FacilityClient.Context context,LocalDate day,CalendarDay calendar,List<PriceRule> rules) {
+        var facility=context.facilityId();var court=context.courtId();var intervals=calendar.intervals();boolean closed=calendar.closed();
         var slots=new ArrayList<Slot>();
         for(var interval:intervals)for(LocalTime start=interval.opensAt();start.plusMinutes(interval.slotMinutes()).isAfter(start) && !start.plusMinutes(interval.slotMinutes()).isAfter(interval.closesAt());start=start.plusMinutes(interval.slotMinutes())) {
             LocalTime end=start.plusMinutes(interval.slotMinutes());

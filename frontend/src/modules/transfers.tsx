@@ -3,13 +3,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, ArrowUpRight, MapPin, Repeat2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api } from "@/rebuilt/lib/api";
 import {
   useAction,
   useCountdown,
   useIdempotency,
   useResource,
-} from "@/lib/hooks";
+} from "@/rebuilt/lib/hooks";
 import {
   type Acquisition,
   type BookingDetail,
@@ -21,7 +21,7 @@ import {
   money,
   shortId,
   time,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -36,7 +36,7 @@ import {
   ResourceState,
   Select,
   Tabs,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 export function ListingCard({ listing: l }: { listing: Listing }) {
   const saving = l.originalAmount - l.price;
   return (
@@ -94,7 +94,7 @@ export function TransferMarket({ mine = false }: { mine?: boolean }) {
   return (
     <div className="container">
       <PageHead
-        eyebrow={mine ? "YOUR TRANSFER DESK" : "KEEP THE GAME GOING"}
+        eyebrow={mine ? "Chuyển nhượng của bạn" : "Chuyển nhượng lịch đặt"}
         title={
           mine ? "Chuyển nhượng của bạn" : "Một lịch chơi mới. Một mức giá tốt."
         }
@@ -266,7 +266,7 @@ export function ListingPage({ id }: { id: string }) {
         {r.data && (
           <>
             <PageHead
-              eyebrow="A NEW CHANCE TO PLAY"
+              eyebrow="Lịch sân được chuyển nhượng"
               title={r.data.venue.facilityName}
               description={r.data.venue.address}
               action={<Badge state={r.data.state} />}
@@ -437,7 +437,7 @@ export function ListingForm({
   return (
     <div className="container narrow">
       <PageHead
-        eyebrow="KEEP THE GAME GOING"
+        eyebrow="Chuyển nhượng lịch đặt"
         title={
           listingId
             ? "Điều chỉnh lịch chuyển nhượng"
@@ -561,7 +561,7 @@ function AcquisitionDetails({
   return (
     <>
       <PageHead
-        eyebrow="YOUR TRANSFER"
+        eyebrow="Giao dịch của bạn"
         title={`Giao dịch #${shortId(a.id)}`}
         description="Theo dõi thanh toán và trạng thái bàn giao quyền sử dụng."
       />
@@ -572,7 +572,7 @@ function AcquisitionDetails({
           items={[
             ["Hạn thanh toán", dateTime(a.expiresAt)],
             ["Thời gian còn lại", countdown.text],
-            ["Booking", shortId(a.bookingId)],
+            ["Lịch đặt", shortId(a.bookingId)],
           ]}
         />
         <Feedback action={action} />

@@ -1656,6 +1656,196 @@
           }
         }
       }
+    },
+    "/bookings/search/facilities": {
+      "get": {
+        "operationId": "searchPublicFacilityAvailability",
+        "security": [],
+        "summary": "Group matching courts by facility, then sort and paginate facilities",
+        "description": "When both opensAfter and closesBefore are supplied, every matched court must have priced AVAILABLE slots covering the exact interval continuously. Price bounds apply to every slot. Counts and pagination are after all filters and grouping. Court IDs, slot intervals and minimum price are retained. Existing court search remains unchanged.",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          {
+            "name": "provinceCode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2,
+              "pattern": "^[0-9]{2}$",
+              "description": "Current Vietnam province/city code from Open Admin Data. Keep leading zeroes."
+            },
+            "description": "Filter by the selected current province/city code, rather than free-form display text."
+          },
+          {
+            "name": "sportCategoryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Defaults to today in Asia/Ho_Chi_Minh; within configured booking.advance-days."
+          },
+          {
+            "name": "opensAfter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+            },
+            "description": "Whole available slots inside the local facility time window; not a reservation."
+          },
+          {
+            "name": "closesBefore",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-2][0-9]:[0-5][0-9]$"
+            },
+            "description": "Whole available slots inside the local facility time window; not a reservation."
+          },
+          {
+            "name": "minPrice",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "description": "Price for each matching slot in VND, not a total multi-slot quote."
+          },
+          {
+            "name": "maxPrice",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "description": "Price for each matching slot in VND, not a total multi-slot quote."
+          },
+          {
+            "name": "latitude",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            }
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            }
+          },
+          {
+            "name": "radiusKm",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NAME",
+                "PRICE_ASC",
+                "PRICE_DESC",
+                "DISTANCE"
+              ],
+              "default": "NAME"
+            },
+            "description": "Distance requires both origin coordinates."
+          },
+          {
+            "name": "wardCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 48,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Facility page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "message"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/FacilityDiscoveryPage"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filters or pagination"
+          },
+          "503": {
+            "description": "Dependencies or availability temporarily unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2686,6 +2876,170 @@
             "items": {
               "$ref": "#/components/schemas/PaymentReminderMemberResult"
             }
+          }
+        }
+      },
+      "MatchingCourt": {
+        "type": "object",
+        "required": [
+          "courtId",
+          "courtName",
+          "sportCategoryId",
+          "sportName",
+          "fromPrice",
+          "currency",
+          "availableSlots",
+          "firstStartsAt",
+          "firstEndsAt",
+          "slots"
+        ],
+        "properties": {
+          "courtId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "courtName": {
+            "type": "string"
+          },
+          "sportCategoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sportName": {
+            "type": "string"
+          },
+          "fromPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string"
+          },
+          "availableSlots": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "firstStartsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstEndsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Slot"
+            }
+          }
+        }
+      },
+      "FacilityDiscoveryResult": {
+        "type": "object",
+        "required": [
+          "facility",
+          "imageUrl",
+          "date",
+          "matchingCourts",
+          "sports",
+          "fromPrice",
+          "currency",
+          "availableSlots",
+          "distanceKm",
+          "courts"
+        ],
+        "properties": {
+          "facility": {
+            "$ref": "#/components/schemas/DiscoveryFacilitySummary"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "matchingCourts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "fromPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string"
+          },
+          "availableSlots": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "distanceKm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "courts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchingCourt"
+            }
+          }
+        }
+      },
+      "FacilityDiscoveryPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "size",
+          "totalFacilities",
+          "totalPages"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacilityDiscoveryResult"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 48
+          },
+          "totalFacilities": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalPages": {
+            "type": "integer",
+            "minimum": 0
           }
         }
       }

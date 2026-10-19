@@ -22,6 +22,13 @@ public class DiscoveryDependencies {
             return uri.build();
         }).retrieve().body(JsonNode.class).path("data");
     }
+    public JsonNode catalog(String q,String province,String ward,UUID category,UUID id) {
+        return facility.get().uri(uri -> {
+            uri.path("/api/v1/facilities/search-catalog");
+            if(q!=null)uri.queryParam("q",q);if(province!=null)uri.queryParam("provinceCode",province);if(ward!=null)uri.queryParam("wardCode",ward);
+            if(category!=null)uri.queryParam("sportCategoryId",category);if(id!=null)uri.queryParam("facilityId",id);return uri.build();
+        }).retrieve().body(JsonNode.class).path("data");
+    }
     public JsonNode courts(UUID id) { return facility.get().uri("/api/v1/facilities/"+id+"/courts").retrieve().body(JsonNode.class).path("data"); }
     public JsonNode categories() { return facility.get().uri("/api/v1/sport-categories").retrieve().body(JsonNode.class).path("data"); }
 }

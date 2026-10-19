@@ -36,10 +36,17 @@ public class FacilityClient {
     public Context context(UUID courtId,String ownerToken) {
         var data=read(ownerToken==null?"/api/v1/facilities/courts/"+courtId+"/context":
             "/api/v1/owner/courts/"+courtId+"/context",ownerToken);
+        return parseContext(data);
+    }
+    public List<Context> contexts(List<UUID> ids) {
+        var data=read("/api/v1/facilities/courts/contexts?ids="+String.join(",",ids.stream().map(UUID::toString).toList()),null);
+        var result=new ArrayList<Context>(); data.forEach(value -> result.add(parseContext(value))); return result;
+    }
+    private Context parseContext(JsonNode data) {
         var f=data.path("facility");var c=data.path("court");
         var windows=new ArrayList<Window>();
         data.path("maintenance").forEach(m->windows.add(new Window(Instant.parse(m.path("startsAt").asText()),Instant.parse(m.path("endsAt").asText()))));
-        return new Context(UUID.fromString(f.path("id").asText()),courtId,
+        return new Context(UUID.fromString(f.path("id").asText()),UUID.fromString(c.path("id").asText()),
             UUID.fromString(c.path("sportCategoryId").asText()),ZoneId.of(f.path("timezone").asText()),
             c.path("enabled").asBoolean(),f.path("status").asText(),List.copyOf(windows),uuid(c,"courtTypeId"));
     }

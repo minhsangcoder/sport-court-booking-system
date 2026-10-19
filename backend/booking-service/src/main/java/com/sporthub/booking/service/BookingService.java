@@ -195,6 +195,41 @@ public class BookingService {
         if(day.isBefore(today)||day.isAfter(horizon.atZone(zone).toLocalDate()))throw new IllegalArgumentException("Choose a date inside the booking window");
         boolean updating=facility!=null&&repo.jdbc().queryForObject("SELECT count(*) FROM configuration_change_guards WHERE facility_id=? AND state='PREPARED'",Integer.class,facility)>0;
         var rows=repo.jdbc().queryForList("SELECT starts_at,ends_at,state FROM slot_reservations WHERE court_id=? AND (state='BOOKED' OR (state='HOLD' AND expires_at>?))",court,Timestamp.from(observed));
+        return overlayAvailability(preview,rows,observed,horizon,updating);
+    }
+    public Map<UUID,JsonNode> availabilityBatch(List<UUID> ids,String date) {
+        if(ids==null)throw new IllegalArgumentException("Supply court IDs");
+        if(ids.isEmpty())return Map.of();
+        LocalDate day;
+        try{day=LocalDate.parse(date);}catch(DateTimeException ex){throw new IllegalArgumentException("Use a valid ISO play date");}
+        var result=new LinkedHashMap<UUID,JsonNode>();
+        var jdbc=new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(repo.jdbc());
+        for(int offset=0;offset<ids.size();offset+=200) {
+            var batch=ids.subList(offset,Math.min(offset+200,ids.size()));
+            var previews=dependencies.previews(batch,day.toString());
+            var facilities=new TreeSet<UUID>();
+            for(var preview:previews)if(preview.hasNonNull("facilityId"))facilities.add(UUID.fromString(preview.path("facilityId").asText()));
+            for(var facility:facilities)configuration.lockReservationFacility(facility);
+            if(!facilities.isEmpty())previews=dependencies.previews(batch,day.toString());
+            Instant observed=clock.instant(),horizon=observed.plusSeconds(advanceDays*86400L);
+            Set<UUID> updating=facilities.isEmpty()?Set.of():new HashSet<>(jdbc.queryForList(
+                "SELECT facility_id FROM configuration_change_guards WHERE facility_id IN (:ids) AND state='PREPARED'",Map.of("ids",facilities),UUID.class));
+            var rows=jdbc.queryForList(
+                "SELECT court_id,starts_at,ends_at,state FROM slot_reservations WHERE court_id IN (:ids) AND (state='BOOKED' OR (state='HOLD' AND expires_at>:now)) AND starts_at<:end AND ends_at>:start",
+                Map.of("ids",batch,"now",Timestamp.from(observed),"start",Timestamp.from(day.minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant()),"end",Timestamp.from(day.plusDays(2).atStartOfDay(ZoneOffset.UTC).toInstant())));
+            var byCourt=rows.stream().collect(java.util.stream.Collectors.groupingBy(row->(UUID)row.get("court_id")));
+            for(var value:previews) {
+                var preview=(ObjectNode)value.deepCopy();
+                var zone=ZoneId.of(preview.path("timezone").asText("Asia/Ho_Chi_Minh"));
+                if(day.isBefore(observed.atZone(zone).toLocalDate())||day.isAfter(horizon.atZone(zone).toLocalDate()))throw new IllegalArgumentException("Choose a date inside the booking window");
+                UUID court=UUID.fromString(preview.path("courtId").asText());
+                UUID facility=preview.hasNonNull("facilityId")?UUID.fromString(preview.path("facilityId").asText()):null;
+                result.put(court,overlayAvailability(preview,byCourt.getOrDefault(court,List.of()),observed,horizon,facility!=null&&updating.contains(facility)));
+            }
+        }
+        return result;
+    }
+    private JsonNode overlayAvailability(ObjectNode preview,List<Map<String,Object>> rows,Instant observed,Instant horizon,boolean updating) {
         for(var slot:preview.withArray("slots"))if(slot.path("state").asText().equals("ELIGIBLE")) {
             Instant start=Instant.parse(slot.path("startsAt").asText()),end=Instant.parse(slot.path("endsAt").asText());String reason=null;
             if(!start.isAfter(observed))reason="PAST_SLOT";

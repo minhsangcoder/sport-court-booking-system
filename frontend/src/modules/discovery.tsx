@@ -1,6 +1,6 @@
 "use client";
-import { Photo } from "@/components/photo";
-import { QuoteBreakdown } from "@/components/quote-breakdown";
+import { Photo } from "@/rebuilt/components/photo";
+import { QuoteBreakdown } from "@/rebuilt/components/quote-breakdown";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -15,15 +15,15 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
+import { api } from "@/rebuilt/lib/api";
+import { useAuth } from "@/rebuilt/lib/auth-context";
 import {
   useAction,
   useIdempotency,
   useResource,
   useCurrentTime,
   formQuery,
-} from "@/lib/hooks";
+} from "@/rebuilt/lib/hooks";
 import {
   type Category,
   type Court,
@@ -32,14 +32,16 @@ import {
   type Media,
   type Preview,
   type Quote,
-  type SearchResult,
-  type DiscoveryItem,
+  type FacilitySearchResult,
+  type FacilityDiscoveryItem,
   money,
   today,
   time,
   label,
-} from "@/lib/domain";
-import { selectedInterval } from "@/lib/selection";
+} from "@/rebuilt/lib/domain";
+import { discoveryQuery, facilitySearchHref, courtSearchHref } from "@/rebuilt/lib/discovery";
+import { selectedInterval } from "@/rebuilt/lib/selection";
+import { provinces, provinceByCode, provinceByName } from "@/features/facility/administrative-divisions";
 import {
   Badge,
   Button,
@@ -54,51 +56,28 @@ import {
   Select,
   Stepper,
   Tabs,
-} from "@/components/ui";
-import { CourtMap } from "@/components/map";
-export function VenueCard({ item }: { item: DiscoveryItem }) {
-  const images = useResource<Media[]>(`/facilities/${item.facility.id}/images`);
+} from "@/rebuilt/components/ui";
+import { CourtMap } from "@/rebuilt/components/map";
+export function VenueCard({ item, query = new URLSearchParams() }: { item: FacilityDiscoveryItem; query?: URLSearchParams }) {
   const [failed, setFailed] = useState(false);
-  const image =
-    images.data?.find((x) => x.courtId === item.courtId) ?? images.data?.[0];
   return (
-    <Link
-      className="venue-card"
-      href={`/facilities/${item.facility.id}/courts/${item.courtId}?date=${item.date}`}
-    >
+    <Link className="venue-card" href={facilitySearchHref(item, query)}>
       <div className="venue-cover">
-        {image && !failed ? (
-          <Photo
-            src={image.url}
-            alt={item.courtName + " tại " + item.facility.name}
-            onError={() => setFailed(true)}
-            loading="lazy"
-          />
-        ) : (
-          <Building2 aria-label="Cơ sở chưa có ảnh" />
-        )}
-        <Badge>{item.sportName}</Badge>
+        {item.imageUrl && !failed ? (
+          <Photo src={item.imageUrl} alt={item.facility.name} onError={() => setFailed(true)} loading="lazy" />
+        ) : <Building2 aria-label="Cơ sở chưa có ảnh" />}
+        <Badge>{item.sports.map((sport) => sport.name).join(" · ")}</Badge>
       </div>
       <div className="venue-card-body">
         <h3>{item.facility.name}</h3>
-        <p className="venue-location">
-          <MapPin size={13} />
-          {item.facility.district}, {item.facility.province}
-        </p>
+        <p className="venue-location"><MapPin size={13} />{[item.facility.addressLine, item.facility.ward, item.facility.province].filter(Boolean).join(", ")}</p>
         <div className="venue-meta">
-          <span>{item.courtName}</span>
-          <span>{item.availableSlots} khung giờ trống</span>
-          {item.distanceKm !== null && (
-            <span>{item.distanceKm.toFixed(1)} km</span>
-          )}
+          <span>{item.matchingCourts} sân phù hợp</span>
+          {item.distanceKm !== null && <span>{item.distanceKm.toFixed(1)} km</span>}
         </div>
         <div className="venue-card-bottom">
-          <div>
-            <small>Từ </small>
-            <strong>{money(item.fromPrice, item.currency)}</strong>
-            <small> / slot</small>
-          </div>
-          <ArrowUpRight size={20} />
+          <div><small>Từ </small><strong>{money(item.fromPrice, item.currency)}</strong><small> / khung giờ</small></div>
+          <span className="venue-card-cta">Xem sân trống <ArrowRight size={16} /></span>
         </div>
       </div>
     </Link>
@@ -107,15 +86,15 @@ export function VenueCard({ item }: { item: DiscoveryItem }) {
 export function Home() {
   const router = useRouter(),
     categories = useResource<Category[]>("/sport-categories"),
-    results = useResource<SearchResult>(
-      `/bookings/search?date=${today()}&sort=NAME`,
+    results = useResource<FacilitySearchResult>(
+      `/bookings/search/facilities?date=${today()}&sort=NAME&size=3`,
     );
   return (
     <>
       <section className="hero">
         <div className="hero-grid">
           <div className="hero-copy">
-            <p className="eyebrow">YOUR NEXT GAME STARTS HERE</p>
+            <p className="eyebrow">Đặt sân thể thao</p>
             <h1>
               Đến sân.
               <br />
@@ -146,7 +125,7 @@ export function Home() {
             />
             <div className="hero-caption">
               <div>
-                <small>MAKE TIME FOR PLAY</small>
+                <small>Cùng nhau ra sân</small>
                 <strong>Ra sân. Kết nối. Hết mình.</strong>
               </div>
               <span>
@@ -168,7 +147,7 @@ export function Home() {
             placeholder="Tên cơ sở, khu vực…"
             maxLength={180}
           />
-          <Select label="MÔN THỂ THAO" name="sportCategoryId">
+          <Select label="Môn thể thao" name="sportCategoryId">
             <option value="">Tất cả bộ môn</option>
             {categories.data
               ?.filter((x) => x.active)
@@ -179,7 +158,7 @@ export function Home() {
               ))}
           </Select>
           <Field
-            label="NGÀY RA SÂN"
+            label="Ngày chơi"
             type="date"
             name="date"
             defaultValue={today()}
@@ -250,7 +229,7 @@ export function Home() {
           >
             <div className="venue-grid">
               {results.data?.items.slice(0, 3).map((item) => (
-                <VenueCard key={item.courtId} item={item} />
+                <VenueCard key={item.facility.id} item={item} />
               ))}
             </div>
           </ResourceState>
@@ -304,7 +283,7 @@ export function Home() {
           style={{ marginTop: 52, marginBottom: 0 }}
         >
           <div>
-            <p className="eyebrow">SPORTHUB FOR PARTNERS</p>
+            <p className="eyebrow">Dành cho chủ sân</p>
             <h2>Cơ sở của bạn. Vận hành dễ hơn.</h2>
             <p>
               Quản lý sân, lịch đặt và đội ngũ trên một không gian thống nhất.
@@ -318,20 +297,49 @@ export function Home() {
     </>
   );
 }
+function SearchLocationFields({ provinceCode, wardCode }: { provinceCode: string; wardCode: string }) {
+  const [selectedProvince, setSelectedProvince] = useState(provinceCode);
+  const [selectedWard, setSelectedWard] = useState(wardCode);
+  const wards = provinceByCode(selectedProvince)?.wards ?? [];
+  return (
+    <>
+      <Select label="Tỉnh / Thành phố" name="provinceCode" value={selectedProvince}
+        onChange={(event) => { setSelectedProvince(event.target.value); setSelectedWard(""); }}>
+        <option value="">Chọn tỉnh / thành phố</option>
+        {provinces.map((province) => <option key={province.code} value={province.code}>{province.name}</option>)}
+      </Select>
+      <Select label="Xã / Phường" name="wardCode" value={selectedWard} disabled={!selectedProvince}
+        onChange={(event) => setSelectedWard(event.target.value)}>
+        <option value="">Chọn xã / phường</option>
+        {wards.map((ward) => <option key={ward.code} value={ward.code}>{ward.name}</option>)}
+      </Select>
+    </>
+  );
+}
 export function SearchPage() {
   const params = useSearchParams(),
     router = useRouter();
   const [mode, setMode] = useState("list"),
+    [filtersOpen, setFiltersOpen] = useState(false),
     [locationError, setLocationError] = useState("");
   const categories = useResource<Category[]>("/sport-categories");
-  const query = params.toString(),
-    results = useResource<SearchResult>(
-      "/bookings/search?" + (query || `date=${today()}`),
-    );
+  const query = params.toString();
+  const provinceCode = params.get("provinceCode") ?? provinceByName(params.get("province"))?.code ?? "";
+  const wardCode = params.get("wardCode") ?? "";
+  const apiParams = discoveryQuery(new URLSearchParams(query));
+  if (provinceCode) apiParams.set("provinceCode", provinceCode);
+  if (!apiParams.has("date")) apiParams.set("date", today());
+  apiParams.set("page", params.get("page") ?? "1");
+  apiParams.set("size", "12");
+  const results = useResource<FacilitySearchResult>("/bookings/search/facilities?" + apiParams.toString());
+  const filteredItems = results.data?.items;
+  function changePage(page: number) {
+    const next = new URLSearchParams(apiParams); next.set("page", String(page)); router.push("/search?" + next);
+  }
   function locate() {
     if (!navigator.geolocation) {
       setLocationError(
-        "Trình duyệt chưa hỗ trợ vị trí. Hãy nhập tỉnh hoặc quận.",
+        "Trình duyệt chưa hỗ trợ vị trí. Hãy chọn tỉnh hoặc xã/phường.",
       );
       return;
     }
@@ -346,24 +354,24 @@ export function SearchPage() {
       },
       () =>
         setLocationError(
-          "Không lấy được vị trí. Bạn có thể tìm theo tỉnh hoặc quận.",
+          "Không lấy được vị trí. Bạn có thể chọn tỉnh hoặc xã/phường.",
         ),
     );
   }
   return (
     <div className="container">
-      <PageHead
-        eyebrow="FIND YOUR COURT"
-        title="Một sân phù hợp. Một cuộc chơi hay."
-        description="Chọn bộ môn, địa điểm và thời gian. Phần còn lại để SportHub."
-      />
+      <PageHead title="Tìm sân thể thao" />
       <div className="search-layout">
         <Panel
-          title="Tìm sân của bạn"
-          className="filter-panel"
-          action={<SlidersHorizontal size={17} />}
+          title="Bộ lọc tìm kiếm"
+          className={`filter-panel ${filtersOpen ? "filter-open" : ""}`}
+          action={<button type="button" className="icon-btn filter-toggle"
+            aria-label={filtersOpen ? "Ẩn bộ lọc" : "Hiện bộ lọc"}
+            aria-expanded={filtersOpen} aria-controls="search-filter-fields"
+            onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={17} /></button>}
         >
           <form
+            id="search-filter-fields"
             key={query}
             onSubmit={(e) => {
               e.preventDefault();
@@ -392,18 +400,6 @@ export function SearchPage() {
                 ))}
             </Select>
             <Field
-              name="province"
-              label="Tỉnh / Thành phố"
-              defaultValue={params.get("province") ?? ""}
-              maxLength={180}
-            />
-            <Field
-              name="district"
-              label="Quận / Huyện"
-              defaultValue={params.get("district") ?? ""}
-              maxLength={180}
-            />
-            <Field
               name="date"
               label="Ngày chơi"
               type="date"
@@ -411,36 +407,23 @@ export function SearchPage() {
               defaultValue={params.get("date") ?? today()}
               required
             />
-            <div className="grid-2" style={{ gap: 10 }}>
-              <Field
-                name="opensAfter"
-                label="Từ giờ"
-                type="time"
-                defaultValue={params.get("opensAfter") ?? ""}
-              />
-              <Field
-                name="closesBefore"
-                label="Đến giờ"
-                type="time"
-                defaultValue={params.get("closesBefore") ?? ""}
-              />
-            </div>
-            <div className="grid-2" style={{ gap: 10 }}>
-              <Field
-                name="minPrice"
-                label="Giá từ (đ/slot)"
-                type="number"
-                min={0}
-                defaultValue={params.get("minPrice") ?? ""}
-              />
-              <Field
-                name="maxPrice"
-                label="Đến (đ/slot)"
-                type="number"
-                min={0}
-                defaultValue={params.get("maxPrice") ?? ""}
-              />
-            </div>
+            <SearchLocationFields provinceCode={provinceCode} wardCode={wardCode} />
+            <fieldset className="search-filter-range">
+              <legend>Thời gian chơi</legend>
+              <div className="search-range-inputs">
+                <input aria-label="Từ giờ" name="opensAfter" type="time" defaultValue={params.get("opensAfter") ?? ""} />
+                <ArrowRight size={16} aria-hidden="true" />
+                <input aria-label="Đến giờ" name="closesBefore" type="time" defaultValue={params.get("closesBefore") ?? ""} />
+              </div>
+            </fieldset>
+            <fieldset className="search-filter-range">
+              <legend>Khoảng giá <span className="muted small">(đ/khung giờ)</span></legend>
+              <div className="search-range-inputs">
+                <input aria-label="Giá từ (đ/khung giờ)" name="minPrice" type="number" min={0} placeholder="Từ" defaultValue={params.get("minPrice") ?? ""} />
+                <ArrowRight size={16} aria-hidden="true" />
+                <input aria-label="Giá đến (đ/khung giờ)" name="maxPrice" type="number" min={0} placeholder="Đến" defaultValue={params.get("maxPrice") ?? ""} />
+              </div>
+            </fieldset>
             <Select
               label="Sắp xếp"
               name="sort"
@@ -493,9 +476,7 @@ export function SearchPage() {
           {locationError && <Notice tone="warning">{locationError}</Notice>}
           <div className="results-toolbar">
             <p>
-              <strong>{results.data?.items.length ?? "…"}</strong> sân phù hợp{" "}
-              {results.data?.truncated &&
-                "· Kết quả giới hạn, hãy thu hẹp bộ lọc"}
+              <strong>{results.data?.totalFacilities ?? "…"}</strong> cơ sở phù hợp
             </p>
             <Tabs
               value={mode}
@@ -508,13 +489,13 @@ export function SearchPage() {
           </div>
           <ResourceState
             resource={results}
-            empty={results.data?.items.length === 0}
+            empty={filteredItems?.length === 0}
             emptyTitle="Chưa tìm thấy sân phù hợp"
             emptyDescription="Thử đổi ngày, khung giờ hoặc mở rộng khu vực tìm kiếm."
           >
             {mode === "map" ? (
-              results.data?.items.some((x) => x.facility.latitude !== null) ? (
-                <CourtMap items={results.data.items} />
+              filteredItems?.some((x) => x.facility.latitude !== null) ? (
+                <CourtMap items={filteredItems ?? []} query={apiParams} />
               ) : (
                 <Empty
                   title="Chưa có tọa độ bản đồ"
@@ -523,23 +504,33 @@ export function SearchPage() {
               )
             ) : (
               <div className="venue-grid">
-                {results.data?.items.map((item) => (
-                  <VenueCard key={item.courtId} item={item} />
+                {filteredItems?.map((item) => (
+                  <VenueCard key={item.facility.id} item={item} query={apiParams} />
                 ))}
               </div>
             )}
           </ResourceState>
+          {results.data && results.data.totalPages > 1 && (
+            <nav className="actions search-pagination" aria-label="Phân trang cơ sở">
+              <Button variant="secondary" disabled={results.loading || results.data.page <= 1} onClick={() => changePage(results.data!.page - 1)}>Trang trước</Button>
+              <span>Trang {results.data.page} / {results.data.totalPages}</span>
+              <Button variant="secondary" disabled={results.loading || results.data.page >= results.data.totalPages} onClick={() => changePage(results.data!.page + 1)}>Trang sau</Button>
+            </nav>
+          )}
         </section>
       </div>
     </div>
   );
 }
 export function FacilityPage({ id }: { id: string }) {
+  const params = useSearchParams();
   const resource = useResource<Facility>(`/facilities/${id}`),
-    courts = useResource<Court[]>(`/facilities/${id}/courts`),
-    images = useResource<Media[]>(`/facilities/${id}/images`),
-    categories = useResource<Category[]>("/sport-categories");
-  const [date, setDate] = useState(today());
+    images = useResource<Media[]>(`/facilities/${id}/images`);
+  const [date, setDate] = useState(params.get("date") ?? today());
+  const query = discoveryQuery(new URLSearchParams(params.toString()), date);
+  query.set("facilityId", id); query.set("size", "1");
+  const matches = useResource<FacilitySearchResult>("/bookings/search/facilities?" + query);
+  const matchingCourts = matches.data?.items[0]?.courts;
   const f = resource.data;
   return (
     <div className="container">
@@ -547,9 +538,9 @@ export function FacilityPage({ id }: { id: string }) {
         {f && (
           <>
             <PageHead
-              eyebrow="YOUR PLACE TO PLAY"
+              eyebrow="Thông tin cơ sở"
               title={f.name}
-              description={`${f.addressLine}, ${f.ward}, ${f.district}, ${f.province}`}
+              description={[f.addressLine, f.ward, f.province].filter(Boolean).join(", ")}
               action={<Badge state={f.status} />}
             />
             {images.data?.length ? (
@@ -585,39 +576,24 @@ export function FacilityPage({ id }: { id: string }) {
                 <section>
                   <h2 style={{ marginBottom: 20 }}>Chọn sân của bạn</h2>
                   <ResourceState
-                    resource={courts}
-                    empty={courts.data?.length === 0}
-                    emptyTitle="Chưa có sân"
-                    emptyDescription="Cơ sở chưa có sân để đặt."
+                    resource={matches}
+                    empty={matches.data?.items.length === 0}
+                    emptyTitle="Chưa có sân phù hợp"
+                    emptyDescription="Thử đổi ngày hoặc mở rộng khung giờ, bộ môn và khoảng giá."
                   >
                     <div className="court-list">
-                      {courts.data?.map((c) => (
-                        <div className="court-row" key={c.id}>
+                      {matchingCourts?.map((c) => (
+                        <div className="court-row" key={c.courtId}>
                           <div className="court-identity">
                             <Activity />
                             <div>
-                              <h3>{c.name}</h3>
-                              <p>
-                                {
-                                  categories.data?.find(
-                                    (x) => x.id === c.sportCategoryId,
-                                  )?.name
-                                }{" "}
-                                · {c.code}
-                              </p>
+                              <h3>{c.courtName}</h3>
+                              <p>{c.sportName} · {c.availableSlots} khung giờ phù hợp · Từ {money(c.fromPrice, c.currency)}</p>
                             </div>
                           </div>
-                          {c.enabled ? (
-                            <LinkButton
-                              href={`/facilities/${id}/courts/${c.id}?date=${date}`}
-                              variant="secondary"
-                              arrow
-                            >
-                              Xem lịch trống
-                            </LinkButton>
-                          ) : (
-                            <Badge state="DISABLED" />
-                          )}
+                          <LinkButton href={courtSearchHref(id, c, query)} variant="secondary" arrow>
+                            Chọn sân và giờ chơi
+                          </LinkButton>
                         </div>
                       ))}
                     </div>
@@ -744,13 +720,13 @@ export function AvailabilityPage({
     setSelected(current);
     if (params.has("start"))
       router.replace(
-        `${counter ? "/staff/counter-booking/" + courtId : `/facilities/${facilityId}/courts/${courtId}`}?date=${date}`,
+        `${counter ? "/staff/counter-booking/" + courtId : `/facilities/${facilityId}/courts/${courtId}`}?${discoveryQuery(new URLSearchParams(params.toString()), date)}`,
       );
   }
   return (
     <div className="container">
       <PageHead
-        eyebrow="BOOK YOUR NEXT GAME"
+        eyebrow="Chọn sân và giờ chơi"
         title={context.data?.court.name ?? "Chọn lịch chơi"}
         description={
           context.data
@@ -776,7 +752,7 @@ export function AvailabilityPage({
       <div className="detail-layout">
         <Panel
           title="Chọn thời gian ra sân"
-          description="Bạn có thể chọn nhiều slot trống liên tiếp."
+          description="Bạn có thể chọn nhiều khung giờ trống liên tiếp."
         >
           <Field
             label="Ngày chơi"
@@ -787,7 +763,7 @@ export function AvailabilityPage({
               setDate(e.target.value);
               setSelected([]);
               if (params.has("start"))
-                router.replace(`?date=${e.target.value}`);
+                router.replace(`?${discoveryQuery(new URLSearchParams(params.toString()), e.target.value)}`);
             }}
           />
           <div className="date-strip">
@@ -803,7 +779,7 @@ export function AvailabilityPage({
                   onClick={() => {
                     setDate(key);
                     setSelected([]);
-                    if (params.has("start")) router.replace(`?date=${key}`);
+                    if (params.has("start")) router.replace(`?${discoveryQuery(new URLSearchParams(params.toString()), key)}`);
                   }}
                 >
                   <span>
@@ -885,7 +861,7 @@ export function AvailabilityPage({
           <p className="small muted">{context.data?.facility.name}</p>
           {selection.length && !interval ? (
             <Notice tone="warning">
-              Chọn các slot trống liên tiếp để tạo một lượt đặt.
+              Chọn các khung giờ trống liên tiếp để tạo một lượt đặt.
             </Notice>
           ) : null}
           {quote.loading ? (
@@ -897,7 +873,7 @@ export function AvailabilityPage({
                 {time(quote.data.endsAt, zone)}
               </p>
               <p className="muted small">
-                {date} · {selection.length} slot
+                {date} · {selection.length} khung giờ
               </p>
               <div style={{ margin: "20px 0" }}>
                 <QuoteBreakdown quote={quote.data} />

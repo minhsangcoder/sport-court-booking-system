@@ -9,7 +9,7 @@ const fallbackPath = '/customer/profile'
 const sourceFiles = {
   state: new URL('../features/auth/google-auth-state.ts', import.meta.url),
   callback: new URL('../features/auth/google-auth-callback.tsx', import.meta.url),
-  api: new URL('../lib/api.ts', import.meta.url),
+  api: new URL('../src/lib/api.ts', import.meta.url),
 }
 const compiled = Object.fromEntries(Object.entries(sourceFiles).map(([name, path]) => [
   name,
@@ -33,7 +33,7 @@ function loadModule(name, globals, overrides = {}, cache = new Map()) {
   if (cache.has(name)) return cache.get(name)
   const exports = {}
   cache.set(name, exports)
-  const dependencies = { './google-auth-state': 'state', '@/lib/api': 'api' }
+  const dependencies = { './google-auth-state': 'state', '@/rebuilt/lib/api': 'api' }
   vm.runInNewContext(compiled[name], {
     exports,
     URL,
@@ -68,6 +68,7 @@ function callbackHarness(storage) {
       useState: () => [false, value => errors.push(value)],
     },
     'next/navigation': { useRouter: () => router },
+    'next/link': { default() {} },
     'react/jsx-runtime': { jsx() {}, jsxs() {} },
   })
   callback.GoogleAuthCallback()

@@ -1,4 +1,4 @@
-import { type Quote, money, time } from "@/lib/domain";
+import { type Quote, money, time } from "@/rebuilt/lib/domain";
 
 export function QuoteBreakdown({ quote }: { quote: Quote }) {
   return (

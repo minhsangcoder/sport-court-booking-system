@@ -6,8 +6,10 @@ export type Facility = {
   phone: string;
   contactEmail?: string | null;
   addressLine: string;
+  provinceCode?: string | null;
   province: string;
   district: string;
+  wardCode?: string | null;
   ward: string;
   description: string | null;
   timezone: string;
@@ -138,8 +140,10 @@ export type DiscoveryItem = {
     | "id"
     | "name"
     | "addressLine"
+    | "provinceCode"
     | "province"
     | "district"
+    | "wardCode"
     | "ward"
     | "timezone"
     | "amenities"
@@ -159,6 +163,21 @@ export type DiscoveryItem = {
   distanceKm: number | null;
 };
 export type SearchResult = { items: DiscoveryItem[]; truncated: boolean };
+export type MatchingCourt = {
+  courtId: string; courtName: string; sportCategoryId: string; sportName: string;
+  fromPrice: number; currency: string; availableSlots: number;
+  firstStartsAt: string; firstEndsAt: string; slots: Slot[];
+};
+export type FacilityDiscoveryItem = {
+  facility: DiscoveryItem["facility"]; imageUrl: string | null; date: string;
+  matchingCourts: number; sports: { id: string; name: string }[];
+  fromPrice: number; currency: string; availableSlots: number;
+  distanceKm: number | null; courts: MatchingCourt[];
+};
+export type FacilitySearchResult = {
+  items: FacilityDiscoveryItem[]; page: number; size: number;
+  totalFacilities: number; totalPages: number;
+};
 export type Member = {
   id: string;
   userId: string;

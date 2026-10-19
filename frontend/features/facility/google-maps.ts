@@ -38,7 +38,7 @@ export function loadGoogleMaps(): Promise<GoogleMapsLibraries> {
       return Promise.reject(new Error('Thiếu NEXT_PUBLIC_GOOGLE_MAPS_API_KEY. Hãy cấu hình API key Google Maps trong môi trường frontend.'))
     }
 
-    setOptions({ key, v: 'weekly' })
+    setOptions({ key, v: 'weekly', language: 'vi', region: 'VN' })
     librariesPromise = Promise.all([
       importLibrary('maps') as Promise<google.maps.MapsLibrary>,
       importLibrary('marker') as Promise<google.maps.MarkerLibrary>,

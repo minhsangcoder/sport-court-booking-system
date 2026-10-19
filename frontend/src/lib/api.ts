@@ -60,7 +60,7 @@ export async function api<T>(
     path === "/sport-categories" ||
     path.startsWith("/schedules/public/") ||
     path.startsWith("/bookings/availability?") ||
-    path.startsWith("/bookings/search?");
+    /^\/bookings\/search(?:[/?]|$)/.test(path);
   if (accessToken && !publicRequest)
     headers.set("Authorization", `Bearer ${accessToken}`);
   let response: Response;

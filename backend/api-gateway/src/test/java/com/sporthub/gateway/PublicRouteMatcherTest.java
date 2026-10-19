@@ -18,6 +18,7 @@ class PublicRouteMatcherTest {
                 "/api/v1/auth/oauth2/**",
                 "/api/v1/auth/forgot-password",
                 "/api/v1/bookings/search",
+                "/api/v1/bookings/search/facilities",
                 "/actuator/health/**"));
         PublicRouteMatcher matcher = new PublicRouteMatcher(properties);
 
@@ -28,6 +29,7 @@ class PublicRouteMatcherTest {
         assertThat(matcher.isPublic("/api/v1/users/me")).isFalse();
         assertThat(matcher.isPublic("/api/v1/staff-bindings")).isFalse();
         assertThat(matcher.isPublic("/api/v1/bookings/search")).isTrue();
+        assertThat(matcher.isPublic("/api/v1/bookings/search/facilities")).isTrue();
         assertThat(matcher.isPublic("/api/v1/bookings/holds")).isFalse();
         assertThat(matcher.isPublic("/api/v1/bookings/search/anything")).isFalse();
     }

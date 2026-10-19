@@ -130,7 +130,7 @@ const json = (data, status = 200) =>
   Response.json({ data, message: "Success" }, { status });
 test("API unwraps real envelopes and preserves bearer auth and HttpOnly credentials", async () => {
   const calls = [];
-  const api = load("lib/api.ts", {
+  const api = load("src/lib/api.ts", {
     fetch: async (url, options) => {
       calls.push({ url, options });
       return url.endsWith("/auth/login")
@@ -150,7 +150,7 @@ test("API unwraps real envelopes and preserves bearer auth and HttpOnly credenti
 test("simultaneous expired requests use one refresh then retry with the new token", async () => {
   let refreshes = 0,
     retries = 0;
-  const api = load("lib/api.ts", {
+  const api = load("src/lib/api.ts", {
     fetch: async (url, options) => {
       if (url.endsWith("/auth/refresh")) {
         refreshes++;
@@ -170,7 +170,7 @@ test("simultaneous expired requests use one refresh then retry with the new toke
 });
 test("expired refresh stops retries and exposes a real authentication error", async () => {
   let calls = 0;
-  const api = load("lib/api.ts", {
+  const api = load("src/lib/api.ts", {
     fetch: async () => {
       calls++;
       return Response.json(
@@ -187,7 +187,7 @@ test("expired refresh stops retries and exposes a real authentication error", as
 });
 test("multipart request lets fetch generate the boundary and retains idempotency", async () => {
   let options;
-  const api = load("lib/api.ts", {
+  const api = load("src/lib/api.ts", {
     fetch: async (_, o) => {
       options = o;
       return json({ id: "document" }, 201);
@@ -221,7 +221,7 @@ test("API distinguishes empty deletion, field validation, connectivity and inval
     ),
     new Response("bad gateway", { status: 200 }),
   ];
-  const api = load("lib/api.ts", { fetch: async () => responses.shift() });
+  const api = load("src/lib/api.ts", { fetch: async () => responses.shift() });
   assert.equal(
     await api.api("/owner/maintenance/id", { method: "DELETE" }),
     undefined,
@@ -231,7 +231,7 @@ test("API distinguishes empty deletion, field validation, connectivity and inval
     (e) => e.status === 400 && e.fieldErrors[0].field === "name",
   );
   await assert.rejects(api.api("/bookings"), (e) => e.status === 502);
-  const offline = load("lib/api.ts", {
+  const offline = load("src/lib/api.ts", {
     fetch: async () => {
       throw Error("offline");
     },
@@ -351,4 +351,23 @@ test("current fallback route grammar includes new scoped screens and excludes in
   const current=load("lib/routes.ts"),id="11111111-2222-4333-8444-555555555555";
   for(const p of ["/customer/favorites","/customer/staff-invitations",`/customer/groups/play-groups/${id}`,`/owner/facilities/${id}/court-types`,`/owner/application/${id}/facility/court-types`,`/staff/bookings/${id}`,`/staff/facilities/${id}/schedule`,`/staff/facilities/${id}/schedule/preview`,`/admin/bookings/reconciliation/${id}`,"/admin/sports"])assert.equal(current.isFrontendRoute(p),true,p);
   for(const p of ["/admin/execute-refund", "/owner/facilities/invalid/court-types",`/staff/bookings/${id}/extra`])assert.equal(current.isFrontendRoute(p),false,p);
+});
+
+const discoveryNavigation = load("src/lib/discovery.ts");
+test("facility and court links preserve search filters and omit pagination", () => {
+  const query = new URLSearchParams("date=2026-10-13&sportCategoryId=sport&provinceCode=01&wardCode=00166&opensAfter=08%3A00&closesBefore=10%3A00&minPrice=70&maxPrice=200&page=2&size=12");
+  const facility = { facility: { id: "facility" }, date: "2026-10-13" };
+  const href = new URL(discoveryNavigation.facilitySearchHref(facility, query), "https://sporthub.local");
+  assert.equal(href.pathname, "/facilities/facility");
+  for (const key of ["date", "sportCategoryId", "provinceCode", "wardCode", "opensAfter", "closesBefore", "minPrice", "maxPrice"]) assert.equal(href.searchParams.get(key), query.get(key));
+  assert.equal(href.searchParams.has("page"), false);
+  const court = { courtId: "court", slots: [{ startsAt: "2026-10-13T01:00:00Z", endsAt: "2026-10-13T02:00:00Z" }, { startsAt: "2026-10-13T02:00:00Z", endsAt: "2026-10-13T03:00:00Z" }] };
+  const next = new URL(discoveryNavigation.courtSearchHref("facility", court, query), "https://sporthub.local");
+  assert.equal(next.pathname, "/facilities/facility/courts/court");
+  assert.equal(next.searchParams.get("start"), court.slots[0].startsAt);
+  assert.equal(next.searchParams.get("end"), court.slots[1].endsAt);
+  assert.equal(next.searchParams.get("sportCategoryId"), "sport");
+  const unrestricted = new URL(discoveryNavigation.courtSearchHref("facility", court, new URLSearchParams("date=2026-10-14")), "https://sporthub.local");
+  assert.equal(unrestricted.searchParams.has("start"), false);
+  assert.equal(discoveryNavigation.discoveryQuery(query, "2026-10-14").get("date"), "2026-10-14");
 });

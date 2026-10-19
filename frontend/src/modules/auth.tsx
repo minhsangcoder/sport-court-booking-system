@@ -1,13 +1,14 @@
 "use client";
-import { Photo } from "@/components/photo";
+import { Photo } from "@/rebuilt/components/photo";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
-import { api, authApi, refreshSession, type UserProfile } from "@/lib/api";
-import { useAction, useIdempotency, useResource } from "@/lib/hooks";
-import { safeNext } from "@/lib/selection";
-import { label } from "@/lib/domain";
+import { api, authApi, refreshSession, type UserProfile } from "@/rebuilt/lib/api";
+import { useAction, useIdempotency, useResource } from "@/rebuilt/lib/hooks";
+import { safeNext } from "@/rebuilt/lib/selection";
+import { rememberGoogleNext } from "@/features/auth/google-auth-state";
+import { label } from "@/rebuilt/lib/domain";
 import {
   Button,
   Feedback,
@@ -17,7 +18,7 @@ import {
   PageHead,
   Panel,
   ResourceState,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 import {
   ApplicationDisclosure,
   FacilityFields,
@@ -28,7 +29,7 @@ import {
   legalFrom,
   setupFrom,
   validateFile,
-} from "@/components/domain-forms";
+} from "@/rebuilt/components/domain-forms";
 type Mode = "login" | "register" | "verify" | "forgot" | "reset";
 const titles = {
   login: "Rất vui được gặp lại bạn.",
@@ -158,7 +159,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
           <Photo src="/images/court-aerial.jpg" alt="" />
           <div>
             <p className="eyebrow" style={{ color: "var(--lime)" }}>
-              MORE PLAY. MORE CONNECTION.
+              Thêm vận động, thêm kết nối
             </p>
             <h2>
               Dành thời gian
@@ -177,7 +178,7 @@ export function AuthPage({ mode }: { mode: Mode }) {
           className="auth-form"
           style={owner ? { maxWidth: 850 } : undefined}
         >
-          <p className="eyebrow">WELCOME TO SPORTHUB</p>
+          <p className="eyebrow">Chào mừng đến SportHub</p>
           <h1>{titles[mode]}</h1>
           <p>
             {mode === "login"
@@ -187,6 +188,13 @@ export function AuthPage({ mode }: { mode: Mode }) {
                 : "Giữ tài khoản của bạn an toàn và luôn sẵn sàng."}
           </p>
           <form onSubmit={submit}>
+            {mode === "login" && params.has("authError") && (
+              <Notice tone="error">
+                {params.get("authError") === "google_not_configured"
+                  ? "Đăng nhập Google chưa được cấu hình. Bạn có thể dùng email hoặc số điện thoại để tiếp tục."
+                  : "Không thể đăng nhập bằng Google. Vui lòng thử lại."}
+              </Notice>
+            )}
             <fieldset disabled={action.busy} className="stack">
               {mode === "register" && (
                 <Field
@@ -358,6 +366,21 @@ export function AuthPage({ mode }: { mode: Mode }) {
                       : "Cập nhật mật khẩu"}
               <ArrowRight size={16} />
             </Button>
+            {["login", "register"].includes(mode) && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={action.busy}
+                onClick={() => {
+                  rememberGoogleNext(params.get("next"));
+                  // OAuth must navigate the browser through the gateway's external redirect.
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                  window.location.assign("/api/v1/auth/oauth2/authorization/google");
+                }}
+              >
+                Tiếp tục với Google
+              </Button>
+            )}
             {action.message && (
               <LinkButton
                 href={
@@ -432,7 +455,7 @@ export function ProfilePage({ contact = false }: { contact?: boolean }) {
   return (
     <div className="container narrow">
       <PageHead
-        eyebrow="YOUR SPORTHUB"
+        eyebrow="Tài khoản của bạn"
         title="Tài khoản của bạn"
         description="Thông tin cá nhân và cách chúng tôi kết nối với bạn."
       />

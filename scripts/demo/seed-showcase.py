@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Populate a running local SportHub with repeatable demo scenarios."""
 import argparse
+import hashlib
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 import json
@@ -21,6 +22,12 @@ MARKER = "Bộ dữ liệu SportHub Showcase."
 PERMISSIONS = ["BOOKING_READ", "BOOKING_CREATE_COUNTER", "BOOKING_CHECK_IN",
                "BOOKING_COMPLETE", "SCHEDULE_READ"]
 CUSTOMERS = ["demo." + name for name in ("anh", "huy", "linh", "trang", "quang", "mai")]
+SPORT_IMAGES = {
+    "Pickleball": ("hero-pickleball.png", "hero-paddle.png"),
+    "Tennis": ("hero-tennis.png", "court-aerial.jpg"),
+    "Cầu lông": ("showcase-badminton.png",),
+    "Bóng đá": ("showcase-football.png",),
+}
 # These are fictional venues; administrative names come from the canonical dataset.
 VENUES = [
     ("hn-pickleball", "Demo Pickleball Cầu Giấy", "Pickleball", "01", "00166",
@@ -134,8 +141,9 @@ class Api:
 
 
 class Showcase:
-    def __init__(self, api, manifest_path, anchor):
+    def __init__(self, api, manifest_path, anchor, frontend_base=None):
         self.api, self.path = api, manifest_path
+        self.frontend_base = frontend_base
         self.data = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {
             "version": 1, "facilities": {}, "applications": {}, "scenarios": {},
         }
@@ -143,6 +151,12 @@ class Showcase:
             self.data.get("date", datetime.now(ZONE).date().isoformat())
         )
         self.data.update(date=self.anchor.isoformat(), apiBase=api.base)
+        owner = getattr(api, "sessions", {}).get("owner", {}).get("user", {}).get("id")
+        if owner:
+            runtime = hashlib.sha256((api.base + "/" + owner).encode()).hexdigest()
+            if self.data.get("runtime") not in (None, runtime):
+                raise RuntimeError("Manifest belongs to another demo database; use a different --manifest path")
+            self.data["runtime"] = runtime
         self.categories = {c["name"]: c["id"] for c in api.get("/sport-categories") if c["active"]}
         self.provinces = json.loads(
             (ROOT / "frontend/features/facility/vietnam-administrative-divisions.json").read_text(encoding="utf-8")
@@ -167,7 +181,10 @@ class Showcase:
             "description": (
                 f"{MARKER} Cơ sở mô phỏng để trải nghiệm tìm và đặt sân {sport}. "
                 f"Slot {minutes} phút; giá ngày thường, cuối tuần và giờ cao điểm. "
-                "Ảnh thể thao minh họa dùng cho demo."
+                "Mở cửa 06:00–23:00 mỗi ngày; có đèn cho lịch buổi tối, "
+                "khu nghỉ giữa trận, chỗ gửi xe và hỗ trợ thuê dụng cụ tại quầy. "
+                "Nên đến trước giờ đặt 10 phút để chuẩn bị. "
+                "Ảnh thể thao minh họa dùng cho demo; không phải địa điểm thương mại thật."
             ),
             "timezone": "Asia/Ho_Chi_Minh", "latitude": lat, "longitude": lng,
             "amenities": ["Bãi đỗ xe", "Phòng thay đồ", "Nước uống", "Đèn chiếu sáng", "Wi-Fi"],
@@ -183,7 +200,13 @@ class Showcase:
                 courts.append(self.api.request("POST", f"/owner/facilities/{fid}/courts", {
                     "code": code, "name": f"Sân {sport} {number:02}",
                     "sportCategoryId": self.categories[sport], "enabled": True,
-                    "description": f"Sân demo {sport}; phù hợp chơi giao hữu và tập luyện.",
+                    "description": (
+                        f"Sân {sport} {number:02} — khu vực "
+                        f"{'trong nhà' if sport == 'Cầu lông' else 'ngoài trời'}, "
+                        "có vạch sân tiêu chuẩn, đèn chiếu sáng và ghế nghỉ. "
+                        f"Đặt theo khung {minutes} phút; giá đã bao gồm sử dụng sân "
+                        "và thiết bị cố định. Dụng cụ cá nhân có thể mang theo hoặc thuê tại quầy."
+                    ),
                 }, actor))
         if not self.api.get(f"/schedules/facilities/{fid}/hours", actor):
             self.api.request("PUT", f"/schedules/facilities/{fid}/hours", {
@@ -214,14 +237,31 @@ class Showcase:
             if not any(d["name"] == name for d in documents):
                 self.api.request("POST", f"/owner/facilities/{fid}/documents", actor=actor,
                                  upload=(name, demo_pdf(title, facility["name"]), "application/pdf"))
-        if not self.api.get(f"/owner/facilities/{fid}/images", actor):
-            image = "hero-tennis.png" if sport == "Tennis" else (
-                "hero-pickleball.png" if sport == "Pickleball" else "hero-paddle.png"
-            )
-            self.api.request("POST", f"/owner/facilities/{fid}/images", actor=actor, upload=(
-                "demo-minh-hoa-" + image, (ROOT / "frontend/public/images" / image).read_bytes(), "image/png",
-            ))
+        self.images(fid, sport, courts, actor)
         return sorted(courts, key=lambda c: c["code"])
+
+    def images(self, fid, sport, courts, actor):
+        """Persist cover/gallery plus court-specific media; never duplicate on rerun."""
+        path = f"/owner/facilities/{fid}/images"
+        existing = self.api.get(path, actor)
+        assets = SPORT_IMAGES[sport]
+        required = [(None, image) for image in assets]
+        required.extend((court["id"], assets[0]) for court in courts)
+        counts = Counter(image.get("courtId") for image in existing)
+        seen = Counter()
+        for court_id, name in required:
+            seen[court_id] += 1
+            if counts[court_id] >= seen[court_id]:
+                continue
+            image_path = ROOT / "frontend/public/images" / name
+            image = image_path.read_bytes()
+            media_type = "image/jpeg" if image_path.suffix == ".jpg" else "image/png"
+            query = "?courtId=" + court_id if court_id else ""
+            uploaded = self.api.request("POST", path + query, actor=actor, upload=(
+                "demo-" + name, image, media_type,
+            ))
+            existing.append(uploaded)
+        return existing
 
     def venues(self):
         owned = self.api.get("/owner/facilities", "owner")
@@ -241,6 +281,11 @@ class Showcase:
             self.data["facilities"][slug]["courts"] = [
                 {"id": c["id"], "name": c["name"], "code": c["code"]} for c in courts
             ]
+            self.data["facilities"][slug].update(
+                sport=spec[2], provinceCode=spec[3], wardCode=spec[4],
+                latitude=spec[5], longitude=spec[6], slotMinutes=spec[8],
+                regularPrice=spec[9], peakPrice=spec[10],
+            )
             if target != "DRAFT" and facility["status"] == "DRAFT":
                 self.api.request("POST", f"/owner/facilities/{fid}/submit", actor="owner")
                 facility["status"] = "PENDING_APPROVAL"
@@ -264,6 +309,42 @@ class Showcase:
                     }, "owner")
             self.save()
             print(f"Venue ready: {name} ({facility['status']}, {len(courts)} courts)", flush=True)
+
+    def enrich_starter(self):
+        """Fill the stock local seeder's existing center without recreating it."""
+        starter = next((f for f in self.api.get("/owner/facilities", "owner")
+                        if f["name"] == "SportHub Demo Center"), None)
+        if not starter:
+            return
+        fid = starter["id"]
+        detail = self.api.get(f"/owner/facilities/{fid}", "owner")
+        body = {key: detail.get(key) for key in (
+            "name", "phone", "addressLine", "provinceCode", "province", "wardCode", "ward",
+            "description", "timezone", "latitude", "longitude", "amenities", "contactEmail")}
+        body["description"] = body["description"] or (
+            f"{MARKER} Trung tâm thể thao mẫu gồm sân tennis và pickleball, "
+            "có lịch mở cửa, giá theo khung giờ, khu nghỉ và chỗ gửi xe. "
+            "Ảnh minh họa cho dữ liệu local; không phải địa điểm thương mại thật.")
+        body["contactEmail"] = body["contactEmail"] or "owner@sporthub.local"
+        if body["latitude"] is None and body["longitude"] is None:
+            body.update(latitude=21.036, longitude=105.826)
+        if any(body[key] != detail.get(key) for key in body):
+            self.api.request("PUT", f"/owner/facilities/{fid}", body, "owner")
+        courts = self.api.get(f"/owner/facilities/{fid}/courts", "owner")
+        for sport, category in self.categories.items():
+            matching = [court for court in courts if court["sportCategoryId"] == category]
+            for court in matching:
+                if not court.get("description"):
+                    self.api.request("PUT", f"/owner/courts/{court['id']}", {
+                        "code": court["code"], "name": court["name"], "sportCategoryId": category,
+                        "enabled": court["enabled"],
+                        "description": f"Sân {sport} demo có vạch sân, thiết bị cố định và đèn chiếu sáng. Giá và giờ trống được tính từ lịch sân.",
+                    }, "owner")
+            if matching:
+                self.images(fid, sport, matching, "owner")
+        self.data["starterFacility"] = {"id": fid, "name": starter["name"], "courts": len(courts)}
+        self.save()
+        print("Starter demo center ready: details and sport-specific images populated", flush=True)
 
     def applications(self):
         for index, actor in enumerate(("demo.linh", "demo.trang"), 1):
@@ -514,6 +595,35 @@ class Showcase:
                 raise
         return list(records.values())
 
+    def verify_catalog(self):
+        """Check the fields and actual image objects consumed by frontend screens."""
+        entries = [(record["id"], "owner") for record in self.data["facilities"].values()]
+        entries.extend((record["facilityId"], actor) for actor, record in self.data["applications"].items())
+        if self.data.get("starterFacility"):
+            entries.append((self.data["starterFacility"]["id"], "owner"))
+        media_count = 0
+        for fid, actor in entries:
+            detail = self.api.get(f"/owner/facilities/{fid}", actor)
+            fields = ("name", "phone", "contactEmail", "description", "addressLine", "provinceCode",
+                      "province", "wardCode", "ward", "timezone", "amenities")
+            if any(not detail.get(field) for field in fields) or any(
+                    detail.get(field) is None for field in ("latitude", "longitude")):
+                raise RuntimeError("Demo facility detail is incomplete: " + detail.get("name", fid))
+            courts = self.api.get(f"/owner/facilities/{fid}/courts", actor)
+            images = self.api.get(f"/owner/facilities/{fid}/images", actor)
+            if not any(image.get("courtId") is None for image in images):
+                raise RuntimeError("Demo facility cover image missing: " + detail["name"])
+            for court in courts:
+                if not court.get("description") or not any(image.get("courtId") == court["id"] for image in images):
+                    raise RuntimeError("Demo court description/image missing: " + court["name"])
+            for image in images:
+                with urllib.request.urlopen(image["url"], timeout=30) as response:
+                    content = response.read()
+                    if response.status != 200 or not response.headers.get("Content-Type", "").startswith("image/") or not content:
+                        raise RuntimeError("Demo image object is unavailable")
+            media_count += len(images)
+        return media_count
+
     def verify(self):
         if len(self.data["facilities"]) != len(VENUES) or len(self.data["applications"]) != 2:
             raise RuntimeError("The showcase seed has not finished; run it without --verify-only")
@@ -554,13 +664,7 @@ class Showcase:
                         for actor, a in self.data["applications"].items()]
         if Counter(a["state"] for a in applications) != Counter({"PENDING_APPROVAL": 1, "DRAFT": 1}):
             raise RuntimeError("Demo Owner applications have unexpected states")
-        for fid in active:
-            images = self.api.get(f"/facilities/{fid}/images")
-            if not images:
-                raise RuntimeError("Demo venue image missing")
-            with urllib.request.urlopen(images[0]["url"], timeout=30) as response:
-                if response.status != 200:
-                    raise RuntimeError("Demo venue image is unavailable")
+        media_count = self.verify_catalog()
         summary = {
             "newFacilities": len(self.data["facilities"]) + len(self.data["applications"]),
             "newCourts": sum(len(f["courts"]) for f in self.data["facilities"].values()) + sum(
@@ -575,6 +679,7 @@ class Showcase:
             "marketplaceListings": len([l for l in self.api.get("/transfers", "customer2") if l["facilityId"] in active]),
             "ownerApplications": len(self.data["applications"]),
             "ownerApplicationStates": dict(Counter(a["state"] for a in applications)),
+            "verifiedImages": media_count,
         }
         self.data.update(verifiedAt=datetime.now(ZONE).isoformat(), summary=summary)
         self.save()
@@ -583,7 +688,8 @@ class Showcase:
 
     def report(self, summary):
         env = load_env()
-        base = (env.get("APP_PUBLIC_URL") or f"http://localhost:{env.get('FRONTEND_PORT', '13000')}").rstrip("/")
+        base = (getattr(self, "frontend_base", None) or env.get("APP_PUBLIC_URL") or
+                f"http://localhost:{env.get('FRONTEND_PORT', '13000')}").rstrip("/")
         fence = chr(96) * 3
         lines = [
             "# Dữ liệu demo SportHub", "", "Kiểm tra lúc: " + self.data["verifiedAt"], "",
@@ -614,6 +720,11 @@ class Showcase:
         ]
         for application in self.data["applications"].values():
             lines.append(f"- [{application['facilityName']}]({base}/admin/owner-applications/{application['id']}): {application['state']}")
+        lines.extend(["", "## Cơ sở và sân", "", "Ảnh được lưu thật trong MinIO qua media API; URL ký được cấp mới khi mở trang.", ""])
+        for facility in self.data["facilities"].values():
+            lines.append(f"- [{facility['name']}]({base}/facilities/{facility['id']}): {facility['status']}, {len(facility['courts'])} sân.")
+            for court in facility["courts"]:
+                lines.append(f"  - [{court['name']}]({base}/facilities/{facility['id']}/courts/{court['id']}?date={self.anchor + timedelta(days=1)})")
         (self.path.parent / "showcase-summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -656,6 +767,9 @@ def main():
     parser.add_argument("--api-base", help="Local Gateway API URL")
     parser.add_argument("--date", type=date.fromisoformat, help="Start another booking batch for this date")
     parser.add_argument("--verify-only", action="store_true", help="Verify previously seeded scenarios")
+    parser.add_argument("--manifest", type=Path, default=ROOT / "tmp/demo/showcase-manifest.json",
+                        help="Separate fixture state for another local database")
+    parser.add_argument("--frontend-base", help="Frontend origin for the generated screen links")
     args = parser.parse_args()
     env = load_env()
     if env.get("SPRING_PROFILES_ACTIVE") not in ("local", "demo") or env.get("DEMO_SEED_ENABLED") != "true":
@@ -671,9 +785,10 @@ def main():
             seed_customers()
         for actor in CUSTOMERS:
             api.login(actor)
-        showcase = Showcase(api, ROOT / "tmp/demo/showcase-manifest.json", args.date)
+        showcase = Showcase(api, args.manifest, args.date, args.frontend_base)
         if not args.verify_only:
             showcase.venues()
+            showcase.enrich_starter()
             showcase.applications()
             showcase.bookings()
             showcase.groups()

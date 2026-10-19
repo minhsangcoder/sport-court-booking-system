@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { refreshSession } from '@/lib/api'
+import { refreshSession } from '@/rebuilt/lib/api'
 import { consumeGoogleNext } from './google-auth-state'
 
 export function GoogleAuthCallback() {

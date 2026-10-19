@@ -42,6 +42,17 @@ class FacilityIntegrationTest {
  UUID fixtureCategory;
  @BeforeEach void emptyBookingImpact(){fixtureCategory=service.createCategory(new CategoryInput("Fixture sport "+UUID.randomUUID(),true),new Caller(UUID.randomUUID(),"Test admin",Set.of("ADMIN"),Map.of())).id();org.mockito.Mockito.doAnswer(a->new com.sporthub.common.schedule.ConfigurationGuardProtocol.Prepared(a.<com.sporthub.common.schedule.ConfigurationGuardProtocol.Command>getArgument(0).operationId(),List.of())).when(guard).prepare(org.mockito.ArgumentMatchers.any());}
  @Autowired com.sporthub.facility.web.TransferPolicyController policies;
+ @Autowired DiscoveryCatalog catalog;
+ @Test void bulkDiscoveryOnlyExposesActiveFacilitiesEnabledCourtsAndCommittedApplications() {
+  var owner=owner();var f=service.create(locationInput("Catalog test","21","105"),owner);UUID sport=service.categories().getFirst().id();
+  var one=service.createCourt(f.id(),new CourtInput("C1","One",sport,null,true),owner);service.createCourt(f.id(),new CourtInput("C2","Disabled",sport,null,false),owner);
+  assertThat(catalog.search("Catalog test",null,null,null,null)).isEmpty();jdbc.update("UPDATE facilities SET status='ACTIVE' WHERE id=?",f.id());
+  var result=catalog.search("Catalog test",f.provinceCode(),f.wardCode(),sport,null);assertThat(result).hasSize(1);assertThat(result.getFirst().courts()).extracting(CourtView::id).containsExactly(one.id());
+  assertThat(catalog.contexts(List.of(one.id()))).hasSize(1);assertThat(catalog.search("Catalog test",null,"99999",null,null)).isEmpty();
+  UUID app=UUID.randomUUID();jdbc.update("INSERT INTO first_facility_applications(application_id,facility_id,owner_id) VALUES(?,?,?)",app,f.id(),owner.id());
+  org.mockito.Mockito.when(applicationGate.approved(org.mockito.ArgumentMatchers.any())).thenReturn(Set.of());assertThat(catalog.search("Catalog test",null,null,null,null)).isEmpty();
+  org.mockito.Mockito.when(applicationGate.approved(org.mockito.ArgumentMatchers.any())).thenReturn(Set.of(app));assertThat(catalog.search("Catalog test",null,null,null,null)).hasSize(1);
+ }
  private Caller owner(){return new Caller(UUID.randomUUID(),"Owner",Set.of("OWNER","CUSTOMER"),Map.of());}
  @Autowired OwnerSignupFacilityService signupFacilities;
  @Test void ownerSignupFirstCourtIsIdempotentPrivateAndCannotChangeBinding(){

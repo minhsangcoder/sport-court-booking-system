@@ -20,7 +20,7 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { label } from "@/lib/domain";
+import { label } from "@/rebuilt/lib/domain";
 export function Button({
   children,
   variant = "primary",

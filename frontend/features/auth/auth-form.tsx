@@ -94,7 +94,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       <Button className="h-11 bg-emerald-600 text-white hover:bg-emerald-700" type="submit" disabled={busy}>{busy ? 'Đang xử lý…' : mode === 'login' ? 'Đăng nhập' : mode === 'register' ? 'Tạo tài khoản' : mode === 'verify' ? 'Xác minh' : 'Tiếp tục'}</Button>
       {(mode === 'login' || (mode === 'register' && !applyAsOwner)) && <>
         <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />HOẶC<span className="h-px flex-1 bg-slate-200" /></div>
-        {/* OAuth requires a full document navigation through the BFF, without Next prefetch. */}
+        {/* OAuth needs a full browser navigation to follow the external redirect. */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/api/v1/auth/oauth2/authorization/google"

@@ -126,6 +126,7 @@ class ShowcaseVerificationTest(unittest.TestCase):
         instance.api.sessions = {"customer2": {"user": {"id": "buyer"}}}
         instance.save = Mock()
         instance.report = Mock()
+        instance.verify_catalog = Mock(return_value=0)
         return instance
 
     def test_verify_finds_recorded_items_outside_monitoring_lists(self):
@@ -145,6 +146,41 @@ class ShowcaseVerificationTest(unittest.TestCase):
             with self.subTest(path=path):
                 with self.assertRaisesRegex(RuntimeError, "booking/payment records are missing"):
                     self.fixture(missing_path=path).verify()
+
+
+class ShowcaseMediaTest(unittest.TestCase):
+    def test_gallery_and_court_photos_are_not_duplicated_on_rerun(self):
+        instance = showcase.Showcase.__new__(showcase.Showcase)
+        images = []
+        instance.api = Mock()
+        instance.api.get.side_effect = lambda *_: list(images)
+
+        def upload(method, path, **kwargs):
+            court = path.partition("?courtId=")[2] or None
+            image = {"id": str(len(images)), "courtId": court}
+            images.append(image)
+            return image
+
+        instance.api.request.side_effect = upload
+        courts = [{"id": "court-a"}, {"id": "court-b"}]
+        instance.images("facility", "Tennis", courts, "owner")
+        self.assertEqual([image["courtId"] for image in images], [None, None, "court-a", "court-b"])
+        instance.images("facility", "Tennis", courts, "owner")
+        self.assertEqual(instance.api.request.call_count, 4)
+        self.assertEqual([call.kwargs["upload"][2] for call in instance.api.request.call_args_list],
+                         ["image/png", "image/jpeg", "image/png", "image/png"])
+
+    def test_manifest_for_another_database_is_rejected_without_overwriting_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "manifest.json"
+            api = FixtureApi()
+            api.sessions = {"owner": {"user": {"id": "original-owner"}}}
+            showcase.Showcase(api, manifest, date(2026, 10, 14))
+            original = manifest.read_bytes()
+            api.sessions["owner"]["user"]["id"] = "another-database-owner"
+            with self.assertRaisesRegex(RuntimeError, "another demo database"):
+                showcase.Showcase(api, manifest, date(2026, 10, 14))
+            self.assertEqual(manifest.read_bytes(), original)
 
 
 if __name__ == "__main__":

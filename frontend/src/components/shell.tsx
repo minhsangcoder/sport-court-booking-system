@@ -14,17 +14,16 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Settings2,
   ShieldCheck,
   Ticket,
   Users,
   Wallet,
   X,
 } from "lucide-react";
-import { authApi, type Role } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
-import { useResource } from "@/lib/hooks";
-import type { Facility } from "@/lib/domain";
+import { authApi, type Role } from "@/rebuilt/lib/api";
+import { useAuth } from "@/rebuilt/lib/auth-context";
+import { useResource } from "@/rebuilt/lib/hooks";
+import type { Facility } from "@/rebuilt/lib/domain";
 import { Button, Empty, LinkButton, Notice } from "./ui";
 export function Brand({ light = false }: { light?: boolean }) {
   return (
@@ -92,6 +91,7 @@ export function Shell({ children }: { children: ReactNode }) {
 }
 function UserMenu() {
   const { user } = useAuth();
+  const path = usePathname();
   const [open, setOpen] = useState(false),
     [error, setError] = useState(""),
     router = useRouter();
@@ -125,16 +125,12 @@ function UserMenu() {
             onClick={() => setOpen(false)}
           />
           <div className="dropdown">
-            <Link onClick={() => setOpen(false)} href="/customer/bookings">
-              <Ticket size={17} />
-              Lịch đặt của tôi
-            </Link>
             <Link onClick={() => setOpen(false)} href="/customer/profile">
               <ContactRound size={17} />
               Tài khoản
             </Link>
             {(["OWNER", "STAFF", "ADMIN"] as Role[])
-              .filter((x) => user.roles.includes(x))
+              .filter((x) => user.roles.includes(x) && !path.startsWith(`/${x.toLowerCase()}`))
               .map((role) => (
                 <Link
                   onClick={() => setOpen(false)}
@@ -149,6 +145,12 @@ function UserMenu() {
                       : "Quản trị nền tảng"}
                 </Link>
               ))}
+            {!user.roles.includes("OWNER") && !path.startsWith("/owner/") && (
+              <Link onClick={() => setOpen(false)} href="/owner/apply">
+                <Building2 size={17} />
+                Đăng ký chủ sân
+              </Link>
+            )}
             <button
               onClick={() => {
                 void authApi
@@ -173,6 +175,8 @@ function UserMenu() {
 function PublicShell({ children }: { children: ReactNode }) {
   const path = usePathname(),
     [open, setOpen] = useState(false);
+  const { user } = useAuth();
+  const personal = path.startsWith("/customer/");
   const auth = [
     "/login",
     "/register",
@@ -189,46 +193,50 @@ function PublicShell({ children }: { children: ReactNode }) {
         <div className="header-inner">
           <Brand />
           <nav
+            id="public-navigation"
             className={`public-nav ${open ? "is-open" : ""}`}
             aria-label="Điều hướng chính"
           >
             <Link
               onClick={() => setOpen(false)}
               className={path === "/search" ? "active" : ""}
+              aria-current={path === "/search" ? "page" : undefined}
               href="/search"
             >
-              Khám phá sân
+              Tìm sân
             </Link>
             <Link
               onClick={() => setOpen(false)}
               className={path.startsWith("/transfers") ? "active" : ""}
+              aria-current={path.startsWith("/transfers") ? "page" : undefined}
               href="/transfers"
             >
-              Chuyển nhượng
+              Chợ chuyển nhượng
             </Link>
-            <Link onClick={() => setOpen(false)} href="/customer/groups">
-              Chơi cùng nhóm
-            </Link>
-            <Link onClick={() => setOpen(false)} href="/owner/apply">
-              Dành cho chủ sân <ArrowUpRight size={13} />
-            </Link>
+            {user && !personal && (
+              <Link onClick={() => setOpen(false)} href="/customer/bookings">
+                Lịch của tôi
+              </Link>
+            )}
           </nav>
           <UserMenu />
           <button
             className="icon-btn mobile-menu"
             aria-label={open ? "Đóng điều hướng" : "Mở điều hướng"}
             aria-expanded={open}
+            aria-controls="public-navigation"
             onClick={() => setOpen(!open)}
           >
             {open ? <X /> : <Menu />}
           </button>
         </div>
       </header>
-      {path.startsWith("/customer/") && (
+      {personal && (
         <nav className="customer-nav" aria-label="Không gian cá nhân">
           <Link
             href="/customer/bookings"
             className={path.includes("/booking") ? "active" : ""}
+            aria-current={path.includes("/booking") ? "page" : undefined}
           >
             <Ticket size={17} />
             Lịch của tôi
@@ -236,6 +244,7 @@ function PublicShell({ children }: { children: ReactNode }) {
           <Link
             href="/customer/groups"
             className={path.includes("/groups") ? "active" : ""}
+            aria-current={path.includes("/groups") ? "page" : undefined}
           >
             <Users size={17} />
             Nhóm chơi
@@ -243,16 +252,10 @@ function PublicShell({ children }: { children: ReactNode }) {
           <Link
             href="/customer/transfers"
             className={path.includes("/transfers") ? "active" : ""}
+            aria-current={path.includes("/transfers") ? "page" : undefined}
           >
             <Activity size={17} />
-            Chuyển nhượng
-          </Link>
-          <Link
-            href="/customer/profile"
-            className={path.includes("/profile") ? "active" : ""}
-          >
-            <ContactRound size={17} />
-            Tài khoản
+            Tin chuyển nhượng của tôi
           </Link>
         </nav>
       )}
@@ -263,24 +266,9 @@ function PublicShell({ children }: { children: ReactNode }) {
         <footer className="footer">
           <div>
             <Brand />
-            <p>
-              Thêm vận động. Thêm kết nối.
-              <br />
-              Tìm cuộc chơi tiếp theo của bạn.
-            </p>
+            <p>Tìm sân, đặt lịch và chơi cùng nhau.</p>
           </div>
-          <div>
-            <span>KHÁM PHÁ</span>
-            <Link href="/search">Tìm sân thể thao</Link>
-            <Link href="/transfers">Chợ chuyển nhượng</Link>
-            <Link href="/customer/groups">Đặt sân cùng nhóm</Link>
-          </div>
-          <div>
-            <span>SPORTHUB</span>
-            <Link href="/owner/apply">Trở thành đối tác</Link>
-            <Link href="/customer/profile">Tài khoản của bạn</Link>
-            <Link href="/login">Đăng nhập quản lý</Link>
-          </div>
+          {!user?.roles.includes("OWNER") && <Link className="text-link" href="/owner/apply">Dành cho chủ sân <ArrowUpRight size={14} /></Link>}
           <div className="footer-bottom">
             <span>© {new Date().getFullYear()} SportHub</span>
             <span>Đến sân. Vào cuộc.</span>
@@ -306,132 +294,50 @@ function ManagementShell({ children }: { children: ReactNode }) {
   const facilityId = path.match(/\/facilities\/([^/]+)/)?.[1];
   const selected =
     facilities.data?.find((f) => f.id === facilityId) || facilities.data?.[0];
-  const base = selected
-    ? `/owner/facilities/${selected.id}`
-    : "/owner/facilities";
   const iconSize = 18;
   const items: NavItem[] = isOwner
-    ? [
-        ["TỔNG QUAN", ""],
-        [
-          "Không gian quản lý",
-          "/owner",
-          <LayoutDashboard size={iconSize} key="icon" />,
-        ],
-        [
-          "Cơ sở của tôi",
-          "/owner/facilities",
-          <Building2 size={iconSize} key="icon" />,
-        ],
-        ["VẬN HÀNH", ""],
-        [
-          "Lịch đặt sân",
-          "/owner/bookings",
-          <CalendarDays size={iconSize} key="icon" />,
-        ],
-        [
-          "Sân & bảo trì",
-          base + "/courts",
-          <Activity size={iconSize} key="icon" />,
-        ],
-        [
-          "Giờ hoạt động",
-          base + "/schedule",
-          <CalendarDays size={iconSize} key="icon" />,
-        ],
-        ["Bảng giá", base + "/pricing", <Wallet size={iconSize} key="icon" />],
-        ["QUẢN LÝ", ""],
-        ["Nhân viên", base + "/staff", <Users size={iconSize} key="icon" />],
-        [
-          "Báo cáo",
-          base + "/reports",
-          <ChartNoAxesCombined size={iconSize} key="icon" />,
-        ],
-        [
-          "Cài đặt cơ sở",
-          base + "/edit",
-          <Settings2 size={iconSize} key="icon" />,
-        ],
-        [
-          "Hồ sơ chủ sân",
-          "/owner/application",
-          <ShieldCheck size={iconSize} key="icon" />,
-        ],
-      ]
-    : isStaff
+    ? user?.roles.includes("OWNER")
       ? [
-          ["VẬN HÀNH", ""],
-          [
-            "Tổng quan",
-            "/staff",
-            <LayoutDashboard size={iconSize} key="icon" />,
-          ],
-          [
-            "Lịch sân",
-            "/staff/schedule",
-            <CalendarDays size={iconSize} key="icon" />,
-          ],
-          [
-            "Booking tại cơ sở",
-            "/staff/bookings",
-            <Ticket size={iconSize} key="icon" />,
-          ],
-          [
-            "Đặt sân tại quầy",
-            "/staff/counter-booking",
-            <ContactRound size={iconSize} key="icon" />,
-          ],
+          ["Quản lý chung", ""],
+          ["Tổng quan", "/owner", <LayoutDashboard size={iconSize} key="icon" />],
+          ["Cơ sở của tôi", "/owner/facilities", <Building2 size={iconSize} key="icon" />],
+          ["Lịch đặt sân", "/owner/bookings", <CalendarDays size={iconSize} key="icon" />],
+          ["Hồ sơ", ""],
+          ["Hồ sơ chủ sân", "/owner/application", <ShieldCheck size={iconSize} key="icon" />],
         ]
       : [
-          ["NỀN TẢNG", ""],
-          [
-            "Tổng quan",
-            "/admin",
-            <LayoutDashboard size={iconSize} key="icon" />,
-          ],
-          [
-            "Tài khoản",
-            "/admin/accounts",
-            <Users size={iconSize} key="icon" />,
-          ],
-          [
-            "Hồ sơ chủ sân",
-            "/admin/owner-applications",
-            <ShieldCheck size={iconSize} key="icon" />,
-          ],
-          [
-            "Cơ sở thể thao",
-            "/admin/facilities",
-            <Building2 size={iconSize} key="icon" />,
-          ],
-          [
-            "Danh mục thể thao",
-            "/admin/sports",
-            <Activity size={iconSize} key="icon" />,
-          ],
-          ["GIÁM SÁT", ""],
-          ["Booking", "/admin/bookings", <Ticket size={iconSize} key="icon" />],
-          [
-            "Thanh toán",
-            "/admin/payments",
-            <Wallet size={iconSize} key="icon" />,
-          ],
-          [
-            "Đối soát",
-            "/admin/bookings/reconciliation",
-            <Activity size={iconSize} key="icon" />,
-          ],
-          [
-            "Báo cáo nền tảng",
-            "/admin/reports",
-            <ChartNoAxesCombined size={iconSize} key="icon" />,
-          ],
-          [
-            "Khiếu nại",
-            "/admin/disputes",
-            <ContactRound size={iconSize} key="icon" />,
-          ],
+          ["Chủ sân", ""],
+          ["Đăng ký chủ sân", "/owner/apply", <Building2 size={iconSize} key="icon" />],
+          ["Hồ sơ đăng ký", "/owner/application", <ShieldCheck size={iconSize} key="icon" />],
+        ]
+    : isStaff
+      ? [
+          ["Vận hành", ""],
+          ["Lịch đặt sân", "/staff/bookings", <Ticket size={iconSize} key="icon" />],
+          ["Lịch sân", "/staff/schedule", <CalendarDays size={iconSize} key="icon" />],
+          ["Đặt sân tại quầy", "/staff/counter-booking", <ContactRound size={iconSize} key="icon" />],
+        ]
+      : [
+          ["Tổng quan", ""],
+          ["Tổng quan và báo cáo", "/admin", <ChartNoAxesCombined size={iconSize} key="icon" />],
+          ["Quản lý", ""],
+          ["Tài khoản", "/admin/accounts", <Users size={iconSize} key="icon" />],
+          ["Hồ sơ chủ sân", "/admin/owner-applications", <ShieldCheck size={iconSize} key="icon" />],
+          ["Cơ sở thể thao", "/admin/facilities", <Building2 size={iconSize} key="icon" />],
+          ["Bộ môn thể thao", "/admin/sports", <Activity size={iconSize} key="icon" />],
+          ["Hoạt động", ""],
+          ["Lịch đặt sân", "/admin/bookings", <Ticket size={iconSize} key="icon" />],
+          ["Thanh toán", "/admin/payments", <Wallet size={iconSize} key="icon" />],
+          ["Đối soát", "/admin/bookings/reconciliation", <Activity size={iconSize} key="icon" />],
+          ["Khiếu nại", "/admin/disputes", <ContactRound size={iconSize} key="icon" />],
         ];
+  // Root Staff and the report URL are alternate routes to existing screens.
+  const navigationPath = path === "/staff" ? "/staff/bookings"
+    : path === "/admin/reports" ? "/admin" : path;
+  const activeItem = items
+    .filter(([, href]) => href && (navigationPath === href ||
+      (href !== `/${kind}` && navigationPath.startsWith(href + "/"))))
+    .sort((a, b) => b[1].length - a[1].length)[0];
   return (
     <div className="management-shell">
       <a className="skip-link" href="#content">
@@ -444,14 +350,14 @@ function ManagementShell({ children }: { children: ReactNode }) {
           onClick={() => setOpen(false)}
         />
       )}
-      <aside className={`sidebar ${open ? "is-open" : ""}`}>
+      <aside id="workspace-navigation" className={`sidebar ${open ? "is-open" : ""}`}>
         <Brand light />
         <span className="workspace-label">
           {isOwner
-            ? "PARTNER WORKSPACE"
+            ? "Khu vực chủ sân"
             : isStaff
-              ? "OPERATIONS WORKSPACE"
-              : "PLATFORM ADMIN"}
+              ? "Khu vực nhân viên"
+              : "Quản trị hệ thống"}
         </span>
         {isOwner && facilities.data && (
           <div className="facility-switch">
@@ -481,7 +387,8 @@ function ManagementShell({ children }: { children: ReactNode }) {
                 onClick={() => setOpen(false)}
                 href={href}
                 key={text}
-                className={path === href ? "active" : ""}
+                className={activeItem?.[1] === href ? "active" : ""}
+                aria-current={activeItem?.[1] === href ? "page" : undefined}
               >
                 {icon}
                 {text}
@@ -519,6 +426,8 @@ function ManagementShell({ children }: { children: ReactNode }) {
             className="icon-btn mobile-menu"
             onClick={() => setOpen(true)}
             aria-label="Mở điều hướng"
+            aria-controls="workspace-navigation"
+            aria-expanded={open}
           >
             <Menu />
           </button>
@@ -530,7 +439,7 @@ function ManagementShell({ children }: { children: ReactNode }) {
                 : "Quản trị nền tảng"}
             <span>/</span>
             <strong>
-              {items.find((x) => x[1] === path)?.[0] ?? "Chi tiết"}
+              {activeItem?.[0] ?? "Chi tiết"}
             </strong>
           </div>
           <UserMenu />

@@ -1,92 +1,107 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { DiscoveryItem } from "@/lib/domain";
+import { loadGoogleMaps } from "@/features/facility/google-maps";
+import type { FacilityDiscoveryItem } from "@/rebuilt/lib/domain";
+import { facilitySearchHref } from "@/rebuilt/lib/discovery";
 import { Notice } from "./ui";
-import "leaflet/dist/leaflet.css";
-export function CourtMap({ items }: { items: DiscoveryItem[] }) {
+
+export function CourtMap({ items, query = new URLSearchParams() }: { items: FacilityDiscoveryItem[]; query?: URLSearchParams }) {
   const container = useRef<HTMLDivElement>(null),
     [failed, setFailed] = useState(false);
+  const queryString = query.toString();
   useEffect(() => {
     let active = true;
-    let map: import("leaflet").Map | undefined;
-    void import("leaflet")
-      .then(({ default: L }) => {
+    let map: google.maps.Map | undefined;
+    let popup: google.maps.InfoWindow | undefined;
+    const pins: google.maps.marker.AdvancedMarkerElement[] = [];
+    const listeners: google.maps.MapsEventListener[] = [];
+    const controller = new AbortController();
+    const host = container.current;
+    void loadGoogleMaps()
+      .then(({ maps, marker }) => {
         if (!active || !container.current) return;
-        const points = items.filter(
-          (x) => x.facility.latitude !== null && x.facility.longitude !== null,
-        );
-        if (!points.length) return;
-        map = L.map(container.current, { scrollWheelZoom: false });
-        const layer = L.tileLayer(
-          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-          {
-            maxZoom: 19,
-            referrerPolicy: "origin",
-            attribution:
-              '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          },
-        );
-        layer.on("tileerror", () => {
-          if (active) setFailed(true);
-        });
-        layer.addTo(map);
-        const icon = L.divIcon({
-          className: "map-pin",
-          html: '<span style="display:block;width:20px;height:20px;background:#164b35;border:3px solid white;border-radius:50%;box-shadow:0 1px 6px #0003"></span>',
-          iconSize: [20, 20],
-        });
         const seen = new Set<string>();
-        points.forEach((item) => {
-          if (seen.has(item.facility.id)) return;
-          seen.add(item.facility.id);
-          const popup = document.createElement("div");
+        const points = items.filter(({ facility }) => {
+          const { id, latitude, longitude } = facility;
+          if (seen.has(id) || latitude == null || longitude == null ||
+            !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+            Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return false;
+          seen.add(id);
+          return true;
+        });
+        map = new maps.Map(container.current, {
+          center: { lat: 16.0471, lng: 108.2068 },
+          zoom: 5,
+          mapId: "DEMO_MAP_ID",
+          mapTypeControl: false,
+          streetViewControl: false,
+          clickableIcons: false,
+          gestureHandling: "cooperative",
+        });
+        popup = new maps.InfoWindow();
+        const bounds = new google.maps.LatLngBounds();
+        const search = new URLSearchParams(queryString);
+        for (const item of points) {
+          const position = { lat: item.facility.latitude!, lng: item.facility.longitude! };
+          bounds.extend(position);
+          const content = document.createElement("div");
           const title = document.createElement("strong");
           title.textContent = item.facility.name;
           const address = document.createElement("p");
           address.textContent = item.facility.addressLine;
           const link = document.createElement("a");
-          link.href = "/facilities/" + encodeURIComponent(item.facility.id);
-          link.textContent = "Xem cơ sở →";
-          popup.append(title, address, link);
-          L.marker([item.facility.latitude!, item.facility.longitude!], {
-            icon,
-          })
-            .addTo(map!)
-            .bindPopup(popup);
-        });
-        map.fitBounds(
-          L.latLngBounds(
-            points.map(
-              (x) =>
-                [x.facility.latitude!, x.facility.longitude!] as [
-                  number,
-                  number,
-                ],
-            ),
-          ),
-          { padding: [45, 45], maxZoom: 14 },
-        );
+          link.href = facilitySearchHref(item, search);
+          link.textContent = "Xem sân trống →";
+          content.append(title, address, link);
+          const pin = new marker.AdvancedMarkerElement({
+            map,
+            position,
+            title: item.facility.name,
+            gmpClickable: true,
+          });
+          pins.push(pin);
+          pin.addEventListener("gmp-click", () => {
+            popup!.setContent(content);
+            popup!.open({ map, anchor: pin });
+          }, { signal: controller.signal });
+        }
+        if (points.length === 1) {
+          map.setCenter(bounds.getCenter());
+          map.setZoom(14);
+        } else if (points.length > 1) {
+          const instance = map;
+          listeners.push(google.maps.event.addListenerOnce(instance, "idle", () => {
+            if ((instance.getZoom() ?? 0) > 14) instance.setZoom(14);
+          }));
+          map.fitBounds(bounds, 45);
+        }
+        setFailed(false);
       })
       .catch(() => {
         if (active) setFailed(true);
       });
     return () => {
       active = false;
-      map?.remove();
+      controller.abort();
+      for (const listener of listeners) listener.remove();
+      for (const pin of pins) pin.map = null;
+      popup?.close();
+      map?.unbindAll();
+      host?.replaceChildren();
     };
-  }, [items]);
+  }, [items, queryString]);
   return (
     <>
       {failed && (
         <Notice tone="warning">
-          Bản đồ đang gặp sự cố. Bạn vẫn có thể xem địa chỉ và đặt sân trong
-          danh sách.
+          Không tải được Google Maps. Bạn vẫn có thể xem địa chỉ và đặt sân trong danh sách.
         </Notice>
       )}
       <div
         className="map-container"
         ref={container}
-        aria-label="Bản đồ các cơ sở có tọa độ"
+        role="region"
+        aria-label="Bản đồ cơ sở trên Google Maps"
       />
     </>
   );

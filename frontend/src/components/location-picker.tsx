@@ -1,8 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
+import { loadGoogleMaps } from "@/features/facility/google-maps";
 import { Button, Field, Notice } from "./ui";
-import "leaflet/dist/leaflet.css";
+
+function mapPosition(lat: string, lon: string): google.maps.LatLngLiteral | null {
+  if (!lat.trim() || !lon.trim()) return null;
+  const latitude = Number(lat), longitude = Number(lon);
+  return Number.isFinite(latitude) && Math.abs(latitude) <= 90 &&
+    Number.isFinite(longitude) && Math.abs(longitude) <= 180
+    ? { lat: latitude, lng: longitude }
+    : null;
+}
 export function LocationPicker({
   latitude,
   longitude,
@@ -19,55 +28,77 @@ export function LocationPicker({
       longitude === null || longitude === undefined ? "" : String(longitude),
     ),
     [open, setOpen] = useState(false),
+    [loading, setLoading] = useState(false),
     [error, setError] = useState("");
   const container = useRef<HTMLDivElement>(null),
-    position = useRef({ lat, lon });
+    position = useRef({ lat, lon }),
+    map = useRef<google.maps.Map | null>(null),
+    marker = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   useEffect(() => {
     position.current = { lat, lon };
+    if (!map.current || !marker.current) return;
+    const selected = mapPosition(lat, lon);
+    marker.current.position = selected;
+    marker.current.map = selected ? map.current : null;
+    if (selected) map.current.panTo(selected);
   }, [lat, lon]);
   useEffect(() => {
     if (!open) return;
-    let active = true,
-      map: import("leaflet").Map | undefined;
-    void import("leaflet")
-      .then(({ default: L }) => {
+    let active = true;
+    let instance: google.maps.Map | undefined;
+    let pin: google.maps.marker.AdvancedMarkerElement | undefined;
+    const listeners: google.maps.MapsEventListener[] = [];
+    const controller = new AbortController();
+    const host = container.current;
+    void loadGoogleMaps()
+      .then(({ maps, marker: markerLibrary }) => {
         if (!active || !container.current) return;
         const p = position.current;
-        map = L.map(container.current, { scrollWheelZoom: false }).setView(
-          p.lat && p.lon ? [Number(p.lat), Number(p.lon)] : [16.0471, 108.2068],
-          p.lat && p.lon ? 15 : 5,
-        );
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: "© OpenStreetMap contributors",
-          referrerPolicy: "origin",
-        }).addTo(map);
-        const icon = L.divIcon({
-          className: "map-pin",
-          html: '<span style="display:block;width:20px;height:20px;background:#164b35;border:3px solid white;border-radius:50%"></span>',
-          iconSize: [20, 20],
+        const selected = mapPosition(p.lat, p.lon);
+        instance = new maps.Map(container.current, {
+          center: selected ?? { lat: 16.0471, lng: 108.2068 },
+          zoom: selected ? 15 : 5,
+          mapId: "DEMO_MAP_ID",
+          mapTypeControl: false,
+          streetViewControl: false,
+          clickableIcons: false,
+          gestureHandling: "cooperative",
         });
-        let marker: import("leaflet").Marker | undefined;
-        if (p.lat && p.lon)
-          marker = L.marker([Number(p.lat), Number(p.lon)], { icon }).addTo(
-            map,
-          );
-        map.on("click", (event: import("leaflet").LeafletMouseEvent) => {
-          setLat(event.latlng.lat.toFixed(7));
-          setLon(event.latlng.lng.toFixed(7));
-          marker?.remove();
-          marker = L.marker(event.latlng, { icon }).addTo(map!);
+        pin = new markerLibrary.AdvancedMarkerElement({
+          map: selected ? instance : null,
+          position: selected,
+          gmpDraggable: true,
+          title: "Kéo để chỉnh vị trí cơ sở",
         });
-        map.on("tileerror", () => {
-          if (active)
-            setError(
-              "Không tải được bản đồ. Bạn vẫn có thể nhập tọa độ trực tiếp.",
-            );
-        });
+        map.current = instance;
+        marker.current = pin;
+        const selectPosition = (point: google.maps.LatLng) => {
+          if (!active) return;
+          setLat(point.lat().toFixed(7));
+          setLon(point.lng().toFixed(7));
+        };
+        listeners.push(instance.addListener("click", (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) selectPosition(event.latLng);
+        }));
+        pin.addEventListener("gmp-dragend", () => {
+          if (pin?.position) selectPosition(new google.maps.LatLng(pin.position));
+        }, { signal: controller.signal });
+        setLoading(false);
       })
-      .catch(() => setError("Không mở được bản đồ. Hãy nhập tọa độ."));
+      .catch(() => {
+        if (!active) return;
+        setLoading(false);
+        setError("Không tải được Google Maps. Bạn vẫn có thể nhập tọa độ trực tiếp.");
+      });
     return () => {
       active = false;
-      map?.remove();
+      controller.abort();
+      for (const listener of listeners) listener.remove();
+      if (pin) pin.map = null;
+      instance?.unbindAll();
+      map.current = null;
+      marker.current = null;
+      host?.replaceChildren();
     };
   }, [open]);
   return (
@@ -98,7 +129,11 @@ export function LocationPicker({
         <Button
           type="button"
           variant="secondary"
-          onClick={() => setOpen(!open)}
+          onClick={() => {
+            setError("");
+            setLoading(!open);
+            setOpen(!open);
+          }}
         >
           <MapPin size={15} />
           {open ? "Ẩn bản đồ" : "Chọn vị trí trên bản đồ"}
@@ -106,14 +141,16 @@ export function LocationPicker({
         {open && (
           <>
             <p className="small muted" style={{ margin: "12px 0" }}>
-              Di chuyển bản đồ và nhấp vào vị trí cơ sở để điền tọa độ.
+              Nhấp vào Google Maps để điền tọa độ, hoặc kéo ghim để chỉnh vị trí cơ sở.
             </p>
             <div
               ref={container}
               className="map-container"
               style={{ height: 320 }}
-              aria-label="Nhấp bản đồ để chọn vị trí cơ sở"
+              role="region"
+              aria-label="Chọn vị trí cơ sở trên Google Maps"
             />
+            {loading && <p role="status" className="small muted">Đang tải Google Maps…</p>}
           </>
         )}
         {error && <Notice tone="warning">{error}</Notice>}

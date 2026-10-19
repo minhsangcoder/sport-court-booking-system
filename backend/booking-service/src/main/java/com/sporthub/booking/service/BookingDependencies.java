@@ -28,6 +28,9 @@ public class BookingDependencies {
     }
     public JsonNode quote(HoldInput input){try{return schedule.post().uri("/api/v1/schedules/public/quote").body(Map.of("courtId",input.courtId(),"startsAt",input.startsAt(),"endsAt",input.endsAt())).retrieve().body(JsonNode.class).path("data");}catch(org.springframework.web.client.HttpClientErrorException ex){throw new ConflictException("Schedule or pricing is no longer eligible");}}
     public JsonNode preview(UUID court,String date){try{return schedule.get().uri("/api/v1/schedules/public/courts/"+court+"?date="+date).retrieve().body(JsonNode.class).path("data");}catch(org.springframework.web.client.HttpClientErrorException ex){throw new ResourceNotFoundException("Court is unavailable");}}
+    public JsonNode previews(List<UUID> ids,String date) {
+        return schedule.get().uri("/api/v1/schedules/public/courts?ids="+String.join(",",ids.stream().map(UUID::toString).toList())+"&date="+date).retrieve().body(JsonNode.class).path("data");
+    }
     public void facilityPermission(UUID facilityId,Caller caller,String token,String permission) {
         if(caller.hasRole("OWNER")) {
             try{facility.get().uri("/api/v1/owner/facilities/"+facilityId).header("Authorization",token).retrieve().toBodilessEntity();return;}

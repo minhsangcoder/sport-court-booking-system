@@ -31,5 +31,6 @@ public class ScheduleController {
     @DeleteMapping("/facilities/{id}/pricing/{ruleId}") @ResponseStatus(HttpStatus.NO_CONTENT) public void disablePrice(@PathVariable UUID id,@PathVariable UUID ruleId,HttpServletRequest r) {service.disablePrice(id,ruleId,identity.current(r),r.getHeader("Authorization"));}
     @GetMapping("/facilities/{id}/preview") public ApiResponse<Preview> ownerPreview(@PathVariable UUID id,@RequestParam UUID courtId,@RequestParam LocalDate date,HttpServletRequest r) {return ApiResponse.success(service.ownerPreview(id,courtId,date,identity.current(r),r.getHeader("Authorization")));}
     @GetMapping("/public/courts/{id}") public ApiResponse<Preview> preview(@PathVariable UUID id,@RequestParam LocalDate date) {return ApiResponse.success(service.publicPreview(id,date));}
+    @GetMapping("/public/courts") public ApiResponse<List<Preview>> previews(@RequestParam List<UUID> ids,@RequestParam LocalDate date) {return ApiResponse.success(service.publicPreviews(ids,date));}
     @PostMapping("/public/quote") public ApiResponse<Quote> quote(@Valid @RequestBody QuoteInput input) {return ApiResponse.success(service.quote(input));}
 }

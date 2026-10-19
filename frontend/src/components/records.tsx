@@ -1,6 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import { dateTime, label } from "@/lib/domain";
+import { dateTime, label } from "@/rebuilt/lib/domain";
 const names: Record<string, string> = {
   facility: "Cơ sở",
   courts: "Sân",
@@ -29,8 +29,8 @@ const names: Record<string, string> = {
   closesAt: "Giờ đóng cửa",
   startsAt: "Bắt đầu",
   endsAt: "Kết thúc",
-  slotMinutes: "Độ dài slot (phút)",
-  pricePerSlot: "Giá mỗi slot",
+  slotMinutes: "Độ dài khung giờ (phút)",
+  pricePerSlot: "Giá mỗi khung giờ",
   priority: "Ưu tiên",
   label: "Tên quy tắc",
   effectiveFrom: "Hiệu lực từ",

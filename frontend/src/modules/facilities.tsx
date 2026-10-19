@@ -1,5 +1,5 @@
 "use client";
-import { Photo } from "@/components/photo";
+import { Photo } from "@/rebuilt/components/photo";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useState, type ReactNode } from "react";
@@ -10,8 +10,8 @@ import {
   ImagePlus,
   Plus,
 } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAction, useResource } from "@/lib/hooks";
+import { api } from "@/rebuilt/lib/api";
+import { useAction, useResource } from "@/rebuilt/lib/hooks";
 import {
   type Binding,
   type Category,
@@ -24,7 +24,7 @@ import {
   dateTime,
   localInstant,
   shortId,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -41,13 +41,13 @@ import {
   Stat,
   Table,
   TextArea,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 import {
   FacilityFields,
   UploadField,
   facilityFrom,
   validateFile,
-} from "@/components/domain-forms";
+} from "@/rebuilt/components/domain-forms";
 type FacilityScope = {
   facility: Facility;
   reload: () => void;
@@ -74,29 +74,22 @@ export function FacilityWorkspace({
     base = applicationId
       ? `/owner/application/${applicationId}/facility`
       : `/owner/facilities/${id}`;
+  const router = useRouter();
   const editable = !!r.data && ["DRAFT", "ACTIVE"].includes(r.data.status);
-  const links = applicationId
+  const groups = applicationId
     ? [
-        ["", "Tổng quan"],
-        ["/edit", "Thông tin"],
-        ["/courts", "Sân"],
-        ["/schedule", "Lịch mở cửa"],
-        ["/pricing", "Giá"],
-        ["/documents", "Tài liệu"],
+        { label: "Cơ sở", links: [["", "Tổng quan"], ["/edit", "Thông tin"], ["/courts", "Sân"]] },
+        { label: "Lịch và giá", links: [["/schedule", "Lịch mở cửa"], ["/pricing", "Bảng giá"]] },
+        { label: "Hồ sơ", links: [["/documents", "Tài liệu"]] },
       ]
     : [
-        ["", "Tổng quan"],
-        ["/courts", "Danh sách sân"],
-        ["/schedule", "Lịch & ngoại lệ"],
-        ["/pricing", "Bảng giá"],
-        ["/maintenance", "Bảo trì"],
-        ["/staff", "Nhân viên"],
-        ["/documents", "Tài liệu"],
-        ["/review", "Kiểm duyệt"],
-        ["/transfer-policy", "Chuyển nhượng"],
-        ["/reports", "Báo cáo"],
-        ["/edit", "Cài đặt"],
+        { label: "Cơ sở", links: [["", "Tổng quan"], ["/courts", "Sân"], ["/staff", "Nhân viên"], ["/edit", "Thông tin"]] },
+        { label: "Lịch và giá", links: [["/schedule", "Lịch mở cửa"], ["/pricing", "Bảng giá"], ["/maintenance", "Bảo trì"], ["/transfer-policy", "Chuyển nhượng"]] },
+        { label: "Hồ sơ và báo cáo", links: [["/documents", "Tài liệu"], ["/review", "Kiểm duyệt"], ["/reports", "Báo cáo"]] },
       ];
+  const activeLink = groups.flatMap((group) => group.links)
+    .filter(([suffix]) => path === base + suffix || (suffix && path.startsWith(base + suffix + "/")))
+    .sort((a, b) => b[0].length - a[0].length)[0];
   return (
     <ResourceState resource={r}>
       {r.data && (
@@ -105,22 +98,36 @@ export function FacilityWorkspace({
         >
           <PageHead
             eyebrow={
-              applicationId ? "FIRST FACILITY SETUP" : "FACILITY WORKSPACE"
+              applicationId ? "Thiết lập cơ sở" : "Quản lý cơ sở"
             }
             title={r.data.name}
             description={`${r.data.addressLine} · ${r.data.timezone}`}
             action={<Badge state={r.data.status} />}
           />
-          <nav className="settings-nav" aria-label="Chức năng cơ sở">
-            {links.map(([suffix, text]) => (
-              <Link
-                className={path === base + suffix ? "active" : ""}
-                key={text}
-                href={base + suffix}
-              >
-                {text}
-              </Link>
-            ))}
+          <nav className="facility-nav" aria-label="Chức năng cơ sở">
+            <div className="facility-nav-groups">
+              {groups.map((group) => (
+                <div className="facility-nav-group" key={group.label}>
+                  <span>{group.label}</span>
+                  <div>
+                    {group.links.map(([suffix, text]) => (
+                      <Link
+                        className={activeLink?.[0] === suffix ? "active" : ""}
+                        aria-current={activeLink?.[0] === suffix ? "page" : undefined}
+                        key={suffix}
+                        href={base + suffix}
+                      >{text}</Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <select className="facility-nav-select" aria-label="Chọn mục quản lý cơ sở"
+              value={base + (activeLink?.[0] ?? "")} onChange={(event) => router.push(event.target.value)}>
+              {groups.map((group) => <optgroup label={group.label} key={group.label}>
+                {group.links.map(([suffix, text]) => <option value={base + suffix} key={suffix}>{text}</option>)}
+              </optgroup>)}
+            </select>
           </nav>
           {!editable && (
             <Notice tone="warning">
@@ -142,7 +149,7 @@ export function FacilitiesPage() {
   return (
     <>
       <PageHead
-        eyebrow="YOUR SPORTS SPACES"
+        eyebrow="Cơ sở thể thao"
         title="Cơ sở của bạn"
         description="Mỗi không gian, một trải nghiệm thể thao riêng."
         action={
@@ -1105,7 +1112,7 @@ export function TransferPolicyPage() {
           >
             {!r.data.configured && (
               <Notice tone="warning">
-                Chưa cấu hình chính sách. Booking tại cơ sở hiện không thể
+                Chưa cấu hình chính sách. Lịch đặt tại cơ sở hiện không thể
                 chuyển nhượng.
               </Notice>
             )}

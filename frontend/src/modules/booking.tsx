@@ -1,18 +1,18 @@
 "use client";
-import { Photo } from "@/components/photo";
-import { QuoteBreakdown } from "@/components/quote-breakdown";
+import { Photo } from "@/rebuilt/components/photo";
+import { QuoteBreakdown } from "@/rebuilt/components/quote-breakdown";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Users, Wallet } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
+import { api } from "@/rebuilt/lib/api";
+import { useAuth } from "@/rebuilt/lib/auth-context";
 import {
   useAction,
   useCountdown,
   useIdempotency,
   useResource,
-} from "@/lib/hooks";
+} from "@/rebuilt/lib/hooks";
 import {
   type Booking,
   type BookingDetail,
@@ -26,7 +26,7 @@ import {
   money,
   shortId,
   time,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -42,7 +42,7 @@ import {
   Stepper,
   Tabs,
   TextArea,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 export function BookingCard({ booking: b }: { booking: Booking }) {
   const facility = useResource<Facility>(`/facilities/${b.facilityId}`),
     courts = useResource<Court[]>(`/facilities/${b.facilityId}/courts`);
@@ -52,7 +52,7 @@ export function BookingCard({ booking: b }: { booking: Booking }) {
     <article className="booking-card">
       <div className="booking-date">
         <span>
-          THÁNG{" "}
+          Tháng{" "}
           {new Intl.DateTimeFormat("vi-VN", {
             month: "numeric",
             timeZone: zone,
@@ -101,7 +101,7 @@ export function BookingsPage() {
   return (
     <div className="container">
       <PageHead
-        eyebrow="YOUR NEXT GAMES"
+        eyebrow="Lịch đặt của bạn"
         title="Lịch chơi của bạn"
         description="Những cuộc hẹn trên sân, từ hôm nay đến lần tiếp theo."
         action={
@@ -395,7 +395,7 @@ export function BookingDetailPage({
   return (
     <div className="container narrow">
       <PageHead
-        eyebrow={admin ? "BOOKING MONITOR" : "YOUR GAME PASS"}
+        eyebrow={admin ? "Theo dõi lịch đặt" : "Chi tiết lịch đặt"}
         title={`Lịch đặt #${shortId(id)}`}
         description="Thông tin sử dụng sân và lịch sử xử lý được cập nhật từ hệ thống."
         action={
@@ -409,7 +409,7 @@ export function BookingDetailPage({
           <div className="grid-2">
             <article className="ticket">
               <div className="ticket-top">
-                <span className="small">SPORTHUB GAME PASS</span>
+                <span className="small">Phiếu đặt sân</span>
                 <h2>
                   {facility.data?.name ?? `Cơ sở #${shortId(b.facilityId)}`}
                 </h2>
@@ -679,7 +679,7 @@ function PaymentDetails({
   return (
     <>
       <PageHead
-        eyebrow="SECURE YOUR GAME"
+        eyebrow="Thanh toán"
         title={
           p.status === "SUCCESS"
             ? "Thanh toán đã được ghi nhận."

@@ -32,6 +32,14 @@ public class MediaService {
         return jdbc.query("SELECT * FROM facility_images WHERE facility_id=? ORDER BY created_at",(rs,n)->image(
                 rs.getObject("id",UUID.class),rs.getObject("court_id",UUID.class),rs.getString("object_key"),rs.getString("content_type"),rs.getLong("size_bytes")),facilityId);
     }
+    public Map<UUID,String> coverImages(Collection<UUID> ids) {
+        if(ids.isEmpty()) return Map.of();
+        var result = new HashMap<UUID,String>();
+        new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc).query(
+            "SELECT DISTINCT ON (facility_id) * FROM facility_images WHERE facility_id IN (:ids) ORDER BY facility_id,(court_id IS NOT NULL),created_at,id",
+            Map.of("ids",ids), r -> { result.put(r.getObject("facility_id",UUID.class), image(r.getObject("id",UUID.class),r.getObject("court_id",UUID.class),r.getString("object_key"),r.getString("content_type"),r.getLong("size_bytes")).url()); });
+        return result;
+    }
     public ImageView upload(UUID facilityId,UUID courtId,MultipartFile file,Caller caller){return uploadOnce(facilityId,courtId,UUID.randomUUID(),file,caller);}
     public ImageView uploadOnce(UUID facilityId,UUID courtId,UUID id,MultipartFile file,Caller caller){
         return transactions.execute(status->uploadWithId(facilityId,courtId,id,file,caller));

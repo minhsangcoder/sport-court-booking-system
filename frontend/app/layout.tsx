@@ -1,8 +1,10 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
-import { AuthProvider } from '@/lib/auth-context'
-import { AppHeader } from '@/components/layout/app-header'
+import './fonts.css'
+import './rebuilt.css'
+import { AuthProvider } from '@/rebuilt/lib/auth-context'
+import { Shell } from '@/rebuilt/components/shell'
 
 export const metadata: Metadata = {
   title: 'SportHub — Đặt sân thể thao tại Hà Nội',
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light dark',
+  colorScheme: 'light',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: 'white' },
     { media: '(prefers-color-scheme: dark)', color: 'black' },
@@ -43,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="antialiased">
-        <AuthProvider><AppHeader /><main className="min-h-[calc(100vh-80px)]">{children}</main></AuthProvider>
+        <AuthProvider><Shell>{children}</Shell></AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

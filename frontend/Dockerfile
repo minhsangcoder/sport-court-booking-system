@@ -17,6 +17,8 @@ RUN pnpm build
 
 FROM node:24-alpine AS runtime
 WORKDIR /app
+ARG GATEWAY_URL=http://api-gateway:8080
+ENV GATEWAY_URL=${GATEWAY_URL}
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0

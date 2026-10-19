@@ -3,8 +3,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Activity, Building2, CalendarDays, Ticket } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { useResource, useCurrentTime } from "@/lib/hooks";
+import { useAuth } from "@/rebuilt/lib/auth-context";
+import { useResource, useCurrentTime } from "@/rebuilt/lib/hooks";
 import {
   type Access,
   type Booking,
@@ -18,7 +18,7 @@ import {
   time,
   today,
   dateTime,
-} from "@/lib/domain";
+} from "@/rebuilt/lib/domain";
 import {
   Badge,
   Button,
@@ -33,7 +33,7 @@ import {
   Stat,
   Table,
   Tabs,
-} from "@/components/ui";
+} from "@/rebuilt/components/ui";
 import { AvailabilityPage } from "./discovery";
 import { BookingDetailPage } from "./booking";
 export function useOperationalFacility(permission: string, owner = false) {
@@ -132,13 +132,13 @@ export function OperationsPage({
   return (
     <>
       <PageHead
-        eyebrow={owner ? "FACILITY OPERATIONS" : "DAILY OPERATIONS"}
+        eyebrow={owner ? "Quản lý lịch đặt" : "Vận hành sân"}
         title={
           view === "schedule"
             ? "Lịch sân & tình trạng phục vụ"
             : view === "counter"
               ? "Đón khách. Chốt lịch chơi."
-              : "Booking tại cơ sở"
+              : "Lịch đặt tại cơ sở"
         }
         description={
           view === "counter"
@@ -562,9 +562,9 @@ export function OwnerDashboard() {
   return (
     <>
       <PageHead
-        eyebrow="PARTNER WORKSPACE"
-        title={`Chào ${user?.fullName.split(" ").slice(-1)[0] ?? "bạn"}, một ngày vận hành mới.`}
-        description="Lịch đặt, sân và hoạt động tại cơ sở — trong một không gian."
+        eyebrow="Quản lý cơ sở"
+        title={`Chào ${user?.fullName.split(" ").slice(-1)[0] ?? "bạn"}`}
+        description="Lịch đặt và tình trạng sân tại cơ sở của bạn."
         action={
           <LinkButton href="/owner/facilities" variant="secondary" arrow>
             Quản lý cơ sở
@@ -653,7 +653,7 @@ export function OwnerDashboard() {
                   ) : (
                     <Empty
                       title="Chưa có cuộc chơi sắp tới"
-                      description="Booking mới sẽ xuất hiện tại đây."
+                      description="Lịch đặt mới sẽ xuất hiện tại đây."
                     />
                   )}
                 </Panel>
