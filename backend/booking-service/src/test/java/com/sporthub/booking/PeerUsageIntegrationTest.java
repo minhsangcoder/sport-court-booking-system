@@ -41,7 +41,6 @@ class PeerUsageIntegrationTest extends RealBookingIntegrationTest {
   @Autowired PeerUsageAdjudication adjudication;
   @Autowired PeerUsageTimeouts timeouts;
   @Autowired PeerHandoffs peerHandoffs;
-  @Autowired FacilityRefundEntitlements refundEntitlements;
   @Autowired BookingBankProfiles bankProfiles;
   @Autowired PeerCaseReads caseReads;
   @MockBean PeerCaseEvidenceClient caseEvidence;
@@ -837,25 +836,45 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
   void peerCompletedBuyerAndOperatorsCannotCreatePolicyRefunds() {
     var sale = sale(new BigDecimal("100000"));
     declare(sale);
-    peer.confirm(sale.acquisition(), new PeerResaleContract.Command(1, sale.hash()), key(), customer.id());
-    assertThatThrownBy(() -> service.cancel(sale.original().id(),
-        new com.sporthub.booking.web.BookingDtos.CancelInput("Buyer cancels"), sale.buyer(), "token"))
+    peer.confirm(
+        sale.acquisition(), new PeerResaleContract.Command(1, sale.hash()), key(), customer.id());
+    assertThatThrownBy(
+            () ->
+                service.cancel(
+                    sale.original().id(),
+                    new com.sporthub.booking.web.BookingDtos.CancelInput("Buyer cancels"),
+                    sale.buyer(),
+                    "token"))
         .isInstanceOf(ConflictException.class)
         .hasMessageContaining("không hỗ trợ hủy trực tiếp")
         .hasMessageNotContaining("cancel-with-policy");
     var request = new BookingPolicyCancellation.Input(UUID.randomUUID(), "Buyer cancellation");
-    for (var actor : List.of(sale.buyer(), venueOwner(),
-        new com.sporthub.common.security.RemoteIdentity.Caller(UUID.randomUUID(), "Staff",
-            Set.of("STAFF"), Map.of(facility, Set.of("BOOKING_REFUND"))))) {
+    for (var actor :
+        List.of(
+            sale.buyer(),
+            venueOwner(),
+            new com.sporthub.common.security.RemoteIdentity.Caller(
+                UUID.randomUUID(),
+                "Staff",
+                Set.of("STAFF"),
+                Map.of(facility, Set.of("BOOKING_REFUND"))))) {
       assertThatThrownBy(() -> cancellation.quote(sale.original().id(), actor, "token"))
-          .isInstanceOf(ConflictException.class).hasMessageContaining("không áp dụng hoàn tiền");
-      assertThatThrownBy(() -> cancellation.cancel(sale.original().id(), request, key(), actor, "token"))
-          .isInstanceOf(ConflictException.class).hasMessageContaining("không áp dụng hoàn tiền");
+          .isInstanceOf(ConflictException.class)
+          .hasMessageContaining("không áp dụng hoàn tiền");
+      assertThatThrownBy(
+              () -> cancellation.cancel(sale.original().id(), request, key(), actor, "token"))
+          .isInstanceOf(ConflictException.class)
+          .hasMessageContaining("không áp dụng hoàn tiền");
     }
     assertThat(repo.find(sale.original().id()).status()).isEqualTo("CONFIRMED");
     assertThat(repo.find(sale.original().id()).currentHolderId()).isEqualTo(sale.buyer().id());
-    assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM booking_cancellation_refund_quotes WHERE booking_id=?", Integer.class, sale.original().id())).isZero();
+    assertThat(
+            repo.jdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM booking_cancellation_refund_quotes WHERE booking_id=?",
+                    Integer.class,
+                    sale.original().id()))
+        .isZero();
     noFacilityResaleMoney();
   }
-
 }

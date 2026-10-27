@@ -6,7 +6,6 @@ import { api } from '@/lib/api'
 import { useApi } from '@/lib/use-api'
 import { useState } from 'react'
 import { useFacility } from './facility-store'
-import { TransferFeePolicyEditor } from './transfer-fee-policy-editor'
 export function TransferPolicyPage() {
   const { facility } = useFacility()
   const r = useApi<TransferPolicy>(`/owner/facilities/${facility.id}/transfer-policy`)
@@ -88,7 +87,11 @@ export function TransferPolicyPage() {
           </Button>
         </form>
       </section>
-      <TransferFeePolicyEditor key={facility.id} facilityId={facility.id} />
+      <p className="mt-5 max-w-xl text-sm text-slate-600">
+        Người mua thanh toán 100% giá chuyển nhượng trực tiếp cho người bán qua QR SePay. Cơ sở
+        không cấu hình hay thu phí chuyển nhượng; chủ cơ sở chỉ phân xử quyền sử dụng sân khi có
+        tranh chấp.
+      </p>
     </>
   )
 }

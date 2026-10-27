@@ -30,16 +30,33 @@ final class PeerVietQrImage {
         var luminance =
             new RGBLuminanceSource(
                 width, height, image.getRGB(0, 0, width, height, null, 0, width));
-        String payload =
-            new MultiFormatReader()
-                .decode(
-                    new BinaryBitmap(new HybridBinarizer(luminance)),
-                    Map.of(
-                        DecodeHintType.POSSIBLE_FORMATS,
-                        List.of(BarcodeFormat.QR_CODE),
-                        DecodeHintType.TRY_HARDER,
-                        true))
-                .getText();
+        var bitmap = new BinaryBitmap(new HybridBinarizer(luminance));
+        String payload;
+        try {
+          payload =
+              new MultiFormatReader()
+                  .decode(
+                      bitmap,
+                      Map.of(
+                          DecodeHintType.POSSIBLE_FORMATS,
+                          List.of(BarcodeFormat.QR_CODE),
+                          DecodeHintType.TRY_HARDER,
+                          true))
+                  .getText();
+        } catch (NotFoundException ex) {
+          // qronly images can contain finder-like data; pure decoding still requires exact
+          // CRC/binding below.
+          payload =
+              new MultiFormatReader()
+                  .decode(
+                      bitmap,
+                      Map.of(
+                          DecodeHintType.PURE_BARCODE,
+                          true,
+                          DecodeHintType.POSSIBLE_FORMATS,
+                          List.of(BarcodeFormat.QR_CODE)))
+                  .getText();
+        }
         verifyPayload(payload, bin, account, amount, memo);
       } finally {
         reader.dispose();

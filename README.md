@@ -57,10 +57,12 @@ Proposal hiện hành được chỉ định tại `openspec/CURRENT_CHANGE.md`;
 - Worker hết hạn lọc phiên cần xử lý trước giới hạn 100; tranh chấp có người đến đúng giờ được giữ đến hạn nghiệp vụ.
 - `SPORTHUB_HOLD_PROTECTION_ENABLED=true` bật cooldown/anti-regrab; cần Redis hoạt động. Quota một lượt giữ vẫn được kiểm tra ở Booking.
 - `SPORTHUB_BANK_PROFILE_ENFORCEMENT=true` bật khóa đổi ngân hàng theo booking/nghĩa vụ. Khai lần đầu vẫn được phép; cần `PAYMENT_SECRET_KEYS` tại backend để lưu ngân hàng mã hóa. Giữ nguyên khóa qua các lần khởi động, không đưa vào Git hoặc frontend.
-- REAL/P2P chỉ bật sau khi Owner có kênh payOS hợp lệ, chính sách hoàn, địa chỉ webhook HTTPS và cấu hình `SPORTHUB_MONEY_MODE=REAL`, `PAYOS_COLLECTION_CREATE_ENABLED=true`, `SPORTHUB_PEER_RESALE_FACILITIES=<UUID cơ sở đã sẵn sàng>`. Chỉ danh sách cơ sở được chọn mới nhận P2P; không dùng booking DEMO làm chứng từ thu thật.
+- Đặt sân mới dùng SePay: `SPORTHUB_MONEY_MODE=REAL`, `SPORTHUB_COLLECTION_PROVIDER=SEPAY`, `SEPAY_COLLECTION_CREATE_ENABLED=true`. Owner cấu hình tài khoản cơ sở và webhook tại **Kênh nhận tiền**; chỉ webhook hợp lệ, đủ tiền mới xác nhận booking. P2P cần `SPORTHUB_PEER_RESALE_FACILITIES=<UUID cơ sở đã sẵn sàng>` (hoặc `*`), B trả 100% P trực tiếp A bằng QR SePay, không có phí Owner. Không dùng booking DEMO làm chứng từ thu thật. Xem [hướng dẫn SePay](docs/sepay-payments.md).
 - Giờ đặt tự chọn cần Owner công bố đủ bảng giá HOURLY và bật chính sách giờ tự chọn tại cơ sở. Không tự chuyển đổi đơn giá của dữ liệu cũ.
 
 Sau khi sửa source hoặc cấu hình, chạy lại `pwsh scripts/demo/start.ps1 -Rebuild` và `pwsh scripts/demo/start-frontend.ps1 -Rebuild`. Không seed lại database để cập nhật ứng dụng.
+
+Tên thư mục `scripts/demo` là tên launcher local, không quyết định chế độ tiền. `SPORTHUB_MONEY_MODE` quyết định chế độ; các giao dịch DEMO cũ không tự chuyển thành REAL khi đổi cấu hình.
 
 > **Mật khẩu dùng chung cho tất cả tài khoản bên dưới:**  
 > 🔑 **`SportHub123@`**

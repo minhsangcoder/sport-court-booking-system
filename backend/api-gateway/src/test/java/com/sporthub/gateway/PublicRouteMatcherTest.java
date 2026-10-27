@@ -29,6 +29,18 @@ class PublicRouteMatcherTest {
   }
 
   @Test
+  void onlySepayPostWebhookIsPublic() {
+    var properties = new GatewaySecurityProperties();
+    properties.setPublicPaths(List.of("/api/v1/payments/providers/sepay/*/webhook"));
+    var matcher = new PublicRouteMatcher(properties);
+    String path = "/api/v1/payments/providers/sepay/" + java.util.UUID.randomUUID() + "/webhook";
+    assertThat(matcher.isPublic(path, org.springframework.http.HttpMethod.POST)).isTrue();
+    assertThat(matcher.isPublic(path, org.springframework.http.HttpMethod.GET)).isFalse();
+    assertThat(matcher.isPublic(path + "/anything", org.springframework.http.HttpMethod.POST))
+        .isFalse();
+  }
+
+  @Test
   void matchesOnlyConfiguredPublicRoutes() {
     GatewaySecurityProperties properties = new GatewaySecurityProperties();
     properties.setPublicPaths(

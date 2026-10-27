@@ -28,7 +28,7 @@ public class AdmissionFailures {
 
   public void nativeFailure(UUID payment) {
     var order = repo.find(payment);
-    if (!order.provider().equals("PAYOS")
+    if (!Set.of("PAYOS", "SEPAY").contains(order.provider())
         || !Set.of("BOOKING", "GROUP_CONTRIBUTION").contains(order.purpose())) return;
     write("NATIVE_PAYMENT", payment, order.bookingId(), order.payerId());
   }

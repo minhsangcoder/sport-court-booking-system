@@ -1450,6 +1450,194 @@
           }
         }
       }
+    },
+    "/payments/facilities/{id}/sepay-channel": {
+      "get": {
+        "operationId": "getFacilitySepayChannel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SepayChannel"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Outside current role/facility scope"
+          },
+          "409": {
+            "description": "Stale version or conflicting command"
+          },
+          "503": {
+            "description": "Dependency unavailable; no simulation fallback"
+          }
+        }
+      },
+      "put": {
+        "operationId": "configureFacilitySepayChannel",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SepayChannel"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Outside current role/facility scope"
+          },
+          "409": {
+            "description": "Stale version or conflicting command"
+          },
+          "503": {
+            "description": "Dependency unavailable; no simulation fallback"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SepayChannelInput"
+              }
+            }
+          }
+        },
+        "description": "Current facility OWNER only. Immutable encrypted receiver revision and write-only API key. Configure the same key on the SePay incoming-money webhook; no QR or browser action certifies money."
+      }
+    },
+    "/payments/providers/sepay/{channelId}/webhook": {
+      "post": {
+        "operationId": "receiveSepayWebhook",
+        "security": [],
+        "description": "API Key authentication, exact immutable receiver/account/bank/memo binding and durable SePay ID plus bank reference deduplication are required. Initial booking money only; never completes a P2P acquisition. 200 success only after commit.",
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "writeOnly": true
+            },
+            "description": "Apikey followed by the channel webhook secret; never logged."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NativeSepayWebhook"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Durably recorded or idempotent duplicate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid native notice"
+          },
+          "403": {
+            "description": "Webhook secret does not match the receiver revision"
+          },
+          "503": {
+            "description": "Not committed; SePay must retry"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2212,6 +2400,157 @@
           "accountVerification",
           "confirmationMethod"
         ]
+      },
+      "SepayChannelInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "bankBin",
+          "accountNumber",
+          "accountName",
+          "webhookApiKey"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "bankBin": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          },
+          "accountNumber": {
+            "type": "string",
+            "pattern": "^[0-9]{1,19}$"
+          },
+          "accountName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "webhookApiKey": {
+            "type": "string",
+            "writeOnly": true,
+            "minLength": 32,
+            "maxLength": 200,
+            "pattern": "^[A-Za-z0-9_.:-]{32,200}$"
+          }
+        }
+      },
+      "SepayChannel": {
+        "type": "object",
+        "required": [
+          "channelId",
+          "facilityId",
+          "receiverRevisionId",
+          "version",
+          "status",
+          "provider",
+          "bankBin",
+          "maskedAccountNumber",
+          "accountName",
+          "webhookUrl"
+        ],
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "facilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiverRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "SEPAY",
+              "PAYOS"
+            ]
+          },
+          "bankBin": {
+            "type": "string"
+          },
+          "maskedAccountNumber": {
+            "type": "string"
+          },
+          "accountName": {
+            "type": "string"
+          },
+          "webhookUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "NativeSepayWebhook": {
+        "type": "object",
+        "required": [
+          "id",
+          "gateway",
+          "transactionDate",
+          "accountNumber",
+          "content",
+          "transferType",
+          "transferAmount",
+          "referenceCode"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          },
+          "gateway": {
+            "type": "string"
+          },
+          "transactionDate": {
+            "type": "string",
+            "example": "2026-10-27 18:00:00"
+          },
+          "accountNumber": {
+            "type": "string",
+            "maxLength": 19
+          },
+          "subAccount": {
+            "type": "string",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string"
+          },
+          "transferType": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ]
+          },
+          "transferAmount": {
+            "type": "number",
+            "minimum": 1,
+            "multipleOf": 1
+          },
+          "referenceCode": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
       }
     }
   }

@@ -2,10 +2,22 @@
 import http from 'node:http'
 import { createHmac, randomUUID } from 'node:crypto'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const port = Number(process.argv[2])
 assert.ok(port > 0 && port <= 65535)
+const root=fileURLToPath(new URL('../../',import.meta.url))
+const qrTools=path.join(root,'tmp/qr-fixture-tools')
+const zxing=path.join(os.homedir(),'.m2/repository/com/google/zxing/core/3.5.3/core-3.5.3.jar')
+mkdirSync(qrTools,{recursive:true})
+execFileSync('javac',['-cp',zxing,'-d',qrTools,path.join(root,'scripts/test/FixtureQrImage.java')],{windowsHide:true,timeout:20000})
+function png(payload) {
+  return execFileSync(process.env.SPORTHUB_E2E_JAVA || 'java',['-Djava.awt.headless=true','-cp',qrTools+path.delimiter+zxing,'FixtureQrImage',payload],{windowsHide:true,timeout:3000,maxBuffer:512*1024})
+}
 const orders = new Map(), webhooks = new Map()
 const checksum = 'synthetic-payos-checksum-not-a-real-secret'
 const ownerAccount=process.env.SPORTHUB_E2E_TEST_SCRIPT==='peer-resale-system-e2e.mjs'?'000555666777':'000123456789'
@@ -22,9 +34,9 @@ function sign(data) {
   }).join('&')
   return createHmac('sha256', checksum).update(plain).digest('hex')
 }
-function qr(order) {
+function qr(order,account=ownerAccount) {
   const tlv = (tag, value) => tag + String(value.length).padStart(2, '0') + value
-  const beneficiary = tlv('00', '970436') + tlv('01', ownerAccount)
+  const beneficiary = tlv('00', '970436') + tlv('01', account)
   const payload = tlv('00', '01') + tlv('01', '12') + tlv('38', tlv('00', 'A000000727') + tlv('01', beneficiary) + tlv('02', 'QRIBFTTA')) + tlv('53', '704') + tlv('54', String(order.amount)) + tlv('58', 'VN') + tlv('62', tlv('08', order.description)) + '6304'
   let crc = 0xffff
   for (const byte of Buffer.from(payload)) { crc ^= byte << 8; for (let bit = 0; bit < 8; bit++) crc = (crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1) & 0xffff }
@@ -43,10 +55,13 @@ const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, 'http://127.0.0.1')
     if (url.pathname === '/health') return reply(response, { fixture: true })
     if(url.pathname==='/sepay') {
-      assert.equal(url.searchParams.get('bank'),'970436');assert.equal(url.searchParams.get('acc'),'000123456789')
-      assert.equal(url.searchParams.get('amount'),'80000');assert.equal(url.searchParams.get('des'),'SH1')
-      const png=readFileSync(new URL('../../backend/payment-service/src/test/resources/peer-qr/sepay-vcb-synthetic.png',import.meta.url))
-      response.writeHead(200,{'Content-Type':'image/png'});return response.end(png)
+      assert.equal(url.searchParams.get('bank'),'970436')
+      const account=url.searchParams.get('acc'),amount=url.searchParams.get('amount'),description=url.searchParams.get('des')
+      assert.match(account,/^0[0-9]{6,18}$/);assert.match(amount,/^[1-9][0-9]{0,9}$/);assert.match(description,/^(?:SC|SH)[0-9]{1,18}$/)
+      const image=account==='000123456789' && amount==='80000' && description==='SH1'
+        ? readFileSync(new URL('../../backend/payment-service/src/test/resources/peer-qr/sepay-vcb-synthetic.png',import.meta.url))
+        : png(qr({amount:Number(amount),description},account))
+      response.writeHead(200,{'Content-Type':'image/png'});return response.end(image)
     }
     if (url.pathname === '/banks') {
       response.writeHead(200, { 'Content-Type': 'application/json' })

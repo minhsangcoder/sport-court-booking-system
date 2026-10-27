@@ -80,7 +80,6 @@ function harness({
     },
     './qr-checkin': { QrUploadButton: 'qr-upload', QuickQrCheckinModal: 'qr-modal' },
     './group': { StaffGroupAttendance: 'attendance' },
-    '@/features/integration/synchronization': { PaymentSynchronization: 'synchronization' },
     './countdown': { Countdown: 'countdown' },
     'lucide-react': new Proxy({}, { get: (_, name) => String(name) }),
   }
@@ -262,7 +261,7 @@ test('operational guest detail exposes the operational code, submits once and re
       },
     },
   })
-  const { OperationalDetail } = h.load('features/integration/operations.tsx')
+  const { OperationalDetail } = h.load('features/operations/operational-detail.tsx')
   let tree = h.render(OperationalDetail, { id: b.id })
   assert.match(text(tree), /Khách vãng lai/)
   assert.match(text(tree), /Khách lúc đặt: Synthetic Guest/)
@@ -301,7 +300,7 @@ test('read-only staff can read the operational code but cannot check in or pay a
           ? { detail: { booking: b, history: [] }, statusAudit: [] }
           : undefined,
   })
-  const { OperationalDetail } = h.load('features/integration/operations.tsx')
+  const { OperationalDetail } = h.load('features/operations/operational-detail.tsx')
   const tree = h.render(OperationalDetail, { id: b.id })
   assert.match(text(tree), /ABCDEF1234/)
   assert.equal(nodes(tree, (n) => n.type === 'form').length, 0)
@@ -331,7 +330,7 @@ test('manual check-in permission failure stays visible and does not report succe
       },
     },
   })
-  const { OperationalDetail } = h.load('features/integration/operations.tsx')
+  const { OperationalDetail } = h.load('features/operations/operational-detail.tsx')
   let tree = h.render(OperationalDetail, { id: b.id })
   nodes(tree, (n) => n.type === 'input')[0].props.onChange({ target: { value: 'ABCDEF1234' } })
   tree = h.render(OperationalDetail, { id: b.id })
@@ -581,6 +580,7 @@ test('personal detail keeps QR and transfer for real owners while hiding them fo
       source: example.source,
       currentHolderId: example.owner,
       customerId: example.owner,
+      priceSnapshot: { moneyClass: 'REAL', timezone: 'Asia/Ho_Chi_Minh', segments: [] },
     })
     const h = harness({
       user: { id: 'staff', roles: example.roles },
@@ -616,39 +616,44 @@ test('personal detail keeps QR and transfer for real owners while hiding them fo
   }
 })
 
-test('neither original customers nor transferred buyers see a self cancellation refund form', () => {
-  for (const transferred of [false, true]) {
-    const b = booking('real-policy', {
-      source: 'ONLINE',
-      customerId: transferred ? 'seller' : 'buyer',
-      currentHolderId: 'buyer',
-      priceSnapshot: { moneyClass: 'REAL', timezone: 'Asia/Ho_Chi_Minh', segments: [] },
-    })
-    const h = harness({
-      user: { id: 'buyer', roles: ['CUSTOMER'] },
-      resource: (url) =>
-        url === '/bookings/real-policy'
-          ? { booking: b, history: [], resaleConsumed: transferred }
-          : undefined,
-    })
-    const { BookingDetailPage } = h.load('features/booking/booking-detail.tsx'),
-      tree = h.render(BookingDetailPage, { id: b.id })
-    assert.equal(
-      text(tree).includes('người đặt trực tiếp không áp dụng hoàn tiền khi tự hủy'),
-      !transferred,
-    )
-    assert.equal(text(tree).includes('Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.'), transferred)
-    assert.equal(text(tree).includes('100% giá chuyển nhượng đã chốt'), !transferred)
-    assert.equal(
-      nodes(
-        tree,
-        (n) => n.type === 'a' && n.props.href === '/customer/bookings/real-policy/transfer',
-      ).length,
-      transferred ? 0 : 1,
-    )
-    assert.equal(
-      nodes(tree, (n) => n.type === 'button' && text(n).includes('Hủy lượt đặt')).length,
-      0,
-    )
+test('neither REAL nor DEMO paid bookings offer self cancellation or new legacy resale', () => {
+  for (const moneyClass of ['REAL', 'DEMO']) {
+    for (const transferred of [false, true]) {
+      const b = booking('real-policy', {
+        source: 'ONLINE',
+        customerId: transferred ? 'seller' : 'buyer',
+        currentHolderId: 'buyer',
+        priceSnapshot: { moneyClass, timezone: 'Asia/Ho_Chi_Minh', segments: [] },
+      })
+      const h = harness({
+        user: { id: 'buyer', roles: ['CUSTOMER'] },
+        resource: (url) =>
+          url === '/bookings/real-policy'
+            ? { booking: b, history: [], resaleConsumed: transferred }
+            : undefined,
+      })
+      const { BookingDetailPage } = h.load('features/booking/booking-detail.tsx'),
+        tree = h.render(BookingDetailPage, { id: b.id })
+      assert.equal(
+        text(tree).includes('người đặt trực tiếp không áp dụng hoàn tiền khi tự hủy'),
+        !transferred,
+      )
+      assert.equal(
+        text(tree).includes('Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.'),
+        transferred,
+      )
+      assert.equal(text(tree).includes('100% giá chuyển nhượng đã chốt'), !transferred)
+      assert.equal(
+        nodes(
+          tree,
+          (n) => n.type === 'a' && n.props.href === '/customer/bookings/real-policy/transfer',
+        ).length,
+        transferred || moneyClass === 'DEMO' ? 0 : 1,
+      )
+      assert.equal(
+        nodes(tree, (n) => n.type === 'button' && text(n).includes('Hủy lượt đặt')).length,
+        0,
+      )
+    }
   }
 })

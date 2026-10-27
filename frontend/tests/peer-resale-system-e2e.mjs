@@ -1,4 +1,4 @@
-// Genuine BFF/Gateway/services, isolated databases/broker, native payOS HTTP/HMAC fixture.
+// Genuine BFF/Gateway/services, isolated databases/broker, SePay QR and incoming-webhook fixture.
 // Only the first synthetic Admin role is bootstrapped. No financial/business status SQL.
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -40,11 +40,16 @@ async function register(name) {
   const code = await poll(async () => JSON.parse(fs.readFileSync(path.join(config.output, 'smtp-codes.json'), 'utf8'))[email], Boolean)
   await call(name, 'POST', '/auth/verify', { challengeId: result.verificationChallengeId, code }); actors[name].id = result.userId; await login(name)
 }
-async function native(action, body) {
-  const response = await fetch(config.payosMockURL + '/__test/' + action, { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
-  assert.equal(response.status, 200); return (await response.json()).data
+let browser, facility, slot, collectionChannel, bankTransaction=100000
+const webhookSecret='phase12-sepay-webhook-fixture-0123456789'
+async function incoming(qr,amount) {
+  const id=++bankTransaction
+  const body={id,gateway:'VCB',accountNumber:'000555666777',subAccount:'',transactionDate:new Date().toLocaleString('sv-SE',{timeZone:'Asia/Ho_Chi_Minh'}),code:qr.description,content:'PAY '+qr.description,transferType:'in',transferAmount:amount,referenceCode:'FT-SEPAY-'+id}
+  for(let attempt=0;attempt<2;attempt++) {
+    const ack=await call('', 'POST', `/payments/providers/sepay/${collectionChannel}/webhook`,body,200,{Authorization:'Apikey '+webhookSecret})
+    assert.equal(ack.success,true)
+  }
 }
-let browser, facility, slot
 const courts = {}, destinations = {}
 async function loginPage(actor, width = 1440) {
   const context = await browser.newContext({ locale: 'vi-VN', timezoneId: 'Asia/Ho_Chi_Minh', viewport: { width, height: 1000 } }); contexts.push(context)
@@ -70,12 +75,13 @@ async function paidBook(actor,court,partial=false) {
   const qr=await poll(()=>call(actor,'GET',`/payments/${payment.id}/qr`),value=>value.state==='READY')
   assert.equal(qr.accountNumber,'000555666777')
   if(partial) {
-    await native('credit',{orderCode:qr.orderCode,amount:40000,webhook:'duplicate'})
+    await incoming(qr,40000)
     await poll(()=>call(actor,'GET',`/payments/${payment.id}/qr`),value=>value.state==='PARTIAL')
     const unpaid=await call(actor,'GET',`/bookings/${booking.id}`)
     assert.equal(unpaid.booking.status,'PENDING');assert.equal(unpaid.checkinToken,null)
   }
-  await native('credit',{orderCode:qr.orderCode,amount:partial?80000:Number(payment.amount),webhook:'duplicate'})
+  assert.equal(payment.provider,'SEPAY')
+  await incoming(qr,partial?80000:Number(payment.amount))
   const detail=await poll(()=>call(actor,'GET',`/bookings/${booking.id}`),value=>value.booking.status==='CONFIRMED')
   return {booking:detail.booking,detail,payment}
 }
@@ -142,9 +148,9 @@ try {
   assert.equal(Number(flexible.amount),150000)
   pass('Schedule and Booking HTTP quote integrates 30 minutes at 100k/h plus 30 at 200k/h to 150k')
   await call('owner','PUT',`/owner/facilities/${facility}/refund-policy`,{rateBps:8000,version:0})
-  const configured=await call('owner','PUT',`/payments/facilities/${facility}/channel`,{version:0,bankBin:'970436',clientId:'synthetic-facility-'+config.run,apiKey:'synthetic-payos-api-key',checksumKey:'synthetic-payos-checksum-not-a-real-secret'},200,key())
-  const ready=await call('owner','POST',`/payments/facilities/${facility}/channel/verify`,{version:configured.version},200,key())
-  assert.equal(ready.status,'READY');assert.ok(!JSON.stringify(ready).match(/apiKey|checksumKey|ciphertext/))
+  const ready=await call('owner','PUT',`/payments/facilities/${facility}/sepay-channel`,{version:0,bankBin:'970436',accountNumber:'000555666777',accountName:'SYNTHETIC FACILITY',webhookApiKey:webhookSecret},200,key())
+  collectionChannel=ready.channelId
+  assert.equal(ready.status,'READY');assert.ok(!JSON.stringify(ready).match(/webhookApiKey|checksumKey|ciphertext/))
   await call('owner','PUT',`/owner/facilities/${facility}/transfer-policy`,{enabled:true,minLeadSeconds:0})
   const main=await paidBook('a','main',true)
   const firstProfile=await call('a','GET','/payments/bank-profile');assert.equal(firstProfile.canRegisterFirst,true)

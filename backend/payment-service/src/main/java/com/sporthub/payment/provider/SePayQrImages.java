@@ -44,23 +44,30 @@ public class SePayQrImages {
   }
 
   public byte[] fetch(PrivateDestination recipient, BigDecimal amount, String memo) {
-    if (recipient == null
-        || !recipient.destination().bankBin().matches("[0-9]{6}")
-        || !recipient.accountNumber().matches("[0-9]{1,19}")
+    if (recipient == null) throw new IllegalArgumentException("Thiếu người nhận QR.");
+    return fetch(recipient.destination().bankBin(), recipient.accountNumber(), amount, memo);
+  }
+
+  public byte[] fetch(String bankBin, String accountNumber, BigDecimal amount, String memo) {
+    if (bankBin == null
+        || !bankBin.matches("[0-9]{6}")
+        || accountNumber == null
+        || !accountNumber.matches("[0-9]{1,19}")
         || amount == null
         || amount.signum() <= 0
         || amount.stripTrailingZeros().scale() > 0
         || amount.compareTo(new BigDecimal("9999999999")) > 0
-        || !memo.matches("SH[0-9]{1,18}"))
+        || memo == null
+        || !memo.matches("(?:SH|SC)[0-9]{1,18}"))
       throw new IllegalArgumentException("Thông tin mã QR chưa hợp lệ.");
     String value = amount.toBigIntegerExact().toString();
     URI uri =
         URI.create(
             endpoint
                 + "?acc="
-                + recipient.accountNumber()
+                + accountNumber
                 + "&bank="
-                + recipient.destination().bankBin()
+                + bankBin
                 + "&amount="
                 + value
                 + "&des="
@@ -84,12 +91,7 @@ public class SePayQrImages {
               .split(";")[0]
               .trim()
               .equalsIgnoreCase("image/png")) throw new IllegalStateException();
-      PeerVietQrImage.verify(
-          response.body(),
-          recipient.destination().bankBin(),
-          recipient.accountNumber(),
-          value,
-          memo);
+      PeerVietQrImage.verify(response.body(), bankBin, accountNumber, value, memo);
       return response.body();
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();

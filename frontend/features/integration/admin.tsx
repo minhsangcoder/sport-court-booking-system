@@ -1,5 +1,0 @@
-'use client'
-export { SupportPage } from '@/features/admin/support-page'
-export { RefundReviews } from '@/features/admin/refund-reviews'
-export { SportsPage } from '@/features/admin/sports-page'
-export { FacilityStatus } from '@/features/admin/facility-status'

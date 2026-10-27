@@ -1,1 +1,0 @@
-export { TimeSlotMatrix } from './index'

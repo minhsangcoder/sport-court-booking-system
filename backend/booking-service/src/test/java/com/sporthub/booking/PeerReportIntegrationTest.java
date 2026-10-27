@@ -69,9 +69,14 @@ class PeerReportIntegrationTest extends PeerUsageIntegrationTest {
     assertThat(first.summary().money().transferCollected()).isEqualTo("0");
     assertThat(first.summary().money().sellerDue()).isEqualTo("0");
     var binding = bank(sale.original().paymentId(), sale.buyer().id(), null);
-    seedHistoricalRefund(sale.original().id(), sale.acquisition(), sale.original().paymentId(),
-        sale.buyer().id(), new BigDecimal("100000"), binding.destinationRevisionId(),
-        Map.of(sale.original().paymentId(), customer.id()));
+    seedHistoricalRefund(
+        sale.original().id(),
+        sale.acquisition(),
+        sale.original().paymentId(),
+        sale.buyer().id(),
+        new BigDecimal("100000"),
+        binding.destinationRevisionId(),
+        customer.id());
     var obligation =
         repo.jdbc()
             .queryForObject(

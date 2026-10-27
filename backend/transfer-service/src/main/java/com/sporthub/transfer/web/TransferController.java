@@ -67,10 +67,7 @@ public class TransferController {
       @RequestHeader("Idempotency-Key") String key,
       HttpServletRequest r) {
     var caller = identity.current(r);
-    var id =
-        peerListings.realBooking(input.bookingId())
-            ? peerListings.create(input, key, caller)
-            : service.create(input, key, caller);
+    var id = peerListings.create(input, key, caller);
     workflow.sync(id);
     return ApiResponse.created(service.detail(id, caller));
   }
@@ -79,20 +76,15 @@ public class TransferController {
   public ApiResponse<com.fasterxml.jackson.databind.JsonNode> quote(
       @Valid @RequestBody Create input, HttpServletRequest r) {
     var caller = identity.current(r);
-    return ApiResponse.success(
-        peerListings.realBooking(input.bookingId())
-            ? peerListings.quote(input, caller)
-            : service.quote(input, caller));
+    return ApiResponse.success(peerListings.quote(input, caller));
   }
 
   @PostMapping("/{id}/quote")
   public ApiResponse<com.fasterxml.jackson.databind.JsonNode> quoteEdit(
       @PathVariable UUID id, @Valid @RequestBody Edit input, HttpServletRequest r) {
     var actor = identity.current(r);
-    return ApiResponse.success(
-        peerListings.isPeer(id)
-            ? peerCommands.quote(id, input, actor)
-            : service.quoteEdit(id, input, actor));
+    requirePeer(id);
+    return ApiResponse.success(peerCommands.quote(id, input, actor));
   }
 
   @GetMapping("/{id}")
@@ -122,8 +114,8 @@ public class TransferController {
       @RequestHeader(value = "Idempotency-Key", required = false) String key,
       HttpServletRequest r) {
     var caller = identity.current(r);
-    if (peerListings.isPeer(id)) peerCommands.edit(id, input, key, caller);
-    else service.edit(id, input, caller);
+    requirePeer(id);
+    peerCommands.edit(id, input, key, caller);
     workflow.sync(id);
     return ApiResponse.success(service.detail(id, caller));
   }
@@ -152,10 +144,8 @@ public class TransferController {
       HttpServletRequest r) {
     var caller = identity.current(r);
     var hash = input == null ? null : input.acceptedTermsHash();
-    var acquisition =
-        peerListings.isPeer(id)
-            ? peerAcquisitions.acquire(id, key, caller, hash)
-            : service.acquire(id, key, caller, hash);
+    requirePeer(id);
+    var acquisition = peerAcquisitions.acquire(id, key, caller, hash);
     workflow.sync(id);
     return ApiResponse.created(service.acquisition(acquisition, caller));
   }
@@ -183,5 +173,12 @@ public class TransferController {
     service.cancel(id, caller);
     workflow.sync(a.listingId());
     return ApiResponse.success(service.acquisition(id, caller));
+  }
+
+  private void requirePeer(UUID listing) {
+    if (!peerListings.isPeer(listing))
+      throw new com.sporthub.common.exception.ConflictException(
+          "Giao dịch cũ chỉ được xem hoặc hoàn tất phiên đã mở. Không tạo giao dịch mới có phí cơ"
+              + " sở.");
   }
 }

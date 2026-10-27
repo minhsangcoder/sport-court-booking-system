@@ -55,11 +55,11 @@ public class PayosSessionRecovery {
         repo.jdbc()
             .queryForList(
                 "SELECT s.payment_id,s.channel_id FROM payos_qr_sessions s JOIN payment_orders p ON"
-                    + " p.id=s.payment_id WHERE s.next_attempt_at<=? AND (s.claim_until IS NULL OR"
-                    + " s.claim_until<?) AND s.state<>'REVIEW' AND (p.expires_at>? OR EXISTS(SELECT"
-                    + " 1 FROM payos_observation_processing x JOIN payos_bank_observations o ON"
-                    + " o.id=x.observation_id WHERE o.payment_id=p.id AND x.state='OBSERVED'))"
-                    + " ORDER BY s.next_attempt_at LIMIT 100",
+                    + " p.id=s.payment_id WHERE p.provider='PAYOS' AND s.next_attempt_at<=? AND"
+                    + " (s.claim_until IS NULL OR s.claim_until<?) AND s.state<>'REVIEW' AND"
+                    + " (p.expires_at>? OR EXISTS(SELECT 1 FROM payos_observation_processing x JOIN"
+                    + " payos_bank_observations o ON o.id=x.observation_id WHERE o.payment_id=p.id"
+                    + " AND x.state='OBSERVED')) ORDER BY s.next_attempt_at LIMIT 100",
                 Timestamp.from(clock.instant()),
                 Timestamp.from(clock.instant()),
                 Timestamp.from(clock.instant().minus(Duration.ofDays(7))));

@@ -56,7 +56,7 @@ Sau payBy, phiên chưa khai hợp lệ SHALL không nhận khai đúng hạn ha
 
 ### Requirement: Open responsibilities lock changes to personal bank information
 
-Hold/booking còn hiệu lực, listing/phiên mua, tranh chấp chưa chốt quyền sân hoặc khoản trả/hoàn đã xác nhận chưa xong SHALL chặn đổi thông tin/tài khoản ngân hàng cá nhân. Server SHALL xét quyền/nghĩa vụ thực tế, không theo Staff created_by. Quyết định cuối Booking SHALL gỡ riêng nguồn tranh chấp, không đóng case tiền hoặc bỏ nguồn khác. Lịch sử đã đóng và kênh payOS cơ sở SHALL không tạo khóa này.
+Hold/booking còn hiệu lực, listing/phiên mua, tranh chấp chưa chốt quyền sân hoặc khoản trả/hoàn đã xác nhận chưa xong SHALL chặn đổi thông tin/tài khoản ngân hàng cá nhân. Server SHALL xét quyền/nghĩa vụ thực tế, không theo Staff created_by. Quyết định cuối Booking SHALL gỡ riêng nguồn tranh chấp, không đóng case tiền hoặc bỏ nguồn khác. Lịch sử đã đóng và kênh nhận tiền cơ sở SHALL không tạo khóa này.
 
 #### Scenario: A customer has a future confirmed booking
 - **WHEN** user đã có tài khoản ngân hàng gửi POST tạo một revision mới dù chưa đăng chuyển nhượng

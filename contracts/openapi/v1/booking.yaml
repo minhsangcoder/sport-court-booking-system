@@ -728,7 +728,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Release an unpaid live pending booking only. Confirmed paid bookings reject Customer self-cancellation, including no-refund requests, in REAL and DEMO. Operational refunds remain separate scoped commands; existing history is retained."
       }
     },
     "/bookings/{id}/check-in": {

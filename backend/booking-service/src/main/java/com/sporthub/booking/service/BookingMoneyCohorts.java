@@ -36,7 +36,7 @@ public class BookingMoneyCohorts {
       if (receiver == null
           || !"READY".equals(receiver.path("status").asText())
           || !facility.toString().equals(receiver.path("facilityId").asText()))
-        throw new ConflictException("Chủ sân cần cấu hình kênh payOS trước khi nhận đặt sân.");
+        throw new ConflictException("Chủ sân cần cấu hình kênh SePay trước khi nhận đặt sân.");
       var context = snapshot.putObject("collectionContext");
       for (String field :
           java.util.List.of("channelId", "receiverRevisionId", "receiverOwnerId", "facilityId"))

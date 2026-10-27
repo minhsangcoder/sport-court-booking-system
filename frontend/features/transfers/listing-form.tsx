@@ -45,16 +45,16 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
     expectedVersion?: number
   } | null>(null)
   const [bankDestination, setBankDestination] = useState('')
-  const real =
-    booking.data?.booking.priceSnapshot.moneyClass === 'REAL' ||
-    listing.data?.financeTerms?.mode === 'REAL'
+  const real = listingId
+    ? listing.data?.financeTerms?.protocol === 'PEER_RESALE_V1'
+    : booking.data?.booking.priceSnapshot.moneyClass === 'REAL'
   const [consent, setConsent] = useState(false)
   const intent = useRef<{ payload: string; key: string } | null>(null)
   async function quote(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy) return
     const form = new FormData(event.currentTarget)
-    if (real && !bankDestination) {
+    if (!real || !bankDestination) {
       setError('Chọn tài khoản ngân hàng của bạn trước khi xem điều khoản và đăng tin.')
       return
     }
@@ -62,7 +62,7 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
       bookingId,
       price: Number(form.get('price')),
       deadline: new Date(String(form.get('deadline'))).toISOString(),
-      ...(real ? { bankDestinationRevisionId: bankDestination } : {}),
+      bankDestinationRevisionId: bankDestination,
       ...(listingId ? { expectedVersion: listing.data?.version } : {}),
     }
     setBusy(true)
@@ -74,11 +74,15 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
         listingId ? `/transfers/${listingId}/quote` : '/transfers/quote',
         { method: 'POST', body: JSON.stringify(body) },
       )
+      if (result.protocol !== 'PEER_RESALE_V1')
+        throw new Error('Điều khoản chuyển nhượng đã cũ. Hãy tải lại trang.')
       setTerms(result)
       setDraft(body)
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : 'Không thể lấy phí và điều khoản của cơ sở.',
+        failure instanceof Error
+          ? failure.message
+          : 'Không thể lấy điều khoản chuyển nhượng trực tiếp.',
       )
     } finally {
       setBusy(false)
@@ -101,7 +105,7 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
       setError(
         failure instanceof Error
           ? failure.message
-          : 'Không thể lưu tin. Nếu phí đã đổi, hãy xem lại điều khoản.',
+          : 'Không thể lưu tin. Hãy kiểm tra lại giá và điều khoản chuyển nhượng.',
       )
       setTerms(null)
       setConsent(false)
@@ -133,6 +137,28 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
   const amount = booking.data?.booking.amount ?? listing.data!.originalAmount
   const starts = booking.data?.booking.startsAt ?? listing.data!.startsAt
   const currency = booking.data?.booking.currency ?? listing.data!.currency
+  if (!real)
+    return (
+      <div className="mx-auto max-w-xl space-y-5 px-5 py-10">
+        <Link
+          href={listingId ? `/transfers/${listingId}` : `/customer/bookings/${bookingId}`}
+          className="text-emerald-700 underline"
+        >
+          Quay lại chi tiết
+        </Link>
+        <h1 className="text-2xl font-bold">
+          Không thể tạo chuyển nhượng tiền thật từ giao dịch cũ
+        </h1>
+        <p>
+          Lượt đặt mô phỏng và giao dịch chuyển nhượng cũ được giữ trong lịch sử. Tin đăng mới chỉ
+          áp dụng cho lượt đặt đã thanh toán thật.
+        </p>
+        <p>
+          Với lượt đặt hợp lệ, người mua trả 100% giá đã chốt trực tiếp vào tài khoản người bán bằng
+          QR SePay, không có phí chuyển nhượng.
+        </p>
+      </div>
+    )
   return (
     <div className="mx-auto max-w-xl px-5 py-10">
       <Link
@@ -193,9 +219,8 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
           />
         </label>
         <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
-          {real
-            ? 'Người mua chuyển khoản trực tiếp cho bạn qua QR SePay. Bạn xác nhận đã nhận đủ tiền để bàn giao sân; không có phí chuyển nhượng.'
-            : 'Cơ sở nhận thanh toán mô phỏng của người mua, giữ phí chủ cơ sở cấu hình và trả bạn phần còn lại. Không cần nhập tài khoản ngân hàng để mô phỏng.'}
+          Người mua chuyển khoản 100% giá đã chốt trực tiếp cho bạn qua QR SePay. Bạn xác nhận đã
+          nhận đủ tiền để bàn giao sân; không có phí chuyển nhượng.
         </p>
         <Button type="submit" variant="outline" disabled={busy}>
           {busy ? 'Đang xử lý…' : 'Xem điều khoản'}
@@ -212,9 +237,9 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
               disabled={busy}
               className="mt-1"
             />
-            {terms.protocol === 'PEER_RESALE_V1'
-              ? 'Tôi đồng ý điều khoản, chia sẻ tài khoản đã chọn cho người mua và gửi ngân hàng, số tài khoản, số tiền, nội dung tới SePay để tạo QR. Tôi tự kiểm tra tiền thực nhận trước khi bàn giao.'
-              : 'Tôi đồng ý phí cơ sở, số tiền nhận và chính sách hoàn đã hiển thị.'}
+            Tôi đồng ý điều khoản, chia sẻ tài khoản đã chọn cho người mua và gửi ngân hàng, số tài
+            khoản, số tiền, nội dung tới SePay để tạo QR. Tôi tự kiểm tra tiền thực nhận trước khi
+            bàn giao.
           </label>
           <Button
             type="button"

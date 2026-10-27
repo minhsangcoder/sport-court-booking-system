@@ -34,7 +34,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
       "booking.expiry-delay-ms=3600000",
       "booking.peer-expiry-delay-ms=3600000"
     })
-@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
+@org.springframework.test.annotation.DirtiesContext(
+    classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class RealBookingIntegrationTest {
   static PostgreSQLContainer<?> pg;
 
@@ -67,7 +68,6 @@ class RealBookingIntegrationTest {
   @Autowired BookingPolicyCancellation cancellation;
   @Autowired BookingRealFunds realFunds;
   @Autowired FacilityManualDisbursements manual;
-  @Autowired FacilityRefundEntitlements historicalRefunds;
   @Autowired BookingLifecycle lifecycle;
   @Autowired FacilityDisbursementChanges moneyChanges;
   @Autowired FacilityFinanceReads financeReads;
@@ -91,7 +91,9 @@ class RealBookingIntegrationTest {
     owner = UUID.randomUUID();
     channel = UUID.randomUUID();
     revision = UUID.randomUUID();
-    customer = new Caller(UUID.randomUUID(), "Customer", Set.of("CUSTOMER"), Map.of(), "ACTIVE", true, false);
+    customer =
+        new Caller(
+            UUID.randomUUID(), "Customer", Set.of("CUSTOMER"), Map.of(), "ACTIVE", true, false);
     now = Instant.parse("2026-10-23T00:00:00Z");
     start = now.plusSeconds(10800);
     end = start.plusSeconds(3600);
@@ -301,11 +303,14 @@ class RealBookingIntegrationTest {
         .facilityPermission(any(), any(), any(), any());
   }
 
-  @Test
-  void canonicalRealReceiptConfirmsOnceAndRetainsCheckedInLifecycle() {
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"PAYOS", "SEPAY"})
+  void canonicalRealReceiptConfirmsOnceAndRetainsCheckedInLifecycle(String provider) {
     var booking = pending();
     var outcome =
         event(booking, UUID.randomUUID(), customer.id(), "BOOKING", null, booking.amount());
+    ((com.fasterxml.jackson.databind.node.ObjectNode) outcome.path("payload"))
+        .put("provider", provider);
     consumer.apply(outcome);
     consumer.apply(outcome);
     var confirmed = repo.find(booking.id());
@@ -742,7 +747,8 @@ class RealBookingIntegrationTest {
     UUID payment = UUID.randomUUID();
     consumer.apply(event(booking, payment, customer.id(), "BOOKING", null, booking.amount()));
     var input = new BookingPolicyCancellation.Input(UUID.randomUUID(), "Customer cancellation");
-    for (var roles : List.of(Set.of("CUSTOMER"), Set.of("CUSTOMER", "OWNER"), Set.of("CUSTOMER", "STAFF"))) {
+    for (var roles :
+        List.of(Set.of("CUSTOMER"), Set.of("CUSTOMER", "OWNER"), Set.of("CUSTOMER", "STAFF"))) {
       var actor = new Caller(customer.id(), "Customer", roles, Map.of());
       assertThatThrownBy(() -> cancellation.quote(booking.id(), actor, "token"))
           .isInstanceOf(com.sporthub.common.exception.ConflictException.class)
@@ -752,8 +758,12 @@ class RealBookingIntegrationTest {
           .hasMessageContaining("người đặt ban đầu");
     }
     assertThat(repo.find(booking.id()).status()).isEqualTo("CONFIRMED");
-    assertThat(repo.jdbc().queryForObject(
-        "SELECT count(*) FROM booking_cancellation_refund_quotes WHERE booking_id=?", Integer.class, booking.id()))
+    assertThat(
+            repo.jdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM booking_cancellation_refund_quotes WHERE booking_id=?",
+                    Integer.class,
+                    booking.id()))
         .isZero();
     assertThat(
             repo.jdbc()
@@ -803,11 +813,24 @@ class RealBookingIntegrationTest {
     for (var actor : List.of(deal.buyer(), ownerActor())) {
       assertThatThrownBy(() -> cancellation.quote(deal.original().id(), actor, "token"))
           .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-      assertThatThrownBy(() -> cancellation.cancel(deal.original().id(),
-          new BookingPolicyCancellation.Input(deal.oldCancellationQuote(), "Buyer cancellation"), key(), actor, "token"))
+      assertThatThrownBy(
+              () ->
+                  cancellation.cancel(
+                      deal.original().id(),
+                      new BookingPolicyCancellation.Input(
+                          deal.oldCancellationQuote(), "Buyer cancellation"),
+                      key(),
+                      actor,
+                      "token"))
           .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
     }
-    assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM facility_refund_entitlements WHERE booking_id=?", Integer.class, deal.original().id())).isZero();
+    assertThat(
+            repo.jdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM facility_refund_entitlements WHERE booking_id=?",
+                    Integer.class,
+                    deal.original().id()))
+        .isZero();
     assertThat(
             repo.jdbc()
                 .queryForObject(
@@ -1307,8 +1330,14 @@ class RealBookingIntegrationTest {
         ownerActor(),
         "token");
     var binding = bank(deal.command().paymentId(), deal.buyer().id(), null);
-    seedHistoricalRefund(deal.original().id(), deal.command().acquisitionId(), deal.command().paymentId(),
-        deal.buyer().id(), deal.command().price(), binding.destinationRevisionId(), Map.of());
+    seedHistoricalRefund(
+        deal.original().id(),
+        deal.command().acquisitionId(),
+        deal.command().paymentId(),
+        deal.buyer().id(),
+        deal.command().price(),
+        binding.destinationRevisionId(),
+        null);
     UUID refund =
         repo.jdbc()
             .queryForObject(
@@ -1415,8 +1444,7 @@ class RealBookingIntegrationTest {
     var actor = ownerActor();
     var quote = cancellation.quote(booking.id(), actor, "token");
     var request =
-        new BookingPolicyCancellation.Input(
-            (UUID) quote.get("id"), "Facility cancellation");
+        new BookingPolicyCancellation.Input((UUID) quote.get("id"), "Facility cancellation");
     var gate = new java.util.concurrent.CountDownLatch(1);
     try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {
       java.util.concurrent.Callable<Boolean> cancel =
@@ -1464,9 +1492,7 @@ class RealBookingIntegrationTest {
     var actor = ownerActor();
     var quote = cancellation.quote(booking.id(), actor, "token");
     var input =
-        new BookingPolicyCancellation.Input(
-            (UUID) quote.get("id"),
-            "Facility cancels before play");
+        new BookingPolicyCancellation.Input((UUID) quote.get("id"), "Facility cancels before play");
     var staff =
         new Caller(
             UUID.randomUUID(),
@@ -1666,8 +1692,14 @@ class RealBookingIntegrationTest {
     transfers.command("complete", deal.command());
     scopePermissions();
     var bank = bank(deal.command().paymentId(), deal.buyer().id(), null);
-    seedHistoricalRefund(deal.original().id(), deal.command().acquisitionId(), deal.command().paymentId(),
-        deal.buyer().id(), deal.command().price(), bank.destinationRevisionId(), Map.of());
+    seedHistoricalRefund(
+        deal.original().id(),
+        deal.command().acquisitionId(),
+        deal.command().paymentId(),
+        deal.buyer().id(),
+        deal.command().price(),
+        bank.destinationRevisionId(),
+        null);
     UUID refund =
         repo.jdbc()
             .queryForObject(
@@ -1810,30 +1842,122 @@ class RealBookingIntegrationTest {
                 .moneyAvailability())
         .isEqualTo("PARTIAL");
   }
+
   // Seed a pre-removal obligation; new cancellation APIs must never recreate this benefit.
-  void seedHistoricalRefund(UUID bookingId, UUID acquisition, UUID payment, UUID buyer,
-      BigDecimal base, UUID destination, Map<UUID, UUID> fundingPayers) {
-    new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(status -> {
-      var booking = repo.find(bookingId);
-      repo.lock(booking.courtId());
-      var policy = repo.jdbc().queryForMap("SELECT * FROM booking_refund_policy_snapshots WHERE booking_id=?", bookingId);
-      int rate = ((Number) policy.get("refund_rate_bps")).intValue();
-      var allocations = com.sporthub.common.money.DemoRefundMath.allocate(
-          List.of(new com.sporthub.common.money.DemoRefundMath.Payment(payment, buyer, base)), rate);
-      var target = com.sporthub.common.money.DemoRefundMath.target(base, rate);
-      UUID quote = UUID.randomUUID();
-      repo.jdbc().update("""
+  void seedHistoricalRefund(
+      UUID bookingId,
+      UUID acquisition,
+      UUID payment,
+      UUID buyer,
+      BigDecimal base,
+      UUID destination,
+      UUID originalPayer) {
+    new org.springframework.transaction.support.TransactionTemplate(manager)
+        .executeWithoutResult(
+            status -> {
+              var booking = repo.find(bookingId);
+              repo.lock(booking.courtId());
+              var policy =
+                  repo.jdbc()
+                      .queryForMap(
+                          "SELECT * FROM booking_refund_policy_snapshots WHERE booking_id=?",
+                          bookingId);
+              int rate = ((Number) policy.get("refund_rate_bps")).intValue();
+              var allocations =
+                  com.sporthub.common.money.DemoRefundMath.allocate(
+                      List.of(
+                          new com.sporthub.common.money.DemoRefundMath.Payment(
+                              payment, buyer, base)),
+                      rate);
+              var target = com.sporthub.common.money.DemoRefundMath.target(base, rate);
+              UUID quote = UUID.randomUUID();
+              repo.jdbc()
+                  .update(
+                      """
 INSERT INTO booking_cancellation_refund_quotes(id,booking_id,booking_version,ownership_version,policy_version,policy_hash,
  base_amount,rate_bps,target_amount,currency,rounding,acquisition_id,allocations,basis_fingerprint,requested_by,created_at,expires_at)
 VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
-""", quote, bookingId, booking.version(), booking.checkinTokenVersion(), policy.get("policy_version"), policy.get("terms_hash"),
-          base, rate, target, acquisition, repo.write(allocations), "a".repeat(64), buyer,
-          java.sql.Timestamp.from(clock.instant()), java.sql.Timestamp.from(clock.instant().plusSeconds(300)));
-      var cancelled = lifecycle.transition(booking, "CANCELLED", buyer, "CANCELLED", Map.of("reason", "Historical refund fixture"), clock.instant(), null);
-      historicalRefunds.policy(cancelled, quote, acquisition, base, rate, target, policy, allocations,
-          Map.of(payment, json.createObjectNode().put("id", destination.toString()).put("destinationHash", "b".repeat(64))),
-          buyer, fundingPayers);
-    });
+""",
+                      quote,
+                      bookingId,
+                      booking.version(),
+                      booking.checkinTokenVersion(),
+                      policy.get("policy_version"),
+                      policy.get("terms_hash"),
+                      base,
+                      rate,
+                      target,
+                      acquisition,
+                      repo.write(allocations),
+                      "a".repeat(64),
+                      buyer,
+                      java.sql.Timestamp.from(clock.instant()),
+                      java.sql.Timestamp.from(clock.instant().plusSeconds(300)));
+              var cancelled =
+                  lifecycle.transition(
+                      booking,
+                      "CANCELLED",
+                      buyer,
+                      "CANCELLED",
+                      Map.of("reason", "Historical refund fixture"),
+                      clock.instant(),
+                      null);
+              UUID entitlement = UUID.randomUUID(), obligation = UUID.randomUUID();
+              assertThat(target).isPositive();
+              repo.jdbc()
+                  .update(
+                      """
+INSERT INTO facility_refund_entitlements(id,source_key,booking_id,facility_id,quote_id,acquisition_id,
+ reason,base_amount,rate_bps,target_amount,policy_version,policy_hash,requested_by,created_at)
+VALUES(?,?,?,?,?,?,'POLICY_CANCELLATION',?,?,?,?,?,?,?)
+""",
+                      entitlement,
+                      "POLICY:" + bookingId,
+                      bookingId,
+                      cancelled.facilityId(),
+                      quote,
+                      acquisition,
+                      base,
+                      rate,
+                      target,
+                      policy.get("policy_version"),
+                      policy.get("terms_hash"),
+                      buyer,
+                      java.sql.Timestamp.from(clock.instant()));
+              repo.jdbc()
+                  .update(
+                      """
+INSERT INTO facility_disbursement_obligations(id,source_key,booking_id,facility_id,receiver_owner_id,payment_id,
+ kind,payee_id,amount,destination_revision_id,destination_hash,state,created_at)
+VALUES(?,?,?,?,(SELECT receiver_owner_id FROM booking_real_collections WHERE payment_id=?),?,
+ 'POLICY_REFUND',?,?,?,?,'UNPAID',?)
+""",
+                      obligation,
+                      "REFUND:" + entitlement + ":" + payment,
+                      bookingId,
+                      cancelled.facilityId(),
+                      payment,
+                      payment,
+                      buyer,
+                      target,
+                      destination,
+                      "b".repeat(64),
+                      java.sql.Timestamp.from(clock.instant()));
+              repo.jdbc()
+                  .update(
+                      """
+INSERT INTO facility_refund_allocations(id,entitlement_id,payment_id,base_amount,amount,payer_id,
+ obligation_id,beneficiary_id,peer_acquisition_id) VALUES(?,?,?,?,?,?,?,?,?)
+""",
+                      UUID.randomUUID(),
+                      entitlement,
+                      payment,
+                      base,
+                      target,
+                      originalPayer == null ? buyer : originalPayer,
+                      obligation,
+                      originalPayer == null ? null : buyer,
+                      originalPayer == null ? null : acquisition);
+            });
   }
-
 }

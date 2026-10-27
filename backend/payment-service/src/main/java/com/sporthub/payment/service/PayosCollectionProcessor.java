@@ -16,10 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.*;
 
-/** Accepts only an authenticated, HMAC-verified native query returned by PayosClient. */
+/**
+ * Shared credit accounting; adapters authenticate payOS queries or SePay webhooks before applying.
+ */
 @Service
 public class PayosCollectionProcessor {
-  private record Credit(
+  record Credit(
       String reference,
       BigDecimal amount,
       Instant bankTime,
@@ -106,12 +108,23 @@ public class PayosCollectionProcessor {
     }
     if (!data.has("amountPaid") || sum.compareTo(data.path("amountPaid").decimalValue()) != 0)
       throw new PayosClient.Failure("TRANSACTIONS_UNPROVEN");
+    applyVerified(order, session, credits);
+  }
+
+  void applyVerified(
+      com.sporthub.payment.web.PaymentDtos.Payment order,
+      Map<String, Object> session,
+      List<Credit> credits) {
+    if (!Set.of("PAYOS", "SEPAY").contains(order.provider()))
+      throw new IllegalArgumentException("Unsupported native collection provider");
+    UUID payment = order.id();
+    var receiver = channels.context((UUID) session.get("receiver_revision_id"));
     tx.executeWithoutResult(
         status -> {
           repo.lock(order.bookingId());
           repo.lock(payment);
           for (var credit : credits) {
-            repo.lockCallback("PAYOS:" + receiver.channelId(), credit.reference());
+            repo.lockCallback(order.provider() + ":" + receiver.channelId(), credit.reference());
             var old =
                 repo.jdbc()
                     .queryForList(
@@ -193,7 +206,8 @@ public class PayosCollectionProcessor {
                       payment);
             String proof =
                 Signatures.sha256(
-                    "PAYOS_V2|"
+                    order.provider()
+                        + "_V2|"
                         + payment
                         + "|"
                         + session.get("receiver_revision_id")
@@ -265,7 +279,8 @@ public class PayosCollectionProcessor {
           if (refundable.signum() > 0 && (paidAt != null || expired)) {
             String reason =
                 canonical ? "OVERPAYMENT" : paidAt != null ? "NON_CANONICAL" : "EXPIRED_PARTIAL";
-            String source = "PAYOS_EXTRA:" + payment + ":" + collected.toBigIntegerExact();
+            String source =
+                order.provider() + "_EXTRA:" + payment + ":" + collected.toBigIntegerExact();
             UUID id = UUID.randomUUID();
             var payload = base(order, session);
             payload.put("sourceKey", source);
@@ -316,7 +331,7 @@ public class PayosCollectionProcessor {
     p.put("acquisitionId", payment.acquisitionId());
     p.put("purpose", payment.purpose());
     p.put("currency", "VND");
-    p.put("provider", "PAYOS");
+    p.put("provider", payment.provider());
     p.put("moneyClass", "REAL");
     p.put("confirmationMethod", "BANK_VERIFIED");
     for (String field :

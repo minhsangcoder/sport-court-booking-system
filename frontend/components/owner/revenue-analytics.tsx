@@ -1,1 +1,0 @@
-export { RevenueAnalytics } from './index'

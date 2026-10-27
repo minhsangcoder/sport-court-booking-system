@@ -35,7 +35,7 @@ public class BookingRealReceipts {
     if (version != 2
         || !real
         || !"payment-service".equals(event.path("producer").asText())
-        || !"PAYOS".equals(p.path("provider").asText())
+        || !Set.of("PAYOS", "SEPAY").contains(p.path("provider").asText())
         || !"REAL".equals(p.path("moneyClass").asText())
         || !"BANK_VERIFIED".equals(p.path("confirmationMethod").asText())
         || !p.path("proofHash").asText().matches("[a-f0-9]{64}")

@@ -27,7 +27,6 @@ public class FacilityRefundEntitlements {
   public UUID policy(
       Booking booking,
       UUID quote,
-      UUID acquisition,
       BigDecimal base,
       int rate,
       BigDecimal target,
@@ -35,45 +34,17 @@ public class FacilityRefundEntitlements {
       List<DemoRefundMath.Allocation> allocations,
       Map<UUID, JsonNode> destinations,
       UUID actor) {
-    return policy(
-        booking,
-        quote,
-        acquisition,
-        base,
-        rate,
-        target,
-        policy,
-        allocations,
-        destinations,
-        actor,
-        Map.of());
-  }
-
-  @Transactional(propagation = Propagation.MANDATORY)
-  public UUID policy(
-      Booking booking,
-      UUID quote,
-      UUID acquisition,
-      BigDecimal base,
-      int rate,
-      BigDecimal target,
-      Map<String, Object> policy,
-      List<DemoRefundMath.Allocation> allocations,
-      Map<UUID, JsonNode> destinations,
-      UUID actor,
-      Map<UUID, UUID> fundingPayers) {
     UUID id = UUID.randomUUID();
     repo.jdbc()
         .update(
             "INSERT INTO"
                 + " facility_refund_entitlements(id,source_key,booking_id,facility_id,quote_id,acquisition_id,reason,base_amount,rate_bps,target_amount,policy_version,policy_hash,requested_by,created_at)"
-                + " VALUES(?,?,?,?,?,?,'POLICY_CANCELLATION',?,?,?,?,?,?,?)",
+                + " VALUES(?,?,?,?,?,NULL,'POLICY_CANCELLATION',?,?,?,?,?,?,?)",
             id,
             "POLICY:" + booking.id(),
             booking.id(),
             booking.facilityId(),
             quote,
-            acquisition,
             base,
             rate,
             target,
@@ -82,7 +53,7 @@ public class FacilityRefundEntitlements {
             actor,
             java.sql.Timestamp.from(clock.instant()));
     for (var allocation : allocations) {
-      boolean guest = isGuest(booking, acquisition);
+      boolean guest = isGuest(booking, null);
       UUID payee = guest ? null : allocation.payerId(),
           guestBooking = guest ? booking.id() : null,
           obligation = null;
@@ -120,18 +91,16 @@ public class FacilityRefundEntitlements {
       repo.jdbc()
           .update(
               "INSERT INTO"
-                  + " facility_refund_allocations(id,entitlement_id,payment_id,base_amount,amount,payer_id,guest_booking_id,obligation_id,beneficiary_id,peer_acquisition_id)"
-                  + " VALUES(?,?,?,?,?,?,?,?,?,?)",
+                  + " facility_refund_allocations(id,entitlement_id,payment_id,base_amount,amount,payer_id,guest_booking_id,obligation_id)"
+                  + " VALUES(?,?,?,?,?,?,?,?)",
               UUID.randomUUID(),
               id,
               allocation.paymentId(),
               allocation.baseAmount(),
               allocation.refundAmount(),
-              fundingPayers.getOrDefault(allocation.paymentId(), payee),
+              payee,
               guestBooking,
-              obligation,
-              fundingPayers.containsKey(allocation.paymentId()) ? payee : null,
-              fundingPayers.containsKey(allocation.paymentId()) ? acquisition : null);
+              obligation);
     }
     return id;
   }

@@ -4,6 +4,12 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
+Latest business revision: proposal + tasks section 21 (2026-10-27): SePay for new
+facility collections with authenticated sufficient-money webhooks; SePay B→A P2P
+without facility fees; no Customer self-cancellation of paid bookings. Old DEMO
+records do not become REAL funding. Read this revision before applying older
+completed task descriptions inside the current change.
+
 ## Mandatory selection rule
 
 Applies to all OpenSpec and Ponytail skills, implementation, fixes and reviews

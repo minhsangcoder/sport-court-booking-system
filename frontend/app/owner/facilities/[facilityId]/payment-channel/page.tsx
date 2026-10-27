@@ -1,4 +1,4 @@
-import { PayosChannelPage } from '@/features/facility/payos-channel-page'
+import { SepayChannelPage } from '@/features/facility/sepay-channel-page'
 export default function Page() {
-  return <PayosChannelPage />
+  return <SepayChannelPage />
 }

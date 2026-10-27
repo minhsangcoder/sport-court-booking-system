@@ -69,7 +69,7 @@ public class RealPaymentReportFacts {
         credits.stream()
             .map(c -> new BigDecimal(c.amount()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-    if (!"PAYOS".equals(order.get("provider")) || session == null)
+    if (!Set.of("PAYOS", "SEPAY").contains(order.get("provider")) || session == null)
       reasons.add("REAL_SESSION_MISSING");
     if (collection == null
         || !canonical
@@ -150,14 +150,14 @@ public class RealPaymentReportFacts {
         order.get("amount").toString(),
         order.get("currency").toString(),
         paid,
-        "PAYOS",
+        order.get("provider").toString(),
         "REAL",
         reasons.isEmpty(),
         canonical,
         "REVIEW".equals(session.get("state")),
         fingerprint,
         memberText,
-        "PAYOS_BANK_COLLECTION_V2",
+        order.get("provider") + "_BANK_COLLECTION_V2",
         List.copyOf(reasons),
         evidence);
   }

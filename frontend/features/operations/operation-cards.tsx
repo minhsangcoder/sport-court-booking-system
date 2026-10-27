@@ -130,14 +130,16 @@ export function OperationCards({
                   </Button>
                 </form>
               )}
-              {b.status === 'CONFIRMED' && b.customerId === b.currentHolderId && can('BOOKING_REFUND') && (
-                <PolicyCancellationPanel
-                  bookingId={b.id}
-                  moneyClass={b.priceSnapshot.moneyClass}
-                  guestBookingId={b.currentHolderId === null ? b.id : undefined}
-                  onSuccess={bookings.reload}
-                />
-              )}
+              {b.status === 'CONFIRMED' &&
+                b.customerId === b.currentHolderId &&
+                can('BOOKING_REFUND') && (
+                  <PolicyCancellationPanel
+                    bookingId={b.id}
+                    moneyClass={b.priceSnapshot.moneyClass}
+                    guestBookingId={b.currentHolderId === null ? b.id : undefined}
+                    onSuccess={bookings.reload}
+                  />
+                )}
               {b.status === 'PENDING' && canPay && (
                 <Button
                   type="button"

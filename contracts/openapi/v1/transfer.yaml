@@ -214,7 +214,8 @@
               }
             }
           }
-        }
+        },
+        "description": "New commands use PEER_RESALE_V1 only, funded by an eligible original REAL booking. Full P is paid directly B to A via SePay; no facility fee or Owner payout. DEMO and legacy creation/edit are rejected; history and already-open transactions remain recoverable."
       }
     },
     "/transfers/mine": {
@@ -441,7 +442,7 @@
             }
           }
         },
-        "description": "Tin P2P yêu cầu expectedVersion, acceptedTermsHash và Idempotency-Key; legacy giữ hợp đồng cũ."
+        "description": "New commands use PEER_RESALE_V1 only, funded by an eligible original REAL booking. Full P is paid directly B to A via SePay; no facility fee or Owner payout. DEMO and legacy creation/edit are rejected; history and already-open transactions remain recoverable."
       }
     },
     "/transfers/{id}/withdraw": {
@@ -914,7 +915,7 @@
     "/transfers/quote": {
       "post": {
         "operationId": "quoteTransferListing",
-        "description": "REAL mới: báo giá P2P miễn phí chuyển nhượng, chỉ dùng tài khoản cá nhân A đang kích hoạt; cần chấp nhận chia sẻ và hash trước khi đăng. DEMO và legacy giữ luồng đã chốt.",
+        "description": "New commands use PEER_RESALE_V1 only, funded by an eligible original REAL booking. Full P is paid directly B to A via SePay; no facility fee or Owner payout. DEMO and legacy creation/edit are rejected; history and already-open transactions remain recoverable.",
         "security": [
           {
             "bearerAuth": []
@@ -991,7 +992,7 @@
     "/transfers/{id}/quote": {
       "post": {
         "operationId": "quoteTransferEdit",
-        "description": "REAL mới: báo giá P2P miễn phí chuyển nhượng, chỉ dùng tài khoản cá nhân A đang kích hoạt; cần chấp nhận chia sẻ và hash trước khi đăng. DEMO và legacy giữ luồng đã chốt.",
+        "description": "New commands use PEER_RESALE_V1 only, funded by an eligible original REAL booking. Full P is paid directly B to A via SePay; no facility fee or Owner payout. DEMO and legacy creation/edit are rejected; history and already-open transactions remain recoverable.",
         "security": [
           {
             "bearerAuth": []

@@ -96,27 +96,6 @@ function Loaded({ id }: { id: string }) {
     detail.history.some((h) => h.action === 'TRANSFER_COMPLETED') ||
     Boolean(b.currentHolderId && b.customerId && b.currentHolderId !== b.customerId)
   const backHref = !isOwner && workspace ? `/${workspace}/bookings` : '/customer/bookings'
-  async function cancelConfirmedDirect() {
-    if (
-      !window.confirm(
-        'LƯU Ý QUAN TRỌNG: Lượt đặt trực tiếp KHÔNG ĐƯỢC HOÀN TIỀN khi tự hủy.\n\nNếu bạn không thể đến sân, hãy chọn "Đăng tin chuyển nhượng lượt đặt" để sang nhượng lại.\n\nBạn có chắc chắn muốn hủy và giải phóng khung giờ chơi (hoàn 0đ)?',
-      )
-    )
-      return
-    setBusy(true)
-    setError('')
-    try {
-      await api(`/bookings/${id}/cancel`, {
-        method: 'POST',
-        body: JSON.stringify({ reason: 'Khách tự hủy lượt đặt trực tiếp (không hoàn tiền)' }),
-      })
-      resource.reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể hủy lượt đặt.')
-    } finally {
-      setBusy(false)
-    }
-  }
   return (
     <div className="mx-auto max-w-4xl px-5 py-10">
       <Link className="text-sm text-slate-500" href={backHref}>
@@ -195,22 +174,9 @@ function Loaded({ id }: { id: string }) {
               </p>
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 {b.priceSnapshot.moneyClass !== 'REAL' && (
-                  <Link
-                    href={`/customer/bookings/${id}/transfer`}
-                    className="inline-block rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
-                  >
-                    Đăng tin chuyển nhượng lượt đặt
-                  </Link>
-                )}
-                {b.priceSnapshot.moneyClass !== 'REAL' && (
-                  <Button
-                    variant="outline"
-                    className="border-rose-300 text-rose-700 hover:bg-rose-50"
-                    onClick={cancelConfirmedDirect}
-                    disabled={busy}
-                  >
-                    Hủy lượt đặt (Không hoàn tiền)
-                  </Button>
+                  <p className="text-sm text-slate-600">
+                    Đây là lượt đặt mô phỏng cũ, không dùng để tạo chuyển nhượng tiền thật.
+                  </p>
                 )}
               </div>
             </section>

@@ -14,16 +14,7 @@ import org.springframework.stereotype.Component;
 /** Applied facility receipts determine the base for eligible operational refunds. */
 @Component
 public class RealRefundBasis {
-  public record Basis(
-      BigDecimal base,
-      List<DemoRefundMath.Payment> payments,
-      UUID acquisition,
-      String fingerprint,
-      Map<UUID,UUID> fundingPayers) {
-    public Basis(BigDecimal base,List<DemoRefundMath.Payment> payments,UUID acquisition,String fingerprint) {
-      this(base,payments,acquisition,fingerprint,Map.of());
-    }
-  }
+  public record Basis(BigDecimal base, List<DemoRefundMath.Payment> payments, String fingerprint) {}
 
   private final BookingRepository repo;
   private final LocalAppliedCollections collections;
@@ -37,7 +28,8 @@ public class RealRefundBasis {
       LocalAppliedCollections collections,
       BookingDependencies dependencies,
       BookingLifecycle lifecycle,
-      Clock clock, BookingRefundEligibility eligibility) {
+      Clock clock,
+      BookingRefundEligibility eligibility) {
     this.repo = repo;
     this.collections = collections;
     this.dependencies = dependencies;
@@ -108,15 +100,13 @@ public class RealRefundBasis {
   }
 
   public Basis load(Booking booking) {
-    UUID acquisition = null;
-    List<DemoRefundMath.Payment> payments;
     var snapshot = collections.load(List.of(booking));
     if (snapshot.facts().stream().anyMatch(f -> !f.verified())
         || !snapshot.reviewedPaymentIds().isEmpty()
         || booking.status().equals("CONFIRMED")
             && !snapshot.assessments().get(booking.id()).fullyPaid())
       throw new ConflictException("Chứng từ đã áp dụng chưa đủ để tính hoàn tiền.");
-    payments =
+    var payments =
         snapshot.facts().stream()
             .map(
                 f ->
@@ -133,19 +123,17 @@ public class RealRefundBasis {
         sorted.stream()
             .map(DemoRefundMath.Payment::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    // Preserve the empty resale segment so already-issued quote hashes still validate.
     return new Basis(
         base,
         sorted,
-        acquisition,
         Signatures.sha256(
             booking.id()
                 + "|"
                 + booking.version()
                 + "|"
                 + booking.checkinTokenVersion()
-                + "|"
-                + acquisition
-                + "|"
+                + "|null|"
                 + repo.write(sorted)));
   }
 }

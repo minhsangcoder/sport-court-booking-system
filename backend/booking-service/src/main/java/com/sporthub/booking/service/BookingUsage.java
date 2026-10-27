@@ -57,7 +57,8 @@ public class BookingUsage {
                     id)
             > 0)
       throw new ConflictException(
-          "Lượt đặt đã nhận tiền không hỗ trợ hủy trực tiếp. Liên hệ cơ sở để xử lý yêu cầu hợp lệ.");
+          "Lượt đặt đã nhận tiền không hỗ trợ hủy trực tiếp. Liên hệ cơ sở để xử lý yêu cầu hợp"
+              + " lệ.");
     if (input == null
         || input.reason() == null
         || input.reason().isBlank()
@@ -71,17 +72,11 @@ public class BookingUsage {
       dependencies.facilityPermission(b.facilityId(), caller, token, "BOOKING_CANCEL_PENDING");
     else caller.requireRole("CUSTOMER");
     if (b.status().equals("CANCELLED")) return reads.projectEffective(b);
-    boolean isTransferred =
-        repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM transfer_handoffs WHERE booking_id=?", Integer.class, id)
-            > 0;
-    if (b.status().equals("CONFIRMED") && isTransferred)
+    if (b.status().equals("CONFIRMED"))
       throw new ConflictException(
-          "Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.");
-    if (!Set.of("PENDING", "CONFIRMED").contains(b.status()))
-      throw new ConflictException(
-          "Only pending or confirmed bookings may be cancelled before play");
+          "Lượt đặt đã thanh toán không hỗ trợ tự hủy. Bạn có thể chuyển nhượng lượt đặt hợp lệ.");
+    if (!b.status().equals("PENDING"))
+      throw new ConflictException("Chỉ có thể hủy giữ chỗ chưa thanh toán.");
     Instant now = clock.instant();
     if (!now.isBefore(b.startsAt())) throw new ConflictException("Booking has already started");
     if (repo.jdbc()
@@ -92,15 +87,8 @@ public class BookingUsage {
                 id)
         > 0)
       throw new ConflictException("Withdraw/reconcile the transfer listing before cancelling");
-    if (b.status().equals("CONFIRMED") && !self)
-      throw new ConflictException(
-          "Lượt đặt đã nhận tiền không hỗ trợ hủy trực tiếp. Liên hệ cơ sở để xử lý yêu cầu hợp lệ.");
-    if (b.status().equals("CONFIRMED") && (b.paymentId() == null || b.paidAt() == null))
-      throw new ConflictException("Confirmed payment evidence is incomplete");
-    if (b.status().equals("PENDING")
-        && (!b.holdExpiresAt().isAfter(now) || !lifecycle.hasLiveHold(b, now)))
+    if (!b.holdExpiresAt().isAfter(now) || !lifecycle.hasLiveHold(b, now))
       throw new ConflictException("Booking payment hold has expired or changed");
-    String policy = b.status().equals("CONFIRMED") ? "CUSTOMER_SELF_NO_REFUND" : "UNPAID_NO_REFUND";
     return reads.projectEffective(
         lifecycle.transition(
             b,
@@ -111,7 +99,7 @@ public class BookingUsage {
                 "reason",
                 input.reason().trim(),
                 "cancellationPolicy",
-                policy,
+                "UNPAID_NO_REFUND",
                 "refundAmount",
                 BigDecimal.ZERO,
                 "cancellationActor",

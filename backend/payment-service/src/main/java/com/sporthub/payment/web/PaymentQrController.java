@@ -12,10 +12,15 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentQrController {
   private final PaymentQrSessions service;
   private final RemoteIdentity identity;
+  private final com.sporthub.payment.service.SepaySessions sepay;
 
-  public PaymentQrController(PaymentQrSessions service, RemoteIdentity identity) {
+  public PaymentQrController(
+      PaymentQrSessions service,
+      RemoteIdentity identity,
+      com.sporthub.payment.service.SepaySessions sepay) {
     this.service = service;
     this.identity = identity;
+    this.sepay = sepay;
   }
 
   @GetMapping("/qr")
@@ -26,7 +31,9 @@ public class PaymentQrController {
   @PostMapping("/refresh")
   public ApiResponse<PaymentQrSessions.Session> refresh(
       @PathVariable UUID id, HttpServletRequest r) {
-    return ApiResponse.success(
-        service.refresh(id, identity.current(r), r.getHeader("Authorization")));
+    var actor = identity.current(r);
+    service.refresh(id, actor, r.getHeader("Authorization"));
+    sepay.initialize(id);
+    return ApiResponse.success(service.own(id, actor, r.getHeader("Authorization")));
   }
 }

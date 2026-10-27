@@ -27,6 +27,8 @@ public class RealPaymentOrders {
   private final Clock clock;
   private final TransactionTemplate tx;
   private final boolean enabled;
+  private final SepaySessions sepay;
+  private final String provider;
 
   public RealPaymentOrders(
       PaymentRepository repo,
@@ -37,7 +39,10 @@ public class RealPaymentOrders {
       ObjectMapper json,
       Clock clock,
       PlatformTransactionManager manager,
-      @Value("${PAYOS_COLLECTION_CREATE_ENABLED:false}") boolean enabled) {
+      @Value("${SEPAY_COLLECTION_CREATE_ENABLED:${PAYOS_COLLECTION_CREATE_ENABLED:false}}")
+          boolean enabled,
+      SepaySessions sepay,
+      @Value("${SPORTHUB_COLLECTION_PROVIDER:SEPAY}") String provider) {
     this.repo = repo;
     this.obligations = obligations;
     this.payable = payable;
@@ -47,6 +52,10 @@ public class RealPaymentOrders {
     this.clock = clock;
     tx = new TransactionTemplate(manager);
     this.enabled = enabled;
+    this.sepay = sepay;
+    if (!Set.of("SEPAY", "PAYOS").contains(provider))
+      throw new IllegalStateException("Unsupported collection provider");
+    this.provider = provider;
   }
 
   public Payment create(CreatePayment input, String key, Caller caller, String token) {
@@ -92,6 +101,8 @@ public class RealPaymentOrders {
     UUID facility = UUID.fromString(bill.path("facilityId").asText()),
         revision = UUID.fromString(bill.path("receiverRevisionId").asText());
     var receiver = channels.ready(facility);
+    if (!provider.equals(channels.collectionProvider(receiver.channelId())))
+      throw new ConflictException("Chủ sân cần cấu hình kênh SePay cho khoản thu mới.");
     if (!receiver.receiverRevisionId().equals(revision)
         || !receiver.receiverOwnerId().toString().equals(bill.path("receiverOwnerId").asText()))
       throw new ConflictException("Kênh nhận tiền đã thay đổi. Hãy tạo lại yêu cầu đặt sân.");
@@ -123,7 +134,7 @@ public class RealPaymentOrders {
                   active = (UUID) claim.get("current_payment_id");
               if (settled != null) {
                 var old = repo.find(settled);
-                if (!old.payerId().equals(caller.id()) || !old.provider().equals("PAYOS"))
+                if (!old.payerId().equals(caller.id()) || !old.provider().equals(provider))
                   throw new ConflictException("Nghĩa vụ đã có khoản thu khác.");
                 remember(input, key, caller, old.id());
                 return old;
@@ -132,7 +143,7 @@ public class RealPaymentOrders {
                 var old = repo.find(active);
                 if (old.status().equals("PENDING")) {
                   if (!old.payerId().equals(caller.id())
-                      || !old.provider().equals("PAYOS")
+                      || !old.provider().equals(provider)
                       || !old.expiresAt().equals(expiry))
                     throw new ConflictException(
                         "Đã có yêu cầu khác đang thanh toán cho nghĩa vụ này.");
@@ -149,7 +160,7 @@ public class RealPaymentOrders {
                   .update(
                       "INSERT INTO"
                           + " payment_orders(id,booking_id,payer_id,member_id,acquisition_id,seller_id,purpose,amount,currency,provider,provider_reference,status,idempotency_key,expires_at)"
-                          + " VALUES(?,?,?,?,?,?,?,?,'VND','PAYOS',?,'PENDING',?,?)",
+                          + " VALUES(?,?,?,?,?,?,?,?,'VND',?,?,'PENDING',?,?)",
                       id,
                       input.bookingId(),
                       caller.id(),
@@ -158,7 +169,8 @@ public class RealPaymentOrders {
                       seller,
                       purpose,
                       amount,
-                      "SH-PAYOS-" + id,
+                      provider,
+                      "SH-" + provider + "-" + id,
                       key,
                       Timestamp.from(expiry));
               repo.jdbc()
@@ -172,7 +184,7 @@ public class RealPaymentOrders {
                       facility,
                       receiver.receiverOwnerId(),
                       code,
-                      PayosClient.description(code),
+                      provider.equals("SEPAY") ? "SC" + code : PayosClient.description(code),
                       terms == null ? null : terms.toString(),
                       bill.path("operatorPayment").asBoolean(),
                       Timestamp.from(clock.instant()));
@@ -181,7 +193,8 @@ public class RealPaymentOrders {
               remember(input, key, caller, id);
               return created;
             });
-    recovery.initialize(payment.id());
+    if (payment.provider().equals("SEPAY")) sepay.initialize(payment.id());
+    else recovery.initialize(payment.id());
     return repo.find(payment.id());
   }
 

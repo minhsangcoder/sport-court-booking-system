@@ -26,10 +26,7 @@ public class BookingPolicyCancellation {
   }
 
   private record Basis(
-      BigDecimal base,
-      List<DemoRefundMath.Payment> payments,
-      UUID acquisition,
-      String fingerprint) {}
+      BigDecimal base, List<DemoRefundMath.Payment> payments, String fingerprint) {}
 
   private final BookingRepository repo;
   private final BookingDependencies dependencies;
@@ -103,7 +100,7 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
                   current.base(),
                   rate,
                   target,
-                  current.acquisition(),
+                  null,
                   repo.write(allocations),
                   current.fingerprint(),
                   actor.id(),
@@ -217,7 +214,7 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
                   new BookingDemoFinance.Entitlement(
                       cancelled,
                       input.quoteId(),
-                      current.acquisition(),
+                      null,
                       "POLICY_CANCELLATION",
                       "POLICY:" + id,
                       current.base(),
@@ -286,15 +283,13 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
   }
 
   private Basis basis(Booking b) {
-    List<DemoRefundMath.Payment> payments;
-    UUID acquisition = null;
     var snapshot = collections.load(List.of(b));
     var local = snapshot.facts();
     if (local.stream().anyMatch(f -> !f.verified())
         || !snapshot.reviewedPaymentIds().isEmpty()
         || b.status().equals("CONFIRMED") && !snapshot.assessments().get(b.id()).fullyPaid())
       throw new ConflictException("Applied payment evidence needs review before refund");
-    payments =
+    var payments =
         local.stream()
             .map(f -> new DemoRefundMath.Payment(f.paymentId(), f.payerId(), f.amount()))
             .toList();
@@ -305,6 +300,7 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
             .map(DemoRefundMath.Payment::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     DemoRefundMath.target(base, 0);
+    // Preserve the empty resale segment so already-issued quote hashes still validate.
     String fingerprint =
         Signatures.sha256(
             b.id()
@@ -312,15 +308,12 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
                 + b.version()
                 + "|"
                 + b.checkinTokenVersion()
-                + "|"
-                + acquisition
-                + "|"
+                + "|null|"
                 + repo.write(sorted));
-    return new Basis(base, sorted, acquisition, fingerprint);
+    return new Basis(base, sorted, fingerprint);
   }
 
   private void requireDemo(Basis basis, Booking b) {
-    if (basis.acquisition() != null) return;
     var unknown = new ArrayList<com.sporthub.common.money.PaymentProofFacts.Binding>();
     for (var payment : basis.payments()) {
       if (repo.jdbc()

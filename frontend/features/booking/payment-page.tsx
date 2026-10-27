@@ -19,6 +19,7 @@ import { notifyDemoMoneyChanged } from './demo-finance'
 import { TransferFinanceNotice } from '@/features/transfers/finance-notice'
 import type { Acquisition } from '@/features/transfers/types'
 import { BankPaymentInstructions } from '@/features/payments/bank-payment-instructions'
+import type { PaymentRuntime } from '@/features/payments/types'
 export function PaymentPage({ id }: { id: string }) {
   return (
     <RequireAuth>
@@ -30,6 +31,7 @@ function Loaded({ id }: { id: string }) {
   const router = useRouter()
   const { user } = useAuth()
   const resource = useApi<Payment>(`/payments/${id}`)
+  const runtime = useApi<PaymentRuntime>('/payments/runtime')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmation, setConfirmation] = useState<{ payment: Payment; deadline: number } | null>(
@@ -130,7 +132,7 @@ function Loaded({ id }: { id: string }) {
     user,
     owned.data?.map((f) => f.id),
   )
-  if (p.provider === 'PAYOS')
+  if (['SEPAY', 'PAYOS'].includes(p.provider))
     return (
       <div className="mx-auto max-w-xl space-y-5 px-5 py-10">
         <h1 className="text-3xl font-black">Thanh toán lượt đặt</h1>
@@ -150,7 +152,9 @@ function Loaded({ id }: { id: string }) {
     )
   return (
     <div className="mx-auto max-w-xl px-5 py-10">
-      <p className="text-sm font-bold text-amber-700">MÔI TRƯỜNG THANH TOÁN MÔ PHỎNG</p>
+      <p className="text-sm font-bold text-amber-700">
+        {runtime.data?.mode === 'REAL' ? 'GIAO DỊCH MÔ PHỎNG CŨ' : 'MÔI TRƯỜNG THANH TOÁN MÔ PHỎNG'}
+      </p>
       <h1 className="mt-4 text-3xl font-black">Thanh toán lượt đặt</h1>
       <p className="mt-3 text-sm text-slate-500">
         Không phát sinh giao dịch tiền thật. Kết quả được máy chủ ghi nhận.
@@ -180,7 +184,13 @@ function Loaded({ id }: { id: string }) {
           Đã nhận thanh toán. Đang xác nhận lượt đặt…
         </p>
       )}
-      {p.status === 'PENDING' && (
+      {p.status === 'PENDING' && runtime.data?.mode === 'REAL' && (
+        <p role="status" className="my-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+          Đây là giao dịch mô phỏng cũ, không thể chuyển thành thanh toán tiền thật. Lượt đặt mới sử
+          dụng QR SePay của cơ sở.
+        </p>
+      )}
+      {p.status === 'PENDING' && runtime.data?.mode !== 'REAL' && (
         <div className="grid gap-3">
           <Button
             className="h-12 bg-emerald-600 text-white"

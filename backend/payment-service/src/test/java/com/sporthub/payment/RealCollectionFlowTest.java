@@ -110,7 +110,17 @@ class RealCollectionFlowTest {
     payable = mock(PayableClient.class);
     orders =
         new RealPaymentOrders(
-            repo, obligations, payable, channels, recovery, json, clock, manager, true);
+            repo,
+            obligations,
+            payable,
+            channels,
+            recovery,
+            json,
+            clock,
+            manager,
+            true,
+            mock(SepaySessions.class),
+            "PAYOS");
     webhooks = new PayosWebhooks(repo, channels, json, vault, manager);
     when(payable.payable(eq(booking), isNull(), any()))
         .thenAnswer(
@@ -408,7 +418,9 @@ class RealCollectionFlowTest {
             json,
             clock,
             new DataSourceTransactionManager(repo.jdbc().getDataSource()),
-            false);
+            false,
+            mock(SepaySessions.class),
+            "PAYOS");
     assertThat(stopped.create(new CreatePayment(booking, null), "pay", customer, "token").id())
         .isEqualTo(first.id());
     assertThatThrownBy(

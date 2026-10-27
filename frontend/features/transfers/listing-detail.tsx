@@ -104,7 +104,7 @@ function Loaded({ id }: { id: string }) {
           trong hạn. Người bán xác nhận đã nhận đủ tiền mới bàn giao sân.
         </p>
       )}
-      {!listing.own && terms && (
+      {!listing.own && terms && peer && (
         <label className="flex items-start gap-3 text-sm">
           <input
             type="checkbox"
@@ -113,9 +113,8 @@ function Loaded({ id }: { id: string }) {
             disabled={command.busy || command.blocked || blocked}
             className="mt-1"
           />
-          {peer
-            ? 'Tôi đồng ý trả trực tiếp người bán, gửi chứng từ, nhận quyền sau khi xác nhận hoặc Owner phân xử; không bán lại lượt đã nhận.'
-            : 'Tôi đồng ý bên nhận thanh toán, phí và chính sách hoàn đã hiển thị.'}
+          Tôi đồng ý trả trực tiếp người bán, gửi chứng từ, nhận quyền sau khi xác nhận hoặc Owner
+          phân xử; không bán lại lượt đã nhận.
         </label>
       )}
       {(command.error || read.error) && (
@@ -128,12 +127,14 @@ function Loaded({ id }: { id: string }) {
           <>
             {listing.state === 'ACTIVE' && (
               <>
-                <Link
-                  href={`/customer/transfers/${id}/edit`}
-                  className="rounded-full bg-emerald-600 px-5 py-3 text-sm text-white"
-                >
-                  Sửa tin
-                </Link>
+                {peer && (
+                  <Link
+                    href={`/customer/transfers/${id}/edit`}
+                    className="rounded-full bg-emerald-600 px-5 py-3 text-sm text-white"
+                  >
+                    Sửa tin
+                  </Link>
+                )}
                 <Button
                   variant="outline"
                   disabled={command.busy || command.blocked || blocked}
@@ -165,12 +166,14 @@ function Loaded({ id }: { id: string }) {
               command.busy ||
               command.blocked ||
               blocked ||
+              !peer ||
               !listing.available ||
               remaining === 0 ||
               !terms ||
               acceptedHash !== terms.termsHash
             }
             onClick={() =>
+              peer &&
               void command.run<Acquisition>(
                 `/transfers/${id}/acquisitions`,
                 { acceptedTermsHash: acceptedHash },
@@ -180,9 +183,11 @@ function Loaded({ id }: { id: string }) {
           >
             {command.busy
               ? 'Đang giữ giao dịch…'
-              : listing.available
-                ? 'Mua lượt đặt này'
-                : 'Lượt đặt hiện không khả dụng'}
+              : !peer
+                ? 'Tin cũ chỉ dùng để xem lịch sử'
+                : listing.available
+                  ? 'Mua lượt đặt này'
+                  : 'Lượt đặt hiện không khả dụng'}
           </Button>
         )}
       </div>

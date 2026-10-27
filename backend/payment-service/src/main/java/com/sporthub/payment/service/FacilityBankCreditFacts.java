@@ -42,7 +42,7 @@ public class FacilityBankCreditFacts {
 SELECT c.*,p.booking_id,p.payer_id,p.member_id,p.acquisition_id,p.purpose,s.facility_id,s.receiver_owner_id
 FROM payos_bank_credits c JOIN payment_orders p ON p.id=c.payment_id
 JOIN payos_qr_sessions s ON s.payment_id=c.payment_id AND s.channel_id=c.channel_id
-WHERE p.provider='PAYOS' AND s.facility_id=? AND s.receiver_owner_id=? AND c.bank_time>=? AND c.bank_time<?
+WHERE p.provider IN('PAYOS','SEPAY') AND s.facility_id=? AND s.receiver_owner_id=? AND c.bank_time>=? AND c.bank_time<?
 AND (?::uuid IS NULL OR c.id>?::uuid) ORDER BY c.id LIMIT 501
 """,
                 facility,

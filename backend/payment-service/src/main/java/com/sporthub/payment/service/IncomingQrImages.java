@@ -10,13 +10,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class IncomingQrImages {
   private final PaymentQrSessions sessions;
+  private final SepaySessions sepay;
 
-  public IncomingQrImages(PaymentQrSessions sessions) {
+  public IncomingQrImages(PaymentQrSessions sessions, SepaySessions sepay) {
     this.sessions = sessions;
+    this.sepay = sepay;
   }
 
   public String image(UUID payment, Caller actor, String token) {
     String value = sessions.own(payment, actor, token).qrCode();
+    if (value != null && value.equals("SEPAY_QR_" + payment)) return sepay.image(payment);
     if (value == null || value.isBlank() || value.length() > 4096)
       throw new ConflictException("QR thanh toán chưa sẵn sàng hoặc đã hết hạn.");
     try {

@@ -8,7 +8,7 @@ Quy định giao dịch mới trả trực tiếp A, bàn giao sau hai bên xác
 
 ### Requirement: New peer acquisitions pay the seller without facility resale fees
 
-Protocol PEER_RESALE_V1 SHALL chỉ nhận booking gốc REAL đã đủ chứng từ thu áp dụng, dùng P>0, P≤giá booking gốc và trả đúng P vào A. Không tính phí chuyển nhượng x%, phí SportHub hoặc nghĩa vụ Owner trả A/B do tranh chấp. Booking DEMO hiện có giữ luồng cũ, không thành nguồn P2P tiền thật.
+Protocol PEER_RESALE_V1 SHALL chỉ nhận booking gốc REAL đã đủ chứng từ thu áp dụng, dùng P>0, P≤giá booking gốc và trả đúng P vào A. Không tính phí chuyển nhượng x%, phí SportHub hoặc nghĩa vụ Owner trả A/B do tranh chấp. Booking DEMO hiện có chỉ giữ lịch sử/quyền sử dụng và phiên giao dịch đã mở, không tạo thêm listing/acquisition mới theo phí cũ và không thành nguồn P2P tiền thật.
 
 #### Scenario: Seller lists a booking for one hundred thousand
 - **WHEN** B chấp nhận P100000đ và tạo phiên mua

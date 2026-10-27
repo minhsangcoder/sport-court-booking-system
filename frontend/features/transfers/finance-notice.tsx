@@ -17,23 +17,19 @@ export function TransferFinanceNotice({ terms }: { terms: TransferFinanceTerms }
           Chủ cơ sở chỉ phân xử quyền dùng sân khi tranh chấp, không hoàn khoản tiền P2P. Sau khi
           nhận quyền, người mua không được chuyển nhượng tiếp.
         </p>
-        <p>
-          Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.
-        </p>
+        <p>Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.</p>
       </section>
     )
   if (terms.mode !== 'DEMO' && terms.mode !== 'REAL')
     return (
       <p className="my-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
-        Giao dịch dùng điều khoản cũ. Cần kiểm tra và chấp nhận điều khoản mô phỏng của cơ sở trước
-        giao dịch mới; không tự áp phí hiện tại vào lịch sử.
+        Đây là điều khoản giao dịch cũ, chỉ phục vụ lịch sử. Tin đăng mới sử dụng chuyển nhượng trực
+        tiếp, không có phí cơ sở.
       </p>
     )
   return (
     <section className="my-5 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm">
-      <h2 className="font-bold">
-        Điều khoản chuyển nhượng{terms.mode === 'DEMO' ? ' mô phỏng' : ''}
-      </h2>
+      <h2 className="font-bold">Điều khoản giao dịch cũ · chỉ xem lịch sử</h2>
       <p>
         Bên nhận thanh toán:{' '}
         <strong>
@@ -57,8 +53,8 @@ export function TransferFinanceNotice({ terms }: { terms: TransferFinanceTerms }
         và bàn giao, sử dụng theo lịch; không phải chờ cơ sở trả người bán.
       </p>
       <p className="text-xs text-slate-600">
-        Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy. Phí thuộc
-        cơ sở; SportHub không hưởng phí.{' '}
+        Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy. Phí thuộc cơ sở;
+        SportHub không hưởng phí.{' '}
         {terms.mode === 'DEMO'
           ? 'Không phát sinh giao dịch tiền thật.'
           : 'Cơ sở thực hiện trả/hoàn qua ngân hàng và xác nhận mã giao dịch.'}

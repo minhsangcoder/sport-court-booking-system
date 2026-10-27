@@ -189,6 +189,8 @@ def main():
                     break
             time.sleep(1)
         else:
+            diagnostic = subprocess.run(['docker', 'logs', '--tail', '100', rabbit], capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=NO_WINDOW)
+            (OUT/'rabbit-startup.log').write_text(diagnostic.stdout + diagnostic.stderr + '\nCLI: ' + result.stderr.decode('utf-8', errors='replace'), encoding='utf-8')
             raise RuntimeError('Rabbit startup timeout')
         env = dict(os.environ)
         env.update({'MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED':'true', 'SERVER_ADDRESS':'127.0.0.1',
@@ -218,7 +220,7 @@ def main():
             env['TRANSFER_ACQUISITION_SECONDS'] = '45'
             env['TRANSFER_FINANCE_ENABLED'] = 'true'
         if REAL_PAYMENTS_TEST:
-            env.update({'SPORTHUB_MONEY_MODE':'REAL', 'PAYOS_COLLECTION_CREATE_ENABLED':'true',
+            env.update({'SPORTHUB_MONEY_MODE':'REAL', 'SPORTHUB_COLLECTION_PROVIDER':'SEPAY', 'SEPAY_COLLECTION_CREATE_ENABLED':'true', 'PAYOS_COLLECTION_CREATE_ENABLED':'false',
                         'PAYMENT_TEST_PROVIDER_ALLOWED':'true',
                         'PAYMENT_SECRET_KEYS':'synthetic:'+base64.b64encode(os.urandom(32)).decode(),
                         'PAYMENT_WEBHOOK_ORIGIN':f'http://127.0.0.1:{ports["gateway"]}',

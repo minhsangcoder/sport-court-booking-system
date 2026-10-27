@@ -20,7 +20,8 @@ public class PublicRouteMatcher {
   }
 
   public boolean isPublic(String path, org.springframework.http.HttpMethod method) {
-    if (pathMatcher.match("/api/v1/payments/providers/payos/*/webhook", path)
+    if ((pathMatcher.match("/api/v1/payments/providers/payos/*/webhook", path)
+            || pathMatcher.match("/api/v1/payments/providers/sepay/*/webhook", path))
         && !org.springframework.http.HttpMethod.POST.equals(method)) return false;
     return isPublic(path);
   }

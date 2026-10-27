@@ -77,7 +77,7 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
                   basis.base(),
                   rate,
                   target,
-                  basis.acquisition(),
+                  null,
                   repo.write(allocations),
                   basis.fingerprint(),
                   actor.id(),
@@ -215,15 +215,13 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
               refunds.policy(
                   cancelled,
                   input.quoteId(),
-                  basis.acquisition(),
                   basis.base(),
                   rate,
                   target,
                   policy,
                   allocations,
                   destinations,
-                  actor.id(),
-                  basis.fundingPayers());
+                  actor.id());
           repo.jdbc().update("UPDATE booking_groups SET state='GROUP_CANCELLED' WHERE id=?", id);
           repo.jdbc()
               .update(

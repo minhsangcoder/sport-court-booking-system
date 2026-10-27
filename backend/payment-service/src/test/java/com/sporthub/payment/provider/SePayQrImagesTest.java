@@ -92,6 +92,24 @@ class SePayQrImagesTest {
   }
 
   @Test
+  void facilityPaymentQrUsesItsOwnBoundMemoAndAccount() throws Exception {
+    image.set(png("000123456789", "100000", "SC0000001"));
+    assertThat(client().fetch("970436", "000123456789", new BigDecimal("100000"), "SC0000001"))
+        .isEqualTo(image.get());
+    assertThat(query.get()).contains("des=SC0000001", "amount=100000", "acc=000123456789");
+  }
+
+  @Test
+  void validFacilityQrWithFinderLikeDataStillRequiresExactReceiverAndMemo() throws Exception {
+    image.set(png("000555666777", "120000", "SC1"));
+    assertThat(client().fetch("970436", "000555666777", new BigDecimal("120000"), "SC1"))
+        .isEqualTo(image.get());
+    assertThatThrownBy(
+            () -> client().fetch("970436", "000555666777", new BigDecimal("120000"), "SC2"))
+        .isInstanceOf(ActionPolicyException.class);
+  }
+
+  @Test
   void rejectsWrongEncodedAccountAmountMemoAndMalformedImage() throws Exception {
     for (byte[] invalid :
         List.of(

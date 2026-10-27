@@ -18,7 +18,8 @@ public class PaymentRuntimeController {
   public PaymentRuntimeController(
       CollectionRuntime runtime,
       RemoteIdentity identity,
-      @Value("${PAYOS_COLLECTION_CREATE_ENABLED:false}") boolean enabled) {
+      @Value("${SEPAY_COLLECTION_CREATE_ENABLED:${PAYOS_COLLECTION_CREATE_ENABLED:false}}")
+          boolean enabled) {
     this.runtime = runtime;
     this.identity = identity;
     this.enabled = enabled;

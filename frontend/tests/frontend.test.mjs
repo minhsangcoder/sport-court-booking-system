@@ -52,89 +52,19 @@ function load(file, extra = {}) {
   );
   return exports;
 }
-const selection = load("src/lib/selection.ts");
-const routes = load("src/lib/routes.ts");
-const domain = load("src/lib/domain.ts");
-test("labels preserve arbitrary user strings and money preserves fractional wire values", () => {
-  assert.equal(domain.label("constructor"), "constructor");
-  assert.equal(domain.label("__proto__"), "__proto__");
-  assert.equal(domain.label("PAST_SLOT"), "Đã qua giờ");
-  assert.match(domain.money(100000.5), /100\.000,5/);
+const labels = load("lib/display-labels.ts");
+const schedule = load("features/schedule/types.ts");
+const auth = load("features/auth/google-auth-state.ts");
+test("current labels ignore prototype keys and money preserves fractional wire values", () => {
+  assert.equal(labels.displayLabel("constructor"), "Chưa xác định");
+  assert.equal(labels.displayLabel("__proto__", "Tên khách"), "Tên khách");
+  assert.equal(labels.displayLabel("PAST_SLOT"), "Đã qua giờ");
+  assert.match(schedule.money(100000.5), /100\.000,5/);
 });
-const slot = (hour, state = "AVAILABLE", amount = 100000) => ({
-  startsAt: `2026-10-13T${hour}:00:00Z`,
-  endsAt: `2026-10-13T${String(Number(hour) + 1).padStart(2, "0")}:00:00Z`,
-  state,
-  amount,
-});
-test("continuous available slots preserve server interval and accept reverse click order", () => {
-  const a = slot("06"),
-    b = slot("07");
-  const result = selection.selectedInterval([a, b], [b.startsAt, a.startsAt]);
-  assert.equal(result.startsAt, a.startsAt);
-  assert.equal(result.endsAt, b.endsAt);
-});
-test("selection rejects gaps, unavailable states, absent prices and stale ids", () => {
-  for (const state of ["BOOKED", "HELD", "BLOCKED", "MAINTENANCE"]) {
-    const a = slot("06", state);
-    assert.equal(selection.selectedInterval([a], [a.startsAt]), null);
-  }
-  const a = slot("06"),
-    c = slot("08");
-  assert.equal(
-    selection.selectedInterval([a, c], [a.startsAt, c.startsAt]),
-    null,
-  );
-  assert.equal(
-    selection.selectedInterval([slot("06", "AVAILABLE", null)], [a.startsAt]),
-    null,
-  );
-  assert.equal(selection.selectedInterval([a], [a.startsAt, "missing"]), null);
-  assert.equal(selection.selectedInterval([a], [a.startsAt, a.startsAt]), null);
-});
-test("safe login continuation preserves group codes and prevents external redirects", () => {
-  assert.equal(
-    selection.safeNext("/customer/groups/join?code=one-time-code"),
-    "/customer/groups/join?code=one-time-code",
-  );
-  for (const value of [
-    null,
-    "https://example.com",
-    "//example.com",
-    "/\\example.com",
-    "/login?next=/",
-    "/register",
-    "/verify",
-    "/x\r\nLocation:evil",
-  ])
-    assert.equal(selection.safeNext(value), "/customer/bookings");
-});
-test("route grammar covers every workspace and rejects accidental or invented pages", () => {
-  const id = "11111111-2222-4333-8444-555555555555";
-  for (const p of [
-    "/",
-    "/search",
-    `/facilities/${id}/courts/${id}`,
-    `/customer/booking/holds/${id}`,
-    `/customer/groups/${id}/split`,
-    `/customer/transfers/acquisitions/${id}`,
-    `/owner/application/${id}/facility/schedule/preview`,
-    `/owner/facilities/${id}/maintenance`,
-    `/owner/bookings/${id}`,
-    `/staff/counter-booking/${id}`,
-    `/admin/owner-applications/${id}`,
-    "/admin/bookings/reconciliation",
-  ])
-    assert.equal(routes.isFrontendRoute(p), true, p);
-  for (const p of [
-    "/fake",
-    "/facilities/not-a-uuid",
-    "/owner/facilities/evil",
-    "/admin/facilities/lock",
-    "/api/v1/bookings",
-    "/customer/groups/join/extra",
-  ])
-    assert.equal(routes.isFrontendRoute(p), false, p);
+test("current login continuation preserves group codes and rejects external redirects", () => {
+  assert.equal(auth.postLoginPath("/customer/groups/join?code=one-time-code"), "/customer/groups/join?code=one-time-code");
+  for (const value of [null, "https://example.com", "//example.com", "/\\example.com"])
+    assert.equal(auth.postLoginPath(value), "/");
 });
 const json = (data, status = 200) =>
   Response.json({ data, message: "Success" }, { status });

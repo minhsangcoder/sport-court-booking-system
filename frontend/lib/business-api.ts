@@ -118,13 +118,6 @@ export type Sport = {
   version: number
   court_count?: number
 }
-export type ActivityReport = {
-  bookings: Record<string, string | number>[]
-  usage: Record<string, string | number>[]
-  appliedCollections: Record<string, string | number>[]
-  occupancy: null
-  netRevenue: null
-}
 const write = <T>(path: string, body: unknown, key?: string, method = 'POST') =>
   api<T>(path, {
     method,

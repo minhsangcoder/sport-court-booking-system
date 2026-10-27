@@ -16,6 +16,9 @@
 **/docs/
 **/*.md
 !/README.md
+!/docs/
+/docs/*
+!/docs/sepay-payments.md
 **/*.mdx
 **/*.doc
 **/*.docx
@@ -89,7 +92,7 @@ docs/phase-0-audit.md
 coverage/
 
 # Generated OpenAPI output
-frontend/src/lib/api/generated/
+frontend/lib/api/generated/
 backend/**/target/generated-sources/openapi/
 
 # Temporary, cache, and generated document output

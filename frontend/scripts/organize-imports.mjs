@@ -21,7 +21,10 @@ const host = {
 const service = ts.createLanguageService(host)
 for (const argument of process.argv.slice(2)) {
   const file = path.resolve(root, argument)
-  if (!file.startsWith(root + path.sep) || file.includes(path.sep + 'src' + path.sep))
+  if (
+    !file.startsWith(root + path.sep) ||
+    file.includes(path.sep + 'api' + path.sep + 'generated' + path.sep)
+  )
     throw new Error('Outside refactor scope')
   let source = fs.readFileSync(file, 'utf8')
   const edits = service.organizeImports(

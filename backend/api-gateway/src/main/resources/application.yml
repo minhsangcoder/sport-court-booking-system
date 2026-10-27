@@ -109,6 +109,7 @@ sporthub:
         - /api/v1/bookings/search
         - /api/v1/payments/providers/demo/callback
         - /api/v1/payments/providers/payos/*/webhook
+        - /api/v1/payments/providers/sepay/*/webhook
         - /actuator/health/**
 
 jwt:

@@ -235,8 +235,8 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
           )}
           {session.state === 'VERIFIED' && !applied && !applicationNotice && (
             <p className="text-sm">
-              Đang áp dụng thanh toán hoặc bàn giao quyền. Người mua không phải chờ cơ sở trả người
-              bán.
+              Đang áp dụng thanh toán vào lượt đặt. Quyền sử dụng được cấp khi hệ thống xác nhận đủ
+              tiền và ghi nhận lượt đặt thành công.
             </p>
           )}
           {applicationNotice && (

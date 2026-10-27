@@ -2,6 +2,8 @@
 
 ## Context
 
+Quyết định mới nhất 27/10/2026: SePay thay payOS cho khoản thu đặt sân mới; webhook API Key khớp kênh/receiver revision và dữ kiện ngân hàng mới ghi nhận đủ tiền. QR P2P vẫn B→A và xác nhận hai bên, không có phí cơ sở. Không còn Customer tự hủy booking đã thanh toán; DEMO/legacy chỉ giữ lịch sử và tiếp tục phiên đã mở, không tạo thêm giao dịch theo phí cũ. Các mô tả cutover/payOS trong phần điều tra ban đầu bên dưới chỉ phục vụ dữ liệu cũ khi xung đột với quyết định này.
+
 Xem proposal để biết phạm vi và các lựa chọn người dùng đã chốt ngày25/10/2026. Đây là kế hoạch, chưa có implementation hoặc migration mới.
 
 Những ràng buộc đọc từ source hiện tại:
@@ -70,9 +72,9 @@ Fraud restriction lưu nguồn quyết định ở Booking cùng peer adjudicati
 
 ### D5. Protocol mới và nguồn quyết định
 
-New listing/acquisition chỉ nhận booking gốc REAL đã đủ chứng từ thu hợp lệ, gắn `PEER_RESALE_V1`, seller/buyer, nguyên booking interval, P, currency, bankDestinationRevisionId/hash của A, phiên bản policy hoàn và termsHash để giữ tương thích snapshot; metadata policy không cấp quyền hoàn cho người mua lại. DEMO hiện có giữ luồng cũ; không tự chuyển khoản thu DEMO thành nguồn tiền thật hoặc mở P2P thật cho booking DEMO. Giữ P>0 và P≤giá booking gốc, không thêm markup/fee. Chat không đổi P; thay giá cần rút phiên chưa khai thanh toán hợp lệ rồi B chấp nhận phiên mới. Đổi ngân hàng còn qua D13; rút listing không gỡ booking/case. Không sửa QR/terms đã khóa.
+New listing/acquisition chỉ nhận booking gốc REAL đã đủ chứng từ thu hợp lệ, gắn `PEER_RESALE_V1`, seller/buyer, nguyên booking interval, P, currency, bankDestinationRevisionId/hash của A, phiên bản policy hoàn và termsHash để giữ tương thích snapshot; metadata policy không cấp quyền hoàn cho người mua lại. DEMO chỉ giữ lịch sử/quyền sử dụng cũ, không tạo listing/acquisition mới; không tự chuyển khoản thu DEMO thành nguồn tiền thật hoặc mở P2P thật cho booking DEMO. Giữ P>0 và P≤giá booking gốc, không thêm markup/fee. Chat không đổi P; thay giá cần rút phiên chưa khai thanh toán hợp lệ rồi B chấp nhận phiên mới. Đổi ngân hàng còn qua D13; rút listing không gỡ booking/case. Không sửa QR/terms đã khóa.
 
-SePay chỉ dựng ảnh QR từ ngân hàng A, P và mã tham chiếu duy nhất của attempt. Không tạo payment order payOS vào Owner cho peer purchase, không tạo F/N hoặc gọi movement adapter. Mode thực và `confirmationMethod=COUNTERPARTY_ACKNOWLEDGED` hoặc `OWNER_ADJUDICATED` phải tách khỏi `BANK_VERIFIED`.
+Trong P2P, SePay chỉ dựng ảnh QR từ ngân hàng A, P và mã tham chiếu duy nhất của attempt. Không tạo payment order payOS vào Owner cho peer purchase, không tạo F/N hoặc gọi movement adapter. Mode thực và `confirmationMethod=COUNTERPARTY_ACKNOWLEDGED` hoặc `OWNER_ADJUDICATED` phải tách khỏi `BANK_VERIFIED`.
 
 Transfer giữ chat, attachments, command intents và projection. Booking sở hữu lease/phase quyết định có được cấp quyền, usage freeze, hạn, quyết định cuối và giới hạn1 handoff. Mọi action có idempotency key, expectedVersion và fingerprint đúng actor/attempt/terms; service call xác thực HMAC. Command đã commit được đọc/replay sau timeout; không suy kết quả từ việc chưa nhận event. RPC/QR/storage không thực hiện trong court transaction. Projection chậm chỉ hiển thị đang đồng bộ, chưa cấp credential B.
 
@@ -229,3 +231,9 @@ Không gọi Payment/storage/provider trong user/court transaction. Timeout sau 
 ### Cập nhật thanh toán nhóm ngày 2026-10-27
 
 Tái sử dụng GET /groups/{id}/invite và PUT /groups/{id}/allocations. Mã mời nằm ngay trên trang nhóm tại khu thanh toán, chỉ Owner nhóm đang nhận thành viên đọc được. Poll GET /groups/{id} mỗi 5 giây cập nhật thành viên/tiến độ; không reload toàn bộ trình duyệt hoặc tự chốt danh sách. Người tổ chức bấm “Chia đều và bắt đầu thanh toán” khi đủ người; server chia đều theo danh sách hiện tại trong group lock. Chia tùy chỉnh vẫn có trang riêng. Khi allocationsLocked, ẩn mã mời; khi đã paymentRequestedAt hoặc amountPaid>0, ẩn cả điều chỉnh và giữ guard backend. Trang nhóm không render panel hủy theo chính sách dành cho người mua chuyển nhượng.
+
+### Dọn source theo audit 3–5 ngày 2026-10-27
+
+Giữ một cây frontend tại `app`, `components`, `features`, `lib`; xóa `frontend/src`, fixture mock cũ và module không có đường import từ entry points Next sau khi chuyển test hữu ích sang code hiện hành. SDK tùy chọn sinh vào `lib/api/generated`, nằm ngoài phạm vi kiểm tra source viết tay. Không xóa baseline đo lịch sử để che thay đổi.
+
+Cơ sở tính hoàn mới chỉ chứa khoản thu đã áp dụng và người trả thực tế; không truyền acquisition/funding-payer rỗng hoặc tạo beneficiary P2P mới. Fingerprint vẫn giữ đoạn `|null|` để quote đã cấp không bị đổi nghĩa. Schema, reader khoản hoàn/beneficiary cũ và hoàn vận hành hợp lệ được giữ; dữ liệu lịch sử phục vụ test được seed riêng, không giữ API production có thể tạo lại quyền hoàn đã bỏ.

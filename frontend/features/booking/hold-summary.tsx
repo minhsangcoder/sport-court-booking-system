@@ -168,8 +168,11 @@ function Loaded({ id }: { id: string }) {
           </strong>
         </div>
         <p className="text-xs text-slate-500">
-          Thanh toán toàn bộ qua môi trường mô phỏng. Hủy trước thanh toán sẽ giải phóng giữ chỗ.
-          Lượt đặt trực tiếp không áp dụng hoàn tiền khi khách tự hủy sau khi thanh toán.
+          {h.quote.moneyClass === 'REAL'
+            ? 'Thanh toán bằng QR SePay vào tài khoản cơ sở. Hệ thống xác nhận khi nhận đủ tiền qua webhook.'
+            : 'Đây là lượt giữ chỗ mô phỏng cũ.'}{' '}
+          Hủy trước thanh toán sẽ giải phóng giữ chỗ. Lượt đặt trực tiếp không áp dụng hoàn tiền khi
+          khách tự hủy sau khi thanh toán.
         </p>
         <RefundPolicyNotice policy={h.quote.refundPolicy} />
       </section>

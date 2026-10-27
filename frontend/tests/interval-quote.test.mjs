@@ -1,10 +1,104 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import * as jsx from 'react/jsx-runtime'
 import { moduleLoader, hookDriver, deferred, flush } from './support/load-module.mjs'
 
 function selection(from, to) {
   return [{ startsAt: `2026-10-26T${from}:00Z`, endsAt: `2026-10-26T${to}:00Z`, amount: 51 }]
 }
+
+test('the current availability page sorts reverse clicks, blocks occupied cells and requires a server quote', () => {
+  const driver = hookDriver()
+  let selected = []
+  const cells = [
+    ...selection('15:00', '15:30'),
+    ...selection('15:30', '16:00'),
+    ...['BOOKED', 'HELD', 'BLOCKED', 'MAINTENANCE'].map((state, i) => ({
+      ...selection(`1${i + 6}:00`, `1${i + 6}:30`)[0],
+      state,
+    })),
+  ].map((cell) => ({ state: 'AVAILABLE', currency: 'VND', ...cell }))
+  const pure = moduleLoader(
+    {},
+    { react: driver.react },
+  )('features/discovery/use-interval-quote.ts').selectionInterval
+  const load = moduleLoader(
+    {},
+    {
+      react: driver.react,
+      'react/jsx-runtime': jsx,
+      'next/link': { default: 'a' },
+      'next/navigation': { useRouter: () => ({ push() {} }) },
+      'lucide-react': { Navigation: () => null },
+      '@/components/ui/button': { Button: 'button' },
+      '@/components/ui/input': { Input: 'input' },
+      '@/lib/api': {
+        api() {
+          throw new Error('No hold may be sent without a quote')
+        },
+        ApiError: Error,
+      },
+      '@/lib/auth-context': { useAuth: () => ({ user: { id: 'customer' } }) },
+      '@/lib/use-api': {
+        useApi: (url) => ({
+          data: url?.startsWith('/bookings/availability')
+            ? { slots: cells }
+            : url?.endsWith('/courts')
+              ? [{ id: 'court', name: 'Sân 1' }]
+              : url === '/facilities/facility'
+                ? { name: 'Cơ sở', timezone: 'Asia/Ho_Chi_Minh' }
+                : null,
+          reload() {},
+          loading: false,
+        }),
+      },
+      '@/features/booking/admission-notice': {
+        AdmissionNotice: () => null,
+        AdmissionErrorContext: () => null,
+      },
+      './use-interval-quote': {
+        useIntervalQuote: (court, value) => {
+          selected = value
+          return { ...pure(court, value), quote: null, loading: false }
+        },
+      },
+    },
+  )
+  const Page = load('features/discovery/availability-page.tsx').AvailabilityPage
+  const render = () =>
+    driver.render(() =>
+      Page({ facilityId: 'facility', courtId: 'court', initialDate: '2026-10-26' }),
+    )
+  function nodes(tree) {
+    if (!tree || typeof tree !== 'object') return []
+    if (Array.isArray(tree)) return tree.flatMap(nodes)
+    return [tree, ...nodes(tree.props?.children)]
+  }
+  let tree = render()
+  for (const cell of cells)
+    assert.equal(
+      nodes(tree).find((n) => n.key === cell.startsAt).props.disabled,
+      cell.state !== 'AVAILABLE',
+    )
+  nodes(tree)
+    .find((n) => n.key === cells[1].startsAt)
+    .props.onClick()
+  tree = render()
+  nodes(tree)
+    .find((n) => n.key === cells[0].startsAt)
+    .props.onClick()
+  tree = render()
+  assert.deepEqual(
+    Array.from(selected, (cell) => cell.startsAt),
+    [cells[0].startsAt, cells[1].startsAt],
+  )
+  assert.equal(pure('court', selected).interval.endsAt, cells[1].endsAt)
+  assert.equal(
+    nodes(tree).find((n) => n.props?.children === 'Xem tóm tắt và giữ chỗ').props.disabled,
+    true,
+  )
+  driver.unmount()
+})
 
 test('selection uses one continuous 60–240 minute interval rather than adding rounded cells', () => {
   const { selectionInterval } = moduleLoader(

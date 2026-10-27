@@ -294,7 +294,7 @@ public class PayosChannels {
   public Channel ready(UUID facility) {
     var current = current(facility);
     if (!current.status().equals("READY"))
-      throw new ConflictException("Chủ sân cần cấu hình kênh payOS trước khi nhận đặt sân.");
+      throw new ConflictException("Chủ sân cần cấu hình kênh SePay trước khi nhận đặt sân.");
     return current;
   }
 
@@ -302,7 +302,7 @@ public class PayosChannels {
     var rows =
         repo.jdbc()
             .queryForList(
-                "SELECT r.*,c.facility_id,c.owner_id FROM payos_channel_revisions r JOIN"
+                "SELECT r.*,c.facility_id,c.owner_id,c.provider FROM payos_channel_revisions r JOIN"
                     + " payos_channels c ON c.id=r.channel_id WHERE r.id=?",
                 revision);
     if (rows.isEmpty())
@@ -319,7 +319,12 @@ public class PayosChannels {
             : vault.open(row.get("account_ciphertext").toString(), "receiver:" + revision),
         text(row, "account_name"),
         text(row, "receiver_hash"),
-        credentials(row));
+        "SEPAY".equals(row.get("provider")) ? null : credentials(row));
+  }
+
+  public String collectionProvider(UUID channel) {
+    return repo.jdbc()
+        .queryForObject("SELECT provider FROM payos_channels WHERE id=?", String.class, channel);
   }
 
   public PayosCredentials reconciliationCredentials(UUID channel) {
@@ -337,7 +342,8 @@ public class PayosChannels {
     return repo
         .jdbc()
         .queryForList(
-            "SELECT * FROM payos_channel_revisions WHERE channel_id=? ORDER BY revision DESC",
+            "SELECT r.* FROM payos_channel_revisions r JOIN payos_channels c ON c.id=r.channel_id"
+                + " WHERE c.id=? AND c.provider='PAYOS' ORDER BY r.revision DESC",
             channel)
         .stream()
         .map(this::credentials)
@@ -366,7 +372,7 @@ public class PayosChannels {
                     + " (status<>'DISABLED') DESC,created_at DESC LIMIT 1",
                 facility);
     if (rows.isEmpty())
-      throw new ConflictException("Chủ sân cần cấu hình kênh payOS trước khi nhận đặt sân.");
+      throw new ConflictException("Chủ sân cần cấu hình kênh SePay trước khi nhận đặt sân.");
     return view((UUID) rows.getFirst().get("current_revision_id"));
   }
 
