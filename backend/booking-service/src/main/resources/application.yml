@@ -56,7 +56,7 @@ booking:
   advance-days: ${BOOKING_ADVANCE_DAYS:90} # DEMO_DEFAULT technical booking horizon
   group:
     deadline-seconds: ${GROUP_PAYMENT_DEADLINE_SECONDS:1800} # DEMO_DEFAULT configurable deadline
-    min-lead-seconds: ${GROUP_MIN_LEAD_SECONDS:7200} # UC-6.1 configurable minimum lead time
+    min-lead-seconds: ${GROUP_MIN_LEAD_SECONDS:900}
     payment-reminder:
       min-interval: ${GROUP_REMINDER_MIN_INTERVAL:PT15M} # IMPLEMENTATION_DEFAULT, not a canonical policy value
 

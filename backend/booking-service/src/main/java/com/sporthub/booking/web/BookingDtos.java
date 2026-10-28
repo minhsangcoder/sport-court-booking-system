@@ -265,7 +265,8 @@ public final class BookingDtos {
       UUID receiverRevisionId,
       String moneyClass,
       String source,
-      boolean operatorPayment) {
+      boolean operatorPayment,
+      boolean groupOrganizerPayment) {
     public Payable(
         UUID bookingId,
         UUID payerId,
@@ -276,7 +277,7 @@ public final class BookingDtos {
         UUID memberId) {
       this(
           bookingId, payerId, amount, currency, expiresAt, purpose, memberId, null, null, null,
-          "UNKNOWN", null, false);
+          "UNKNOWN", null, false, false);
     }
   }
 }

@@ -81,3 +81,26 @@ test('group page polls membership, removes the obsolete refund panel and hides i
   group = { ...group, allocationsLocked: true, members: [{ ...group.members[0], paymentRequestedAt: '2026-10-27T09:00:00Z' }] }
   assert.doesNotMatch(render(), /INLINE-INVITE|OBSOLETE-REFUND/)
 })
+
+test('only the organizer sees the outstanding balance and can pay unpaid member shares', () => {
+  const load = moduleLoader({}, {
+    react: React, 'react/jsx-runtime': jsx,
+    '@/components/ui/button': { Button: 'button' },
+  })
+  const Tracking = load('features/groups/payment-tracking.tsx').GroupPaymentTracking
+  const group = {
+    ownerId: 'owner', state: 'GROUP_PENDING', allocationsLocked: true, totalPaid: 50000,
+    maxMembers: 2, booking: { amount: 100000, currency: 'VND', priceSnapshot: { timezone: 'Asia/Ho_Chi_Minh' } },
+    members: [
+      { id: 'a', userId: 'owner', displayName: 'Chủ nhóm', amountDue: 50000, amountPaid: 50000, paymentState: 'PAID' },
+      { id: 'b', userId: 'member', displayName: 'Bạn chơi', amountDue: 50000, amountPaid: 0, paymentState: 'WAITING_FOR_PAYMENT' },
+    ],
+  }
+  const render = userId => renderToStaticMarkup(jsx.jsx(Tracking, { group, userId, busy: false, pay() {}, reload() {} }))
+  assert.match(render('owner'), /Thanh toán phần còn lại để nhận sân/)
+  assert.match(render('owner'), /Còn thiếu 50\.000/)
+  assert.match(render('owner'), />Thanh toán thay</)
+  assert.doesNotMatch(render('member'), /Thanh toán phần còn lại để nhận sân|>Thanh toán thay</)
+  group.state = 'CONFIRMED'
+  assert.doesNotMatch(render('owner'), /Thanh toán phần còn lại để nhận sân|>Thanh toán thay</)
+})

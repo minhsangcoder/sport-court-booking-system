@@ -56,7 +56,7 @@ export type Preview = {
   date: string
   timezone: string
   slots: Slot[]
-  pricingMode?: 'LEGACY_SLOT' | 'HOURLY_INTERVAL_V1'
+  pricingMode?: 'LEGACY_SLOT' | 'HOURLY_INTERVAL_V1' | 'PRORATED_SLOT_INTERVAL_V1'
   selectionStepMinutes?: number | null
   minimumMinutes?: number | null
   maximumMinutes?: number | null
@@ -72,7 +72,7 @@ export type Quote = {
   timezone: string
   segments: Slot[]
   quoteVersion?: 1 | 2
-  pricingMode?: 'LEGACY_SLOT' | 'HOURLY_INTERVAL_V1'
+  pricingMode?: 'LEGACY_SLOT' | 'HOURLY_INTERVAL_V1' | 'PRORATED_SLOT_INTERVAL_V1'
   pricingRevision?: string
   policyVersion?: number
   durationMinutes?: number
@@ -80,6 +80,7 @@ export type Quote = {
   warnings?: { code: string; startsAt: string; endsAt: string }[]
   suggestions?: { courtId: string; startsAt: string; endsAt: string }[]
   moneyClass?: 'REAL' | 'DEMO'
+  groupMinimumLeadSeconds?: number
   refundPolicy?: import('@/features/facility/refund-policy').RefundPolicy
 }
 export const weekdays = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật']

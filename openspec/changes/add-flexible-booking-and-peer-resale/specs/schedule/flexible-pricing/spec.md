@@ -72,8 +72,19 @@ Hệ thống SHALL cảnh báo khoảng trống mới liền kề dưới60 phú
 
 ### Requirement: Legacy per slot prices are not silently reinterpreted
 
-Giá/snapshot cũ SHALL giữ nguyên đơn vị và tiền đã chấp nhận. Booking linh hoạt chỉ được tạo khi Owner đã công bố coverage giá HOURLY; chuyển đổi không xác định được slot basis duy nhất SHALL cần Owner chốt giá.
+Giá/snapshot cũ SHALL giữ nguyên đơn vị và tiền đã chấp nhận. Theo xác nhận người dùng ngày28/10/2026, báo giá mới khi chưa công bố HOURLY SHALL tính tỷ lệ pricePerSlot / slotMinutes gốc của khoảng mở cửa hiệu lực, không sửa rule đã lưu. Không xác định được slot basis duy nhất SHALL cần Owner chốt giá. Coverage HOURLY đã công bố vẫn dùng giá giờ.
 
 #### Scenario: A legacy court uses thirty minute slots
 - **WHEN** rule cũ100000đ/slot và calendar30 phút được nâng cấp
-- **THEN** không tự hiểu là100000đ/giờ hoặc sửa tiền booking cũ; Owner phải xác nhận giá giờ trước nhận booking linh hoạt
+- **THEN** báo giá mới cho60 phút là200000đ, không tự hiểu là100000đ/giờ hoặc sửa tiền booking cũ
+
+### Requirement: Customers choose start and end and see live free ranges
+UI SHALL cung cấp giờ bắt đầu/kết thúc theo mốc30 phút và tổng hợp các khoảng trống liên tục, cập nhật mỗi5 giây. Không chọn qua hold/booking/giờ nghỉ; polling không tự giữ sân hay xóa lựa chọn còn hợp lệ.
+
+#### Scenario: Existing hourly slots support a half-hour start
+- **WHEN** bảng giá cũ2000đ/60 phút và lịch14:00–16:00 còn trống, khách chọn14:30–15:30
+- **THEN** nhận quote2000đ cho đúng khoảng, preview có mốc14:30 và không đổi lịch/tiền của booking đã có
+
+#### Scenario: Another customer holds the selected interval
+- **WHEN** polling trả khoảng chọn bị giữ
+- **THEN** UI báo khoảng không còn trống và chặn tiếp tục; server vẫn kiểm overlap khi tạo hold

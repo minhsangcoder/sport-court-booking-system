@@ -36,6 +36,43 @@ class FlexiblePricingEngineTest {
   }
 
   @Test
+  void proratesExistingSlotPricesAcrossRateBoundariesWithoutChangingTheRules() {
+    var first = new PriceRule(UUID.randomUUID(), facility, null, null, 1, null,
+        LocalTime.of(14, 0), LocalTime.of(15, 0), new BigDecimal("2000"), 0, "Standard",
+        day.minusDays(1), null, "VND", true, 0);
+    var second = new PriceRule(UUID.randomUUID(), facility, null, null, 1, null,
+        LocalTime.of(15, 0), LocalTime.of(16, 0), new BigDecimal("4000"), 0, "Peak",
+        day.minusDays(1), null, "VND", true, 0);
+    var rules = List.of(first, second);
+    var result = engine.quote(context, calendar, rules, policy,
+        new QuoteInput(court, at(14, 30), at(15, 30)), true);
+    assertThat(result.amount()).isEqualByComparingTo("3000");
+    assertThat(result.segments()).extracting(Slot::amount)
+        .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+        .containsExactly(new BigDecimal("1000"), new BigDecimal("2000"));
+    assertThat(result.pricingMode()).isEqualTo("PRORATED_SLOT_INTERVAL_V1");
+    assertThat(first.pricingUnit()).isEqualTo("LEGACY_SLOT");
+    assertThat(first.pricePerSlot()).isEqualByComparingTo("2000");
+    assertThat(engine.preview(context, day, calendar, rules, policy, true).slots())
+        .anySatisfy(s -> { assertThat(s.startsAt()).isEqualTo(at(14, 30)); assertThat(s.amount()).isEqualByComparingTo("1000"); });
+  }
+
+  @Test
+  void proratedTotalsUseExactFractionsAndTheOriginalSlotDuration() {
+    var rule = new PriceRule(UUID.randomUUID(), facility, null, null, 1, null,
+        LocalTime.of(6, 0), LocalTime.of(22, 0), new BigDecimal("101"), 0, "Legacy",
+        day.minusDays(1), null, "VND", true, 0);
+    for (int basis : List.of(30, 45, 60)) {
+      var opening = new ScheduleReads.CalendarDay(false,
+          List.of(new Interval(1, LocalTime.of(6, 0), LocalTime.of(22, 0), basis)));
+      var result = engine.quote(context, opening, List.of(rule), policy,
+          new QuoteInput(court, at(14, 30), at(15, 30)), true);
+      assertThat(result.amount()).isEqualByComparingTo(basis == 30 ? "202" : basis == 45 ? "135" : "101");
+      assertThat(result.segments().stream().map(Slot::amount).reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo(result.amount());
+    }
+  }
+
+  @Test
   void halfHourRangeCrossesTwoRatesAndBindsTheSnapshot() {
     var rates = List.of(rate(15, 0, 16, 0, "100000", 0), rate(16, 0, 17, 0, "200000", 0));
     var result = quote(rates, 15, 30, 16, 30);

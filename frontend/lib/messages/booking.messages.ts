@@ -24,6 +24,8 @@ export const bookingMessages: Record<string, string> = {
     'Người tổ chức cần hủy lượt đặt qua màn hình nhóm.',
   'Group payment deadline has ended or group is no longer pending':
     'Đã hết hạn góp tiền hoặc nhóm không còn chờ thanh toán.',
+  'Group minimum booking lead time elapsed during creation':
+    'Không còn đủ thời gian trước giờ chơi để tạo nhóm. Vui lòng chọn giờ chơi muộn hơn hoặc chuyển sang đặt cá nhân, thanh toán toàn bộ.',
   'A member token is required': 'Vui lòng cung cấp mã vào sân của thành viên.',
   'Member check-in is permitted from 30 minutes before play until booking end':
     'Thành viên chỉ được vào sân từ 30 phút trước giờ chơi đến khi hết giờ đặt.',

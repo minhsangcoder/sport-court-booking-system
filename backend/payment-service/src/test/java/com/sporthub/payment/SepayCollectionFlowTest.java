@@ -140,6 +140,51 @@ class SepayCollectionFlowTest {
   }
 
   @Test
+  void organizerCanReplaceAnUnpaidMemberQrAndDuplicateTransfersSettleOnlyOnce() {
+    UUID memberId = UUID.randomUUID();
+    var organizer = new com.sporthub.common.security.RemoteIdentity.Caller(
+        UUID.randomUUID(), "Organizer", Set.of("CUSTOMER"), Map.of());
+    when(f.payable.payable(eq(f.booking), eq(memberId), any())).thenAnswer(call ->
+        f.bill().put("receiverRevisionId", channel.receiverRevisionId().toString())
+            .put("purpose", "GROUP_CONTRIBUTION").put("memberId", memberId.toString())
+            .put("payerId", call.getArgument(2).equals("organizer") ? organizer.id().toString() : f.customer.id().toString())
+            .put("groupOrganizerPayment", call.getArgument(2).equals("organizer")));
+    var input = new CreatePayment(f.booking, memberId);
+    var original = orders.create(input, "member", f.customer, "member");
+    var replacement = orders.create(input, "organizer", organizer, "organizer");
+    assertThat(f.repo.find(original.id()).status()).isEqualTo("EXPIRED");
+    assertThat(replacement.payerId()).isEqualTo(organizer.id());
+    assertThat(orders.create(input, "organizer", organizer, "organizer").id()).isEqualTo(replacement.id());
+    assertThatThrownBy(() -> orders.create(input, "member-retry", f.customer, "member"))
+        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
+    receive(webhook(replacement, 9001, 100000));
+    receive(webhook(original, 9002, 100000));
+    assertThat(f.repo.jdbc().queryForObject(
+        "SELECT sum(applied_amount) FROM real_payment_collections WHERE payment_id IN (?,?)", java.math.BigDecimal.class,
+        original.id(), replacement.id())).isEqualByComparingTo("100000");
+    assertThat(f.repo.jdbc().queryForObject(
+        "SELECT sum(amount) FROM real_unapplied_funds WHERE payment_id=?", java.math.BigDecimal.class,
+        original.id())).isEqualByComparingTo("100000");
+  }
+
+  @Test
+  void organizerCannotReplaceAPartiallyPaidMemberQr() {
+    UUID memberId = UUID.randomUUID();
+    var organizer = new com.sporthub.common.security.RemoteIdentity.Caller(
+        UUID.randomUUID(), "Organizer", Set.of("CUSTOMER"), Map.of());
+    var bill = f.bill().put("receiverRevisionId", channel.receiverRevisionId().toString())
+        .put("purpose", "GROUP_CONTRIBUTION").put("memberId", memberId.toString());
+    when(f.payable.payable(eq(f.booking), eq(memberId), any())).thenReturn(bill);
+    var original = orders.create(new CreatePayment(f.booking, memberId), "member", f.customer, "member");
+    receive(webhook(original, 9010, 40000));
+    bill.put("payerId", organizer.id().toString()).put("groupOrganizerPayment", true);
+    assertThatThrownBy(() -> orders.create(new CreatePayment(f.booking, memberId), "organizer", organizer, "organizer"))
+        .isInstanceOf(com.sporthub.common.exception.ConflictException.class)
+        .hasMessageContaining("một phần tiền");
+    assertThat(f.repo.find(original.id()).status()).isEqualTo("PENDING");
+  }
+
+  @Test
   void newOrderUsesSePayOwnerQrAndDoesNotExposeWebhookSecrets() throws Exception {
     var p = create();
     assertThat(p.provider()).isEqualTo("SEPAY");

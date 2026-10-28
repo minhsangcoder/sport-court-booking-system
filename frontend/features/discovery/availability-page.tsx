@@ -15,6 +15,8 @@ import { OwnFacilityNotice } from '@/features/booking/own-facility-notice'
 import { type Preview, type Slot, money } from '@/features/schedule/types'
 import type { Hold } from '@/features/booking/types'
 import { useIntervalQuote } from './use-interval-quote'
+import { availableRanges, rangeSelection } from './available-ranges'
+import { usePolling } from '@/lib/use-polling'
 const reasons: Record<string, string> = {
   MAINTENANCE: 'Bảo trì',
   CLOSED_EXCEPTION: 'Đóng cửa',
@@ -48,12 +50,48 @@ export function AvailabilityPage({
   const [error, setError] = useState('')
   const [policyFailure, setPolicyFailure] = useState<ApiError | null>(null)
   const court = courts.data?.find((c) => c.id === courtId)
+  const slots = resource.data?.slots ?? []
+  const ranges = availableRanges(slots)
+  const unavailable = selection.some(
+    (s) =>
+      !slots.some(
+        (current) =>
+          current.startsAt === s.startsAt &&
+          current.endsAt === s.endsAt &&
+          current.state === 'AVAILABLE',
+      ),
+  )
+  usePolling((signal) => resource.poll(signal), {
+    interval: 5000,
+    enabled: !busy,
+    scope: `${courtId}:${date}`,
+  })
   const pricing = useIntervalQuote(
     courtId,
-    selection,
-    resource.data?.pricingMode === 'HOURLY_INTERVAL_V1',
+    unavailable ? [] : selection,
+    resource.data?.pricingMode !== 'LEGACY_SLOT',
   )
   const holdIntent = useRef<{ selection: string; payload: string; key: string } | null>(null)
+  function chooseRange(startsAt: string, endsAt: string) {
+    holdIntent.current = null
+    setError('')
+    setSelection(rangeSelection(slots, startsAt, endsAt))
+  }
+  const start = selection[0]?.startsAt ?? ''
+  const end = selection[selection.length - 1]?.endsAt ?? ''
+  const startOptions = slots.filter(
+    (s) =>
+      s.state === 'AVAILABLE' &&
+      ranges.some(
+        (r) => s.startsAt >= r.startsAt && Date.parse(s.startsAt) + 3600000 <= Date.parse(r.endsAt),
+      ),
+  )
+  const endOptions = start
+    ? slots.filter((s) => {
+        const minutes = (Date.parse(s.endsAt) - Date.parse(start)) / 60000
+        return minutes >= 60 && minutes <= 240 && rangeSelection(slots, start, s.endsAt).length > 0
+      })
+    : []
   function select(slot: Slot) {
     holdIntent.current = null
     setError('')
@@ -139,7 +177,7 @@ export function AvailabilityPage({
         Lịch trống cập nhật từ hệ thống. Chọn khung giờ chưa giữ chỗ; giờ theo{' '}
         {timezoneLabel(timezone || 'cơ sở')}.
       </p>
-      {resource.data?.pricingMode === 'HOURLY_INTERVAL_V1' && (
+      {resource.data?.selectionStepMinutes === 30 && (
         <p className="mt-2 text-sm text-slate-500">
           Chọn liên tiếp từ 60 phút đến 4 giờ, theo bước 30 phút. Giá cuối tính theo toàn bộ khoảng
           chọn và làm tròn một lần.
@@ -183,6 +221,89 @@ export function AvailabilityPage({
           Làm mới lịch
         </Button>
       </div>
+      <section
+        aria-label="Lịch trống"
+        className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5"
+      >
+        <h2 className="font-bold">Các khoảng còn trống</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Tự cập nhật mỗi 5 giây. Chọn một khoảng hoặc tự chọn giờ bên dưới.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {ranges.map((range) => (
+            <Button
+              key={`range-${range.startsAt}`}
+              variant="outline"
+              disabled={
+                busy ||
+                ownFacility ||
+                resource.loading ||
+                Date.parse(range.endsAt) - Date.parse(range.startsAt) < 3600000
+              }
+              onClick={() =>
+                chooseRange(
+                  range.startsAt,
+                  new Date(Date.parse(range.startsAt) + 3600000).toISOString(),
+                )
+              }
+            >
+              {time(range.startsAt)}–{time(range.endsAt)}
+            </Button>
+          ))}
+        </div>
+        {!resource.loading && !resource.error && ranges.length === 0 && (
+          <p className="mt-3 text-sm">Không còn giờ trống trong ngày này. Hãy chọn ngày khác.</p>
+        )}
+      </section>
+      <section aria-label="Tự chọn giờ chơi" className="mb-6 rounded-2xl border p-5">
+        <h2 className="font-bold">Tự chọn giờ chơi</h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-2 text-sm">
+            Giờ bắt đầu
+            <select
+              className="rounded-lg border bg-white p-3"
+              value={start}
+              disabled={busy || ownFacility || resource.loading}
+              onChange={(e) => {
+                if (!e.target.value) {
+                  setSelection([])
+                  return
+                }
+                chooseRange(
+                  e.target.value,
+                  new Date(Date.parse(e.target.value) + 3600000).toISOString(),
+                )
+              }}
+            >
+              <option value="">Chọn giờ bắt đầu</option>
+              {startOptions.map((s) => (
+                <option key={s.startsAt} value={s.startsAt}>
+                  {time(s.startsAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2 text-sm">
+            Giờ kết thúc
+            <select
+              className="rounded-lg border bg-white p-3"
+              value={end}
+              disabled={busy || ownFacility || resource.loading || !start}
+              onChange={(e) => chooseRange(start, e.target.value)}
+            >
+              <option value="">Chọn giờ kết thúc</option>
+              {endOptions.map((s) => (
+                <option key={s.endsAt} value={s.endsAt}>
+                  {time(s.endsAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="mt-3 text-sm text-slate-600">
+          Chọn từ 60 phút đến 4 giờ. Chỉ các khoảng còn trống liên tục mới có thể đặt.
+        </p>
+      </section>
       {(resource.error || facility.error || courts.error || error) && (
         <p role="alert" className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">
           {error || resource.error || facility.error || courts.error}
@@ -265,9 +386,11 @@ export function AvailabilityPage({
                   ? money(pricing.quote.amount)
                   : 'Chọn đủ thời lượng'}
             </p>
-            {pricing.error && (
+            {(pricing.error || unavailable) && (
               <p role="alert" className="mt-1 text-sm text-red-700">
-                {pricing.error}
+                {unavailable
+                  ? 'Khoảng đã chọn không còn trống. Vui lòng chọn lại giờ chơi.'
+                  : pricing.error}
               </p>
             )}
           </div>

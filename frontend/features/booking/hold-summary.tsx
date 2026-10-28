@@ -218,7 +218,10 @@ function Loaded({ id }: { id: string }) {
               />
             </label>
             <p className="text-xs text-slate-600">
-              Nhóm có hạn thanh toán chung. Khi đủ 100% tiền sân, lượt đặt mới được xác nhận. Nếu
+              Tạo nhóm trước giờ chơi ít nhất{' '}
+              {Math.ceil((h.quote.groupMinimumLeadSeconds ?? 900) / 60)} phút. Hạn góp tiền tối đa
+              30 phút và kết thúc chậm nhất 5 phút trước giờ chơi. Người tổ chức có thể thanh toán
+              thay các thành viên chưa đóng. Khi đủ 100% tiền sân, lượt đặt mới được xác nhận. Nếu
               hết hạn, sân được giải phóng; khoản đã đóng được lưu để đối soát theo chính sách hoàn
               tiền.
             </p>

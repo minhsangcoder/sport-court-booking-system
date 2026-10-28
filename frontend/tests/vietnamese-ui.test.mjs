@@ -109,6 +109,49 @@ test('the screenshot refund-policy error is Vietnamese at the real API boundary,
   })
 })
 
+test('group creation explains the configured lead time using the real conflict response code', async () => {
+  for (const hours of [2, 3]) {
+    const app = application({
+      fetch: async () =>
+        Response.json(
+          {
+            message: `Group booking requires at least ${hours} hours before play`,
+            code: 'COMMON-002',
+          },
+          { status: 409 },
+        ),
+    })
+    await assert.rejects(
+      app.load('lib/api.ts').api('/groups', { method: 'POST', body: '{}' }),
+      (failure) => {
+        assert.equal(
+          failure.message,
+          `Đặt sân theo nhóm cần được tạo trước giờ chơi ít nhất ${hours} giờ. Vui lòng chọn giờ chơi muộn hơn hoặc chuyển sang đặt cá nhân, thanh toán toàn bộ.`,
+        )
+        assert.equal(failure.status, 409)
+        assert.equal(failure.code, 'COMMON-002')
+        return true
+      },
+    )
+  }
+  assert.match(
+    application()
+      .load('lib/error-translator.ts')
+      .translateError('Group booking requires at least 15 minutes before play', {
+        code: 'COMMON-002',
+      }),
+    /ít nhất 15 phút/,
+  )
+  assert.equal(
+    application()
+      .load('lib/error-translator.ts')
+      .translateError('Group minimum booking lead time elapsed during creation', {
+        code: 'COMMON-002',
+      }),
+    'Không còn đủ thời gian trước giờ chơi để tạo nhóm. Vui lòng chọn giờ chơi muộn hơn hoặc chuyển sang đặt cá nhân, thanh toán toàn bộ.',
+  )
+})
+
 test('validation, permissions, dynamic limits and unknown server errors cannot leak English', async () => {
   const app = application({
     fetch: async () =>

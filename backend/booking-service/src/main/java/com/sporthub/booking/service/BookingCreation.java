@@ -133,6 +133,11 @@ public class BookingCreation {
                 h.endsAt(),
                 h.quote().path("amount").decimalValue(),
                 h.quote().path("quoteHash").asText(null)));
+    String acceptedHash = h.quote().path("quoteHash").asText(null);
+    // A pre-upgrade hold had no hash; its exact accepted amount is still checked below.
+    if (h.quote().path("quoteVersion").asInt(1) < 2
+        && "PRORATED_SLOT_INTERVAL_V1".equals(live.path("pricingMode").asText()))
+      acceptedHash = live.path("quoteHash").asText(null);
     holds.validateQuote(
         live,
         new HoldInput(
@@ -140,7 +145,7 @@ public class BookingCreation {
             h.startsAt(),
             h.endsAt(),
             h.quote().path("amount").decimalValue(),
-            h.quote().path("quoteHash").asText(null)));
+            acceptedHash));
     if (!h.expiresAt().isAfter(clock.instant()))
       throw new ConflictException("Hold expired during price validation");
     if (!h.facilityId().toString().equals(live.path("facilityId").asText())

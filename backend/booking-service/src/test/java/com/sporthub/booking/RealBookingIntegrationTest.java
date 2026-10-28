@@ -650,7 +650,34 @@ class RealBookingIntegrationTest {
   }
 
   @Test
+  void preUpgradeHoldKeepsAcceptedMoneyWhenLiveQuoteBecomesProrated() {
+    var hold = service.hold(input(), key(), customer, "token", false);
+    var live = ((com.fasterxml.jackson.databind.node.ObjectNode) hold.quote().deepCopy())
+        .put("quoteVersion", 2).put("pricingMode", "PRORATED_SLOT_INTERVAL_V1").put("quoteHash", "new-hash");
+    when(dependencies.quote(any())).thenReturn(live);
+    var booking = service.create(new CreateInput(hold.id(), null, null), key(), customer, "token", false);
+    assertThat(booking.amount()).isEqualByComparingTo(hold.quote().path("amount").decimalValue());
+    assertThat(repo.hold(hold.id()).quote().path("quoteVersion").asInt(1)).isEqualTo(1);
+  }
+
+  @Test
+  void groupRejectsLessThanFifteenMinutesWithoutConsumingTheHold() {
+    when(clock.instant()).thenReturn(start.minusSeconds(900));
+    var hold = service.hold(input(), key(), customer, "token", false);
+    when(clock.instant()).thenReturn(start.minusSeconds(899));
+    assertThatThrownBy(() -> groups.create(
+        new com.sporthub.booking.web.GroupDtos.CreateGroup(hold.id(), "Late group", 2),
+        key(), customer, "token"))
+        .isInstanceOf(com.sporthub.common.exception.ConflictException.class)
+        .hasMessageContaining("15 minutes");
+    assertThat(repo.hold(hold.id()).state()).isEqualTo("HOLD");
+    assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM bookings WHERE reservation_id=?", Integer.class, hold.id())).isZero();
+  }
+
+  @Test
   void groupNeedsEveryRealContributionAndSupportsOrganizerPayingForMember() {
+    now = start.minusSeconds(900);
+    when(clock.instant()).thenReturn(now);
     var hold = service.hold(input(), key(), customer, "token", false);
     var group =
         groups.create(
@@ -676,7 +703,10 @@ class RealBookingIntegrationTest {
             .filter(m -> m.userId().equals(member.id()))
             .findFirst()
             .orElseThrow();
+    assertThat(group.deadline()).isEqualTo(start.minusSeconds(300));
     assertThat(groups.payable(group.id(), first.id(), customer).moneyClass()).isEqualTo("REAL");
+    assertThat(groups.payable(group.id(), second.id(), customer).groupOrganizerPayment()).isTrue();
+    assertThat(groups.payable(group.id(), second.id(), member).groupOrganizerPayment()).isFalse();
     var firstEvent =
         event(
             group.booking(),

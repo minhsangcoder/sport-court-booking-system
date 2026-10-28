@@ -14,10 +14,13 @@ public class BookingQuotes {
   private final BookingDependencies dependencies;
   private final BookingAvailabilityService availability;
   private final OrphanGapAdvice advice = new OrphanGapAdvice();
+  private final int groupMinimumLeadSeconds;
 
-  public BookingQuotes(BookingDependencies dependencies, BookingAvailabilityService availability) {
+  public BookingQuotes(BookingDependencies dependencies, BookingAvailabilityService availability,
+      @org.springframework.beans.factory.annotation.Value("${booking.group.min-lead-seconds:900}") int groupMinimumLeadSeconds) {
     this.dependencies = dependencies;
     this.availability = availability;
+    this.groupMinimumLeadSeconds = groupMinimumLeadSeconds;
   }
 
   public JsonNode quote(QuoteInput input) {
@@ -27,6 +30,8 @@ public class BookingQuotes {
   }
 
   public JsonNode advise(JsonNode quote) {
+    quote = ((com.fasterxml.jackson.databind.node.ObjectNode) quote.deepCopy())
+        .put("groupMinimumLeadSeconds", groupMinimumLeadSeconds);
     if (quote.path("quoteVersion").asInt(1) < 2) return quote;
     var day =
         java.time.Instant.parse(quote.path("startsAt").asText())

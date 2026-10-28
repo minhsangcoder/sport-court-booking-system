@@ -24,7 +24,7 @@ $demoValues=[ordered]@{
  GOOGLE_REDIRECT_URI='';SECURE_COOKIE='false'
  MAIL_HOST='localhost';MAIL_PORT='25';MAIL_USERNAME='';MAIL_PASSWORD='';MAIL_SMTP_AUTH='false'
  MAIL_SMTP_STARTTLS='false';MAIL_SMTP_STARTTLS_REQUIRED='false'
- GROUP_PAYMENT_DEADLINE_SECONDS='1800';GROUP_MIN_LEAD_SECONDS='7200'
+ GROUP_PAYMENT_DEADLINE_SECONDS='1800';GROUP_MIN_LEAD_SECONDS='900'
 }
 [IO.File]::WriteAllLines($demoPath,($demoValues.GetEnumerator()|ForEach-Object {"$($_.Key)=$($_.Value)"}))
 Write-Output 'Created ignored .env with random local credentials, isolated ports and explicit local/demo opt-in. Credentials were not printed.'

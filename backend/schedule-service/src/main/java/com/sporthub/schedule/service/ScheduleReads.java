@@ -65,36 +65,9 @@ public class ScheduleReads {
     if (!input.endsAt().minusNanos(1).atZone(context.timezone()).toLocalDate().equals(day))
       throw new IllegalArgumentException("Choose slots within one local date");
     var policy = repo.bookingPolicy(context.facilityId());
-    if (policy.enabled())
-      return flexible.quote(context, calendar(context.facilityId(), context.courtId(), day),
-          repo.rules(context.facilityId()), policy, input);
-    var segments =
-        preview(context, day).slots().stream()
-            .filter(
-                s ->
-                    !s.startsAt().isBefore(input.startsAt()) && !s.endsAt().isAfter(input.endsAt()))
-            .toList();
-    Instant cursor = input.startsAt();
-    BigDecimal amount = BigDecimal.ZERO;
-    for (var segment : segments) {
-      if (!segment.startsAt().equals(cursor) || !segment.state().equals("ELIGIBLE"))
-        throw new ConflictException("Slot is not eligible: " + segment.reason());
-      cursor = segment.endsAt();
-      amount = amount.add(segment.amount());
-    }
-    if (segments.isEmpty() || !cursor.equals(input.endsAt()))
-      throw new ConflictException("Interval does not align with operating slots");
-    return new Quote(
-        context.facilityId(),
-        context.courtId(),
-        input.startsAt(),
-        input.endsAt(),
-        com.sporthub.common.money.Money.positive(amount, "VND"),
-        "VND",
-        context.timezone().getId(),
-        segments);
+    return flexible.quote(context, calendar(context.facilityId(), context.courtId(), day),
+        repo.rules(context.facilityId()), policy, input, !policy.enabled());
   }
-
   public CalendarDay calendar(UUID facility, UUID court, LocalDate day) {
     return calendar(court, day, repo.hours(facility), repo.exceptions(facility));
   }
@@ -140,7 +113,7 @@ public class ScheduleReads {
   public Preview preview(FacilityClient.Context context, LocalDate day, List<PriceRule> rules) {
     var policy = repo.bookingPolicy(context.facilityId());
     if (policy.enabled()) return hourlyPreview(context, day, rules, policy);
-    return legacyPreview(context, day, rules);
+    return flexible.preview(context, day, calendar(context.facilityId(), context.courtId(), day), rules, policy, true);
   }
 
   public Preview hourlyPreview(FacilityClient.Context context, LocalDate day, List<PriceRule> rules, BookingPolicy policy) {

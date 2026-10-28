@@ -4,7 +4,15 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: proposal + tasks sections 21–26 (2026-10-28): SePay for new
+Latest business revision: section 27 (2026-10-28): explicit start/end selection,
+live free ranges, proportional pricing from the existing slot duration for new
+quotes (user confirmed), and group creation at least 15 minutes before play.
+Group payment closes at min(created + 30 minutes, startsAt - 5 minutes).
+The organizer may pay unpaid member shares, including replacing an unpaid SePay
+QR; duplicate credits remain reconciled, never counted twice. Existing accepted
+bookings and amounts are unchanged.
+
+Earlier business revision: proposal + tasks sections 21–26 (2026-10-28): SePay for new
 facility collections with authenticated sufficient-money webhooks; SePay B→A P2P
 without facility fees; no Customer self-cancellation of paid bookings. Old DEMO
 records do not become REAL funding. Read this revision before applying older

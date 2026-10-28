@@ -11,8 +11,8 @@ test('the current availability page sorts reverse clicks, blocks occupied cells 
   const driver = hookDriver()
   let selected = []
   const cells = [
+    ...selection('14:30', '15:00'),
     ...selection('15:00', '15:30'),
-    ...selection('15:30', '16:00'),
     ...['BOOKED', 'HELD', 'BLOCKED', 'MAINTENANCE'].map((state, i) => ({
       ...selection(`1${i + 6}:00`, `1${i + 6}:30`)[0],
       state,
@@ -39,6 +39,7 @@ test('the current availability page sorts reverse clicks, blocks occupied cells 
         ApiError: Error,
       },
       '@/lib/auth-context': { useAuth: () => ({ user: { id: 'customer' } }) },
+      '@/lib/use-polling': { usePolling() {} },
       '@/lib/use-api': {
         useApi: (url) => ({
           data: url?.startsWith('/bookings/availability')
@@ -77,15 +78,15 @@ test('the current availability page sorts reverse clicks, blocks occupied cells 
   let tree = render()
   for (const cell of cells)
     assert.equal(
-      nodes(tree).find((n) => n.key === cell.startsAt).props.disabled,
+      nodes(tree).find((n) => n.type === 'button' && n.key === cell.startsAt).props.disabled,
       cell.state !== 'AVAILABLE',
     )
   nodes(tree)
-    .find((n) => n.key === cells[1].startsAt)
+    .find((n) => n.type === 'button' && n.key === cells[1].startsAt)
     .props.onClick()
   tree = render()
   nodes(tree)
-    .find((n) => n.key === cells[0].startsAt)
+    .find((n) => n.type === 'button' && n.key === cells[0].startsAt)
     .props.onClick()
   tree = render()
   assert.deepEqual(
@@ -93,11 +94,40 @@ test('the current availability page sorts reverse clicks, blocks occupied cells 
     [cells[0].startsAt, cells[1].startsAt],
   )
   assert.equal(pure('court', selected).interval.endsAt, cells[1].endsAt)
+  const startSelect = nodes(tree).filter((n) => n.type === 'select')[0]
+  startSelect.props.onChange({ target: { value: cells[0].startsAt } })
+  tree = render()
+  assert.equal(selected[0].startsAt, '2026-10-26T14:30:00Z')
+  assert.equal(selected.at(-1).endsAt, '2026-10-26T15:30:00Z')
   assert.equal(
     nodes(tree).find((n) => n.props?.children === 'Xem tóm tắt và giữ chỗ').props.disabled,
     true,
   )
+  cells[0].state = 'BLOCKED'
+  render()
+  assert.equal(selected.length, 0, 'a polling update must invalidate an occupied selection')
   driver.unmount()
+})
+
+test('free ranges merge only adjacent available cells and reject selections through a hold or break', () => {
+  const { availableRanges, rangeSelection } = moduleLoader()(
+    'features/discovery/available-ranges.ts',
+  )
+  const cells = [
+    ...selection('14:00', '14:30'),
+    ...selection('14:30', '15:00'),
+    { ...selection('15:00', '15:30')[0], state: 'HELD' },
+    ...selection('15:30', '16:00'),
+    ...selection('17:00', '17:30'),
+  ].map((s) => ({ state: 'AVAILABLE', ...s }))
+  assert.deepEqual(JSON.parse(JSON.stringify(availableRanges(cells))), [
+    { startsAt: cells[0].startsAt, endsAt: cells[1].endsAt },
+    { startsAt: cells[3].startsAt, endsAt: cells[3].endsAt },
+    { startsAt: cells[4].startsAt, endsAt: cells[4].endsAt },
+  ])
+  assert.equal(rangeSelection(cells, cells[0].startsAt, cells[1].endsAt).length, 2)
+  assert.equal(rangeSelection(cells, cells[0].startsAt, cells[3].endsAt).length, 0)
+  assert.equal(rangeSelection(cells, cells[3].startsAt, cells[4].endsAt).length, 0)
 })
 
 test('selection uses one continuous 60–240 minute interval rather than adding rounded cells', () => {

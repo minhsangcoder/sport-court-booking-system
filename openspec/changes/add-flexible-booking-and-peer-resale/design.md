@@ -1,5 +1,13 @@
 # Design
 
+## Revision 27 — explicit interval selection and last-minute groups (2026-10-28)
+
+Customer selects start/end from server-provided 30-minute availability boundaries; contiguous free ranges are displayed and polled every 5 seconds with the shared visibility/abort-aware polling hook. Refresh preserves input but invalidates an occupied selection. No hold is created until confirmation. Quotes and holds remain authoritative at the server.
+
+For facilities without published hourly pricing, ScheduleReads uses FlexiblePricingEngine in PRORATED_SLOT_INTERVAL_V1 mode. Partition at price and opening-window boundaries; each piece uses the existing pricePerSlot / effective slotMinutes. Use exact integer fractions with a common denominator and round the total once; displayed pieces sum to that total. Do not mutate stored prices or historical bookings. A pre-upgrade hold without a hash can still create a booking only after scope and the accepted total are revalidated. Published HOURLY pricing retains its current precedence and revision checks.
+
+GroupService default minimum lead becomes 900 seconds. Cap its payment deadline at startsAt minus 300 seconds, retaining the 1800-second maximum window and synchronizing reservation, booking and admission claim expiry. Existing groups retain their deadlines. Payable exposes groupOrganizerPayment only from server ownership. Under the payment booking lock, the organizer may expire an unpaid SePay member order and create a new payer-specific order for the same obligation. Refuse replacement after any bank credit; never mutate the payer on existing evidence. Existing obligation settlement and unapplied-funds processing handle delayed and duplicate transfers. The group screen presents the total shortage and per-member payment actions.
+
 ## Context
 
 Cập nhật 28/10/2026 (mục 26): BookingDetail chỉ render ảnh QR và mã thủ công 10 ký tự, không render token trong details/text. Token/signature vẫn phục vụ QR scanner và kiểm tra hạn/holder/version. Xóa BookingPolicyCancellation và controller; route không tồn tại trả404 qua xử lý NoResourceFoundException chung. Xóa create/quote/edit/acquire cũ trong TransferService, FacilityTransferQuotes, client phí/beneficiary không còn caller và cấu hình timeout cũ. Giữ reader/payable/cancel phiên chưa trả, workflow đối soát lịch sử và guard chặn gọi protocol cũ bằng giao dịch P2P. HistoricalTransfers/fixture refund chỉ ở test; không giữ service tạo giao dịch cũ để dựng dữ liệu test. Bỏ E2E DEMO yêu cầu tạo fee/refund mới; coverage bảo mật, payment proof, outbox và lịch sử chuyển sang các bộ test hiện hành.

@@ -42,11 +42,11 @@ public class GroupService {
       PlayGroupMembership playMembership,
       @Value("${JWT_SECRET}") String secret,
       @Value("${booking.group.deadline-seconds:1800}") int deadlineSeconds,
-      @Value("${booking.group.min-lead-seconds:7200}") int minLeadSeconds,
+      @Value("${booking.group.min-lead-seconds:900}") int minLeadSeconds,
       @Value("${APP_PUBLIC_URL:http://localhost:3000}") String publicAppUrl) {
-    if (deadlineSeconds < 60 || minLeadSeconds < deadlineSeconds)
+    if (deadlineSeconds < 60 || minLeadSeconds < 600)
       throw new IllegalArgumentException(
-          "Group deadline must fit inside minimum booking lead time");
+          "Group payment window must be positive and lead time at least ten minutes");
     this.playMembership = playMembership;
     this.repo = repo;
     this.bookings = bookings;
@@ -94,7 +94,7 @@ public class GroupService {
     var hold = bookings.ownHold(input.holdId(), caller, token);
     if (hold.startsAt().isBefore(clock.instant().plusSeconds(minLeadSeconds)))
       throw new ConflictException(
-          "Group booking requires at least " + minLeadSeconds / 3600 + " hours before play");
+          "Group booking requires at least " + minLeadSeconds / 60 + " minutes before play");
     var booking =
         bookings.create(
             new CreateInput(hold.id(), null, null),
@@ -110,6 +110,9 @@ public class GroupService {
       throw new ConflictException("Group minimum booking lead time elapsed during creation");
     Instant deadline =
         createdAt.plusSeconds(deadlineSeconds).truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+    // Leave five minutes for confirmation before play, including last-minute groups.
+    Instant latestDeadline = booking.startsAt().minusSeconds(300);
+    if (deadline.isAfter(latestDeadline)) deadline = latestDeadline;
     repo.jdbc()
         .update(
             "UPDATE slot_reservations SET expires_at=? WHERE id=?",

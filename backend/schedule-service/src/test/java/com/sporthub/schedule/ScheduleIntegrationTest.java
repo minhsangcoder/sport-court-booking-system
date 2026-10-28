@@ -72,7 +72,7 @@ class ScheduleIntegrationTest {
     @Test void multipleIntervalsAndSnapshotTraceArePersistent() {
         hours();var rule=service.addPrice(facilityId,price(null,null,null,0,"100000"),owner,"token");
         var quote=service.quote(new QuoteInput(courtId,at(6),at(8)));
-        assertThat(quote.amount()).isEqualByComparingTo("200000");assertThat(quote.segments()).hasSize(2);
+        assertThat(quote.amount()).isEqualByComparingTo("200000");assertThat(quote.segments()).hasSize(1);
         assertThat(quote.segments().get(0).ruleId()).isEqualTo(rule.id());
         assertThatThrownBy(()->service.quote(new QuoteInput(courtId,at(10),at(14)))).isInstanceOf(ConflictException.class);
         assertThat(service.hours(facilityId,owner,"token")).hasSize(2);
@@ -85,7 +85,7 @@ class ScheduleIntegrationTest {
         service.addException(facilityId,new ExceptionInput(null,day,"CLOSED",null,null,"Holiday"),owner,"token");
         when(facility.context(eq(courtId),any())).thenReturn(new FacilityClient.Context(facilityId,courtId,categoryId,context.timezone(),true,"ACTIVE",List.of(new FacilityClient.Window(at(6),at(7)))));
         var preview=service.publicPreview(courtId,day);
-        assertThat(preview.slots().get(0).reason()).isEqualTo("MAINTENANCE");assertThat(preview.slots().get(1).reason()).isEqualTo("CLOSED_EXCEPTION");
+        assertThat(preview.slots()).allMatch(slot -> slot.state().equals("BLOCKED") && slot.reason().equals("CLOSED_EXCEPTION"));
         assertThatThrownBy(()->service.quote(new QuoteInput(courtId,at(6),at(7)))).isInstanceOf(ConflictException.class);
     }
     @Test void ambiguousOverlapsAndForeignScopeAreRejected() {
@@ -125,7 +125,7 @@ class ScheduleIntegrationTest {
     @Test void courtWeeklyOverrideAndClearingItRestoreFacilityInheritance() {
         hours();service.addPrice(facilityId,price(null,null,null,0,"100000"),owner,"token");
         service.replaceHours(facilityId,new HoursInput(courtId,List.of(new Interval(day.getDayOfWeek().getValue(),LocalTime.of(8,0),LocalTime.of(10,0),60))),owner,"token");
-        assertThat(service.publicPreview(courtId,day).slots()).hasSize(2);
+        assertThat(service.publicPreview(courtId,day).slots()).hasSize(4);
         assertThatThrownBy(()->service.quote(new QuoteInput(courtId,at(6),at(7)))).isInstanceOf(ConflictException.class);
         service.replaceHours(facilityId,new HoursInput(courtId,List.of()),owner,"token");
         assertThat(service.quote(new QuoteInput(courtId,at(6),at(7))).amount()).isEqualByComparingTo("100000");
@@ -241,22 +241,22 @@ class ScheduleIntegrationTest {
   assertThatThrownBy(()->service.updateException(UUID.randomUUID(),exception.id(),new ExceptionInput(null,day,"CLOSED",null,null,"Foreign"),owner,"token")).isInstanceOf(ResourceNotFoundException.class);
  }
 
- @Test void confirmedBookingKeepsItsGridWhenHoursRemainOpenButLiveHoldRequiresValidNewAlignment(){
+ @Test void originalSlotSizeDoesNotChangeTheThirtyMinuteSelectionGrid(){
   service.replaceHours(facilityId,new HoursInput(null,List.of(new Interval(day.getDayOfWeek().getValue(),LocalTime.of(6,0),LocalTime.of(12,0),30))),owner,"token");
   var booked=new com.sporthub.common.schedule.ConfigurationGuardProtocol.Reservation(UUID.randomUUID(),UUID.randomUUID(),courtId,at(6).plusSeconds(1800),at(7).plusSeconds(1800),"BOOKED");
   affected(booked);var changed=new HoursInput(null,List.of(new Interval(day.getDayOfWeek().getValue(),LocalTime.of(6,0),LocalTime.of(12,0),60)));
   service.replaceHours(facilityId,changed,owner,"token");
   affected(new com.sporthub.common.schedule.ConfigurationGuardProtocol.Reservation(booked.reservationId(),booked.bookingId(),courtId,booked.startsAt(),booked.endsAt(),"HOLD"));
-  assertThatThrownBy(()->service.replaceHours(facilityId,changed,owner,"token")).isInstanceOf(ConfigurationImpactException.class);
+  service.replaceHours(facilityId,changed,owner,"token");
  }
 
  private PriceInput rate(UUID court,UUID type,Integer weekday,LocalDate specific,LocalTime start,LocalTime end,String amount,int priority,LocalDate from,LocalDate to){return new PriceInput(court,null,weekday,specific,start,end,new BigDecimal(amount),priority,"Pricing test",from,to,"VND",type);}
  private void fullWeek(){service.replaceHours(facilityId,new HoursInput(null,java.util.stream.IntStream.rangeClosed(1,7).mapToObj(d->new Interval(d,LocalTime.of(6,0),LocalTime.of(12,0),60)).toList()),owner,"token");}
  @Test void weekdaysWeekendAndPeakOffPeakUseExactPerSlotPrices(){
   fullWeek();for(int d=1;d<=7;d++){service.addPrice(facilityId,rate(null,null,d,null,LocalTime.of(6,0),LocalTime.of(9,0),d>=6?"200000.20":"100000.10",0,day.minusDays(10),null),owner,"token");service.addPrice(facilityId,rate(null,null,d,null,LocalTime.of(9,0),LocalTime.of(12,0),d>=6?"300000.30":"150000.15",0,day.minusDays(10),null),owner,"token");}
-  day=day.with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));assertThat(service.quote(new QuoteInput(courtId,at(8),at(10))).amount()).isEqualByComparingTo("250000.25");
-  day=day.with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));assertThat(service.quote(new QuoteInput(courtId,at(8),at(10))).amount()).isEqualByComparingTo("500000.50");
-  assertThat(service.quote(new QuoteInput(courtId,at(9),at(10))).segments()).allMatch(slot->slot.startsAt().equals(at(9))&&slot.amount().compareTo(new BigDecimal("300000.30"))==0);
+  day=day.with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));assertThat(service.quote(new QuoteInput(courtId,at(8),at(10))).amount()).isEqualByComparingTo("250000");
+  day=day.with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY));assertThat(service.quote(new QuoteInput(courtId,at(8),at(10))).amount()).isEqualByComparingTo("500001");
+  assertThat(service.quote(new QuoteInput(courtId,at(9),at(10))).segments()).allMatch(slot->slot.startsAt().equals(at(9))&&slot.amount().compareTo(new BigDecimal("300000"))==0);
  }
  @Test void specialDateOverridesSamePriorityWeekdayAndExpiryFallsBackAtInclusiveBoundaries(){
   fullWeek();int weekday=day.getDayOfWeek().getValue();var normal=service.addPrice(facilityId,rate(null,null,weekday,null,LocalTime.of(6,0),LocalTime.of(12,0),"100000",0,day.minusDays(30),null),owner,"token");
@@ -336,7 +336,7 @@ class ScheduleIntegrationTest {
  @Test void quoteUsesFacilityLocalSpecialDateAndRejectsTotalStorageOverflow(){
   var zone=ZoneId.of("Pacific/Kiritimati");context=new FacilityClient.Context(facilityId,courtId,categoryId,zone,true,"ACTIVE",List.of());when(facility.context(eq(courtId),any())).thenReturn(context);fullWeek();
   service.addPrice(facilityId,rate(null,null,day.getDayOfWeek().getValue(),null,LocalTime.of(6,0),LocalTime.of(12,0),"10.10",0,day.minusDays(1),null),owner,"token");service.addPrice(facilityId,rate(null,null,null,day,LocalTime.of(6,0),LocalTime.of(12,0),"20.20",0,day,day),owner,"token");
-  assertThat(at(6).atZone(ZoneOffset.UTC).toLocalDate()).isEqualTo(day.minusDays(1));assertThat(service.quote(new QuoteInput(courtId,at(6),at(8))).amount()).isEqualByComparingTo("40.40");
+  assertThat(at(6).atZone(ZoneOffset.UTC).toLocalDate()).isEqualTo(day.minusDays(1));assertThat(service.quote(new QuoteInput(courtId,at(6),at(8))).amount()).isEqualByComparingTo("40");
   service.addPrice(facilityId,rate(courtId,null,day.getDayOfWeek().getValue(),null,LocalTime.of(6,0),LocalTime.of(12,0),"9999999999.99",1,day.minusDays(1),null),owner,"token");assertThatThrownBy(()->service.quote(new QuoteInput(courtId,at(6),at(8)))).isInstanceOf(IllegalArgumentException.class);
  }
  @Test void legacyTypeTextIsNeverSilentlyAppliedAsFacilityWidePrice(){

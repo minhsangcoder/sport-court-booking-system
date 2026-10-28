@@ -42,7 +42,9 @@ class FlexibleBookingIntegrationTest extends ScheduleIntegrationTest {
     service.addPrice(facilityId, hourly(LocalTime.of(16, 0), LocalTime.of(17, 0), "200000", 0), owner, "token");
     var input = new QuoteInput(courtId, day.atTime(15, 30).atZone(context.timezone()).toInstant(),
         day.atTime(16, 30).atZone(context.timezone()).toInstant());
-    assertThatThrownBy(() -> service.quote(input)).isInstanceOf(ConflictException.class);
+    assertThat(service.quote(input).amount()).isEqualByComparingTo("90000");
+    assertThat(service.quote(input).pricingMode()).isEqualTo("PRORATED_SLOT_INTERVAL_V1");
+    assertThat(service.publicPreview(courtId, day).slots()).hasSize(4);
     var command = new BookingPolicy(true, 0, 30, 60, 240);
     var published = policies.publish(facilityId, command, "publish-hourly", owner, "token");
     assertThat(published.version()).isEqualTo(1);

@@ -100,7 +100,8 @@ public class BookingMoneyCohorts {
         real ? id(context, "receiverRevisionId") : null,
         booking.priceSnapshot().path("moneyClass").asText("UNKNOWN"),
         booking.source(),
-        operator);
+        operator,
+        member != null && Objects.equals(booking.currentHolderId(), payer));
   }
 
   private static UUID id(JsonNode node, String field) {

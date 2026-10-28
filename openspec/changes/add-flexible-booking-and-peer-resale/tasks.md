@@ -221,3 +221,11 @@ Kết quả mục 23: 121 frontend tests, typecheck/lint, module budget và Open
 - [x] 26.2 Xóa stub service/controller hủy theo chính sách, OpenAPI/DTO không còn dùng; endpoint đã bỏ trả404 không ghi dữ liệu.
 - [x] 26.3 Xóa legacy create/quote/edit/acquire, calculator phí/client/config không còn caller; chuyển coverage lịch sử sang fixture test, kiểm tài khoản chưa xác thực trên PeerTransferAcquisitions đang chạy. Gỡ E2E tái tạo nghiệp vụ phí/hoàn cũ; giữ các reader/executor và guard còn dùng.
 - [ ] 26.4 Chạy regression Booking/Transfer/P2P, frontend, hợp đồng/typecheck/lint, OpenSpec/module check; clean build lại và khởi động local. Không sửa dữ liệu thật, migration, cấu hình ngân hàng hoặc Tunnel.
+
+## 27. Giờ tự chọn, lịch trống và nhóm sát giờ (28/10/2026)
+
+- [ ] 27.1 Cho chọn giờ bắt đầu/kết thúc, hiển thị khoảng trống liên tục, polling5 giây và chặn lựa chọn bị chiếm; giữ quote/hold phía server.
+- [ ] 27.2 Báo giá mới theo tỷ lệ thời lượng từ giá/slot gốc, phân đoạn qua biên giá/lịch, làm tròn một lần; giữ tiền booking cũ và kiểm hồi quy.
+- [ ] 27.3 Hạ mốc tạo nhóm xuống15 phút; hạn góp tiền tối đa30 phút và kết thúc trước giờ chơi5 phút; kiểm biên và rollback.
+- [ ] 27.4 Hiện tổng tiền thiếu và trả thay; xử lý QR thành viên chưa trả, kiểm quyền, chuyển trùng và không đụng chứng từ đã có tiền.
+- [ ] 27.5 Chạy kiểm thử liên quan, typecheck/lint, build và khởi động local; kiểm giao diện và API thực tế không chuyển tiền thật.

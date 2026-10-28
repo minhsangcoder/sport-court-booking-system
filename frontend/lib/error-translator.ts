@@ -80,6 +80,12 @@ export function translateError(
   }
 
   // 3. Pattern / Prefix matches
+  const groupLeadTime = trimmed.match(
+    /^Group booking requires at least (\d+) (hours|minutes) before play$/,
+  )
+  if (groupLeadTime)
+    return `Đặt sân theo nhóm cần được tạo trước giờ chơi ít nhất ${groupLeadTime[1]} ${groupLeadTime[2] === 'minutes' ? 'phút' : 'giờ'}. Vui lòng chọn giờ chơi muộn hơn hoặc chuyển sang đặt cá nhân, thanh toán toàn bộ.`
+
   if (trimmed.startsWith('Slot is not eligible:')) {
     const rawReason = trimmed.replace('Slot is not eligible:', '').trim()
     const viReason = Object.hasOwn(SLOT_REASON_TRANSLATIONS, rawReason)

@@ -142,13 +142,28 @@ public class RealPaymentOrders {
               if (active != null) {
                 var old = repo.find(active);
                 if (old.status().equals("PENDING")) {
-                  if (!old.payerId().equals(caller.id())
+                  boolean organizerTakeover = purpose.equals("GROUP_CONTRIBUTION")
+                      && bill.path("groupOrganizerPayment").asBoolean()
+                      && !old.payerId().equals(caller.id())
+                      && old.provider().equals("SEPAY") && provider.equals("SEPAY")
+                      && old.expiresAt().equals(expiry);
+                  if (organizerTakeover) {
+                    if (repo.jdbc().queryForObject(
+                        "SELECT EXISTS(SELECT 1 FROM payos_bank_credits WHERE payment_id=?)",
+                        Boolean.class, old.id()))
+                      throw new ConflictException("Thành viên đã chuyển một phần tiền. Cần hoàn tất hoặc đối soát khoản này trước khi thanh toán thay.");
+                    // Keep the old receipt identity: a late transfer is still reconciled exactly once.
+                    repo.jdbc().update("UPDATE payment_orders SET status='EXPIRED',updated_at=clock_timestamp() WHERE id=?", old.id());
+                    repo.jdbc().update("UPDATE payos_qr_sessions SET state='EXPIRED' WHERE payment_id=?", old.id());
+                  } else {
+                    if (!old.payerId().equals(caller.id())
                       || !old.provider().equals(provider)
                       || !old.expiresAt().equals(expiry))
                     throw new ConflictException(
                         "Đã có yêu cầu khác đang thanh toán cho nghĩa vụ này.");
-                  remember(input, key, caller, old.id());
-                  return old;
+                    remember(input, key, caller, old.id());
+                    return old;
+                  }
                 }
               }
               if (!clock.instant().isBefore(expiry))

@@ -78,6 +78,23 @@ export function GroupPaymentTracking({
   )
   return (
     <section className="mt-8 min-w-0" aria-label="Theo dõi thanh toán nhóm">
+      {owner &&
+        g.state === 'GROUP_PENDING' &&
+        g.allocationsLocked &&
+        g.totalPaid < g.booking.amount && (
+          <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <h2 className="font-bold">Thanh toán phần còn lại để nhận sân</h2>
+            <p className="mt-2 text-sm">
+              Còn thiếu {money(g.booking.amount - g.totalPaid, g.booking.currency)}. Bạn có thể đóng
+              phần của mình và bấm “Thanh toán thay” cho từng thành viên chưa đóng bên dưới, trước
+              hạn góp tiền.
+            </p>
+            <p className="mt-2 text-xs text-slate-600">
+              Nhóm chỉ được xác nhận khi hệ thống nhận đủ 100% tiền sân. Hãy báo thành viên ngừng
+              chuyển khoản khi bạn trả thay để tránh chuyển trùng.
+            </p>
+          </div>
+        )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold">
           Thành viên · {g.members.length}/{g.maxMembers}
