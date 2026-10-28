@@ -50,26 +50,29 @@ export function OperationCards({
               : 'Khách trực tuyến'
           const canPay = canPayBooking(b, user, Boolean(can('BOOKING_CREATE_COUNTER')))
           return (
-            <article key={b.id} className="rounded-xl border p-5">
+            <article
+              key={b.id}
+              className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs"
+            >
               <div className="flex flex-wrap justify-between gap-3">
                 <div>
-                  <h2 className="font-bold">
+                  <h2 className="text-sm font-semibold text-slate-900">
                     {new Date(b.startsAt).toLocaleString('vi-VN', {
                       timeZone: b.priceSnapshot.timezone,
                     })}{' '}
                     · {statusLabels[b.status]}
                   </h2>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <p className="mt-1.5 text-xs text-slate-500">
                     {guestLabel}
                     {b.guestName ? ` · Khách lúc đặt: ${b.guestName}` : ''} {b.guestPhone || ''} ·{' '}
-                    {b.id.slice(0, 8).toUpperCase()}
+                    <span className="font-mono">{b.id.slice(0, 8).toUpperCase()}</span>
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">Người tạo: {b.createdBy}</p>
+                  <p className="mt-1 text-xs text-slate-400">Người tạo: {b.createdBy}</p>
                 </div>
-                <div>
-                  <p className="font-bold">{money(b.amount, b.currency)}</p>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-slate-900">{money(b.amount, b.currency)}</p>
                   <Link
-                    className="mt-2 block text-sm text-emerald-700 underline"
+                    className="mt-1.5 block text-xs font-medium text-emerald-700 underline underline-offset-4"
                     href={`/${owner ? 'owner' : 'staff'}/bookings/${b.id}`}
                   >
                     Chi tiết vận hành & điểm danh nhóm

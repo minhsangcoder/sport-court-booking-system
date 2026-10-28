@@ -23,7 +23,10 @@ export function refundPercentToBps(value: string): number {
 
 export function refundBpsToPercent(rate: number | null): string {
   if (rate === null) return ''
-  if (!Number.isInteger(rate) || rate < 0 || rate > 10000) throw new Error('Tỷ lệ hoàn không hợp lệ.')
-  const fraction = String(rate % 100).padStart(2, '0').replace(/0+$/, '')
+  if (!Number.isInteger(rate) || rate < 0 || rate > 10000)
+    throw new Error('Tỷ lệ hoàn không hợp lệ.')
+  const fraction = String(rate % 100)
+    .padStart(2, '0')
+    .replace(/0+$/, '')
   return `${Math.floor(rate / 100)}${fraction ? `.${fraction}` : ''}`
 }

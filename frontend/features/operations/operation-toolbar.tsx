@@ -17,7 +17,7 @@ export function OperationToolbar({
       {!owner && facilityId && can('BOOKING_CHECK_IN') && (
         <Link
           href={`/staff/peer-presence?facilityId=${facilityId}`}
-          className="rounded-full border px-4 py-2 text-sm text-emerald-700"
+          className="inline-flex h-8 items-center rounded-lg border border-slate-300 bg-white px-3.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
           Ghi nhận có mặt khi tranh chấp
         </Link>
@@ -25,16 +25,17 @@ export function OperationToolbar({
       {can('BOOKING_CHECK_IN') && (
         <Button
           type="button"
+          size="sm"
           onClick={() => setQuickQrOpen(true)}
-          className="rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-2 px-4 py-2 text-sm font-semibold"
+          className="bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs flex items-center gap-1.5"
         >
-          <QrCode className="h-4 w-4" />
+          <QrCode className="size-3.5" strokeWidth={1.75} />
           <span>Tải ảnh QR xác nhận vào sân</span>
         </Button>
       )}
       {can('BOOKING_CREATE_COUNTER') && facilityId && (
         <Link
-          className="rounded-full border border-emerald-600 bg-white px-5 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+          className="inline-flex h-8 items-center rounded-lg border border-emerald-700 bg-white px-3.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
           href={`/${owner ? 'owner' : 'staff'}/counter-booking?facilityId=${facilityId}`}
         >
           Đặt tại quầy

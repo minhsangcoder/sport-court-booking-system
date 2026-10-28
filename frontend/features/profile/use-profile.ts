@@ -1,7 +1,7 @@
 'use client'
 import { ApiError, api, type Role, type UserProfile } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
-import { Building2, Shield, ShieldCheck, Sparkles } from 'lucide-react'
+import { Building2, Shield, ShieldCheck, User } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 export function useProfile() {
   const { user } = useAuth()
@@ -78,7 +78,7 @@ export function useProfile() {
       default:
         return {
           label: 'Khách hàng',
-          icon: Sparkles,
+          icon: User,
           className:
             'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
         }

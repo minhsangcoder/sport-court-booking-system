@@ -2,7 +2,7 @@
 import { provinces } from '@/features/facility/provinces.data'
 import type { Category } from '@/features/facility/types'
 import { useApi } from '@/lib/use-api'
-import { Calendar, MapPin, Search, Zap } from 'lucide-react'
+import { CalendarDays, MapPin, Search, Trophy, Map as MapIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 export function HomeSearch({ today }: { today: string }) {
@@ -21,39 +21,49 @@ export function HomeSearch({ today }: { today: string }) {
     if (date) params.set('date', date)
     router.push(`/search?${params.toString()}`)
   }
+  const field =
+    'w-full min-w-0 cursor-pointer bg-transparent text-[15px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white'
+  const cell =
+    'group/cell flex flex-col justify-center gap-0.5 px-5 py-3 transition-colors hover:bg-slate-50 focus-within:bg-slate-50 dark:hover:bg-slate-800 dark:focus-within:bg-slate-800'
+  const label =
+    'flex items-center gap-1.5 text-xs font-medium text-slate-500 group-focus-within/cell:text-emerald-700'
+  const icon = 'size-3.5'
+  const quick = [
+    ['Pickleball', 'Pickleball Hà Nội'],
+    ['Tennis', 'Quần vợt Đà Nẵng'],
+    ['Cầu lông', 'Sân cầu lông trong nhà'],
+  ]
   return (
-    <div className="mt-10 rounded-3xl border border-slate-700/80 bg-white/95 p-4 shadow-2xl backdrop-blur-xl sm:p-6 dark:bg-slate-900/95 dark:border-slate-800">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-[0_24px_60px_-24px_rgba(2,6,23,0.5)] dark:border-slate-700 dark:bg-slate-900">
       <form
         onSubmit={handleSearchSubmit}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end"
+        className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-[1.4fr_1fr_1fr_1fr_auto] lg:divide-x dark:divide-slate-700"
       >
-        {/* Keyword / Facility */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            <MapPin size={14} className="text-emerald-600" />
-            <span>Cơ sở / Khu vực</span>
-          </label>
+        <label className={cell}>
+          <span className={label}>
+            <MapPin className={icon} strokeWidth={2} />
+            Địa điểm
+          </span>
           <input
             type="text"
-            placeholder="Tên sân, đường, quận..."
+            placeholder="Tên sân, đường, quận…"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             maxLength={180}
-            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className={field}
           />
-        </div>
+        </label>
 
-        {/* Sport Category */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            <Zap size={14} className="text-emerald-600" />
-            <span>Bộ môn</span>
-          </label>
+        <label className={cell}>
+          <span className={label}>
+            <Trophy className={icon} strokeWidth={2} />
+            Bộ môn
+          </span>
           <select
             aria-label="Chọn bộ môn thể thao"
             value={sportId}
             onChange={(e) => setSportId(e.target.value)}
-            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className={field}
           >
             <option value="">Tất cả bộ môn</option>
             {categories.data
@@ -64,35 +74,33 @@ export function HomeSearch({ today }: { today: string }) {
                 </option>
               ))}
           </select>
-        </div>
+        </label>
 
-        {/* Date */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            <Calendar size={14} className="text-emerald-600" />
-            <span>Ngày chơi</span>
-          </label>
+        <label className={cell}>
+          <span className={label}>
+            <CalendarDays className={icon} strokeWidth={2} />
+            Ngày chơi
+          </span>
           <input
             type="date"
             min={today}
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className={field}
           />
-        </div>
+        </label>
 
-        {/* Province / City */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            <MapPin size={14} className="text-emerald-600" />
-            <span>Tỉnh / Thành</span>
-          </label>
+        <label className={cell}>
+          <span className={label}>
+            <MapIcon className={icon} strokeWidth={2} />
+            Khu vực
+          </span>
           <select
             aria-label="Chọn tỉnh thành"
             value={provinceCode}
             onChange={(e) => setProvinceCode(e.target.value)}
-            className="h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 shadow-sm transition-all focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className={field}
           >
             <option value="">Tất cả tỉnh thành</option>
             {provinces.map((p) => (
@@ -101,51 +109,32 @@ export function HomeSearch({ today }: { today: string }) {
               </option>
             ))}
           </select>
-        </div>
+        </label>
 
-        {/* Submit Button */}
         <button
           type="submit"
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-lg shadow-emerald-600/30 transition-all hover:bg-emerald-500 hover:shadow-xl active:scale-[0.98]"
+          className="flex min-h-16 cursor-pointer items-center justify-center gap-2 bg-emerald-700 px-9 text-[15px] font-semibold text-white transition-colors hover:bg-emerald-800 sm:col-span-2 lg:col-span-1"
         >
-          <Search size={16} />
-          <span>Tìm sân ngay</span>
+          <Search size={18} strokeWidth={2} />
+          <span>Tìm sân</span>
         </button>
       </form>
 
-      {/* Quick Filter Tags */}
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <span className="font-semibold text-slate-700 dark:text-slate-300">Gợi ý tìm nhanh:</span>
-        <button
-          type="button"
-          onClick={() => {
-            setKeyword('Pickleball')
-            router.push(`/search?q=Pickleball&date=${today}`)
-          }}
-          className="rounded-lg bg-slate-100 px-2.5 py-1 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-slate-800"
-        >
-          Pickleball Hà Nội
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setKeyword('Tennis')
-            router.push(`/search?q=Tennis&date=${today}`)
-          }}
-          className="rounded-lg bg-slate-100 px-2.5 py-1 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-slate-800"
-        >
-          Quần vợt Đà Nẵng
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setKeyword('Cầu lông')
-            router.push(`/search?q=Cầu lông&date=${today}`)
-          }}
-          className="rounded-lg bg-slate-100 px-2.5 py-1 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-slate-800"
-        >
-          Sân Cầu lông máy lạnh
-        </button>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-slate-200 bg-slate-50/80 px-5 py-2.5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/50">
+        <span>Gợi ý</span>
+        {quick.map(([q, text]) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => {
+              setKeyword(q)
+              router.push(`/search?q=${encodeURIComponent(q)}&date=${today}`)
+            }}
+            className="cursor-pointer font-medium text-slate-700 underline decoration-slate-300 underline-offset-4 transition-colors hover:text-emerald-700 hover:decoration-emerald-600 dark:text-slate-200"
+          >
+            {text}
+          </button>
+        ))}
       </div>
     </div>
   )

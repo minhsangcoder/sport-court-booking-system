@@ -1,1 +1,1 @@
-export { StaffManagement as FacilityStaffPage } from '@/features/staff/staff-directory';
+export { StaffManagement as FacilityStaffPage } from '@/features/staff/staff-directory'

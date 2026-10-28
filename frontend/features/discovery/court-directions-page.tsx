@@ -3,13 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import {
-  ChevronRight,
-  MapPin,
-  ArrowLeft,
-  Ticket,
-  CheckCircle2,
-} from 'lucide-react'
+import { ChevronRight, MapPin, ArrowLeft, Ticket, CheckCircle2 } from 'lucide-react'
 import { useApi } from '@/lib/use-api'
 import { useAuth } from '@/lib/auth-context'
 import type { Facility } from '@/features/facility/types'
@@ -28,12 +22,11 @@ export function CourtDirectionsPage({
 
   // If demo slug from court.ziet.dev
   const isAuraDemo =
-    courtId === 'san-1-tham-bwf-cau-giay' ||
-    courtId.toLowerCase().includes('cau-giay')
+    courtId === 'san-1-tham-bwf-cau-giay' || courtId.toLowerCase().includes('cau-giay')
 
   // Check if we can find facility & court from backend
   const contextRes = useApi<{ facility: Facility; court: { id: string; name: string } }>(
-    !isAuraDemo ? `/facilities/courts/${courtId}/context` : null
+    !isAuraDemo ? `/facilities/courts/${courtId}/context` : null,
   )
   const facilitiesRes = useApi<Facility[]>('/facilities')
   const demoFacility =
@@ -48,10 +41,10 @@ export function CourtDirectionsPage({
     bookingsRes.data?.find(
       (b) =>
         (b.courtId === courtId || (demoFacility && b.facilityId === demoFacility.id)) &&
-        (b.status === 'CONFIRMED' || b.status === 'CHECKED_IN')
+        (b.status === 'CONFIRMED' || b.status === 'CHECKED_IN'),
     ) ||
     bookingsRes.data?.find(
-      (b) => b.courtId === courtId || (demoFacility && b.facilityId === demoFacility.id)
+      (b) => b.courtId === courtId || (demoFacility && b.facilityId === demoFacility.id),
     )
 
   const effectiveBookingId = paramBookingId || matchingBooking?.id
@@ -60,28 +53,28 @@ export function CourtDirectionsPage({
     ? 'Sân 1 - Thảm BWF Tiêu Chuẩn'
     : contextRes.data?.court?.name || 'Sân thể thao'
 
-  const venueName = isAuraDemo
-    ? 'Aura Court Cầu Giấy'
-    : demoFacility?.name || 'Aura Court Cầu Giấy'
+  const venueName = isAuraDemo ? 'Aura Court Cầu Giấy' : demoFacility?.name || 'Aura Court Cầu Giấy'
 
   const addressLine = isAuraDemo
     ? 'Số 18 Phố Duy Tân'
-    : demoFacility ? demoFacility.addressLine : 'Số 18 Phố Duy Tân'
+    : demoFacility
+      ? demoFacility.addressLine
+      : 'Số 18 Phố Duy Tân'
 
   const ward = isAuraDemo
     ? 'Phường Dịch Vọng Hậu'
-    : demoFacility ? demoFacility.ward : 'Phường Dịch Vọng Hậu'
+    : demoFacility
+      ? demoFacility.ward
+      : 'Phường Dịch Vọng Hậu'
 
   const province = isAuraDemo
     ? 'Quận Cầu Giấy, Hà Nội'
-    : demoFacility ? `${demoFacility.province}` : 'Hà Nội'
+    : demoFacility
+      ? `${demoFacility.province}`
+      : 'Hà Nội'
 
-  const latitude = isAuraDemo
-    ? 21.031345
-    : demoFacility ? demoFacility.latitude : 21.031345
-  const longitude = isAuraDemo
-    ? 105.783421
-    : demoFacility ? demoFacility.longitude : 105.783421
+  const latitude = isAuraDemo ? 21.031345 : demoFacility ? demoFacility.latitude : 21.031345
+  const longitude = isAuraDemo ? 105.783421 : demoFacility ? demoFacility.longitude : 105.783421
 
   const amenities = isAuraDemo
     ? [
@@ -90,12 +83,8 @@ export function CourtDirectionsPage({
         '❄️ Điều Hòa & Phòng Nghỉ VIP',
       ]
     : demoFacility?.amenities?.length
-    ? demoFacility.amenities
-    : [
-        '🏸 Sân Chuẩn Thi Đấu',
-        '🅿️ Bãi Đỗ Ô Tô & Xe Máy',
-        '❄️ Phòng Nghỉ Thoáng Mát',
-      ]
+      ? demoFacility.amenities
+      : ['🏸 Sân Chuẩn Thi Đấu', '🅿️ Bãi Đỗ Ô Tô & Xe Máy', '❄️ Phòng Nghỉ Thoáng Mát']
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/50 pb-20">
@@ -147,7 +136,11 @@ export function CourtDirectionsPage({
                   Lượt đặt của bạn đã thanh toán thành công
                 </p>
                 <p className="text-xs text-emerald-800">
-                  Mã lượt đặt: <strong className="font-mono">{effectiveBookingId.slice(0, 8).toUpperCase()}</strong> · Trạng thái: Đã xác nhận
+                  Mã lượt đặt:{' '}
+                  <strong className="font-mono">
+                    {effectiveBookingId.slice(0, 8).toUpperCase()}
+                  </strong>{' '}
+                  · Trạng thái: Đã xác nhận
                 </p>
               </div>
             </div>

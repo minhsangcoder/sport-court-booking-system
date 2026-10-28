@@ -1,7 +1,7 @@
 'use client'
 import type { useFacilityOverview } from '@/features/facility/use-facility-overview'
 import { timezoneLabel } from '@/lib/display-labels'
-import { Clock, Mail, MapPin, Phone, Sparkles } from 'lucide-react'
+import { ClipboardList, Clock, Mail, MapPin, Phone } from 'lucide-react'
 import Link from 'next/link'
 export function FacilityInformation({
   model,
@@ -83,11 +83,10 @@ export function FacilityInformation({
         </div>
       </div>
 
-      {/* Status Callout Card */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+      <div className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600">
-            <Sparkles size={14} />
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+            <ClipboardList size={13} strokeWidth={1.75} />
             <span>Quy trình vận hành</span>
           </div>
           <h4 className="mt-2 text-base font-bold text-slate-900 dark:text-white">

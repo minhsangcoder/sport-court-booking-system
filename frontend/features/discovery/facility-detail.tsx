@@ -18,13 +18,17 @@ export function PublicFacilityDetail({ id }: { id: string }) {
 
   const { user } = useAuth()
   const bookingsRes = useApi<Booking[]>(user ? '/bookings' : null)
-  const confirmedBooking = bookingsRes.data?.find(
-    (b) =>
-      b.facilityId === id &&
-      (b.status === 'CONFIRMED' || b.status === 'CHECKED_IN')
-  ) || bookingsRes.data?.find((b) => b.facilityId === id)
+  const confirmedBooking =
+    bookingsRes.data?.find(
+      (b) => b.facilityId === id && (b.status === 'CONFIRMED' || b.status === 'CHECKED_IN'),
+    ) || bookingsRes.data?.find((b) => b.facilityId === id)
 
-  if (resource.loading) return <p className="p-8" role="status">Đang tải cơ sở…</p>
+  if (resource.loading)
+    return (
+      <p className="p-8" role="status">
+        Đang tải cơ sở…
+      </p>
+    )
   if (resource.error || !resource.data)
     return (
       <div className="p-8" role="alert">
@@ -52,36 +56,40 @@ export function PublicFacilityDetail({ id }: { id: string }) {
       </div>
 
       {confirmedBooking && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-300 bg-emerald-50/90 p-4 sm:p-5 shadow-xs">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-2xs">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-xs text-white font-bold">
               ✓
             </div>
             <div>
-              <p className="font-bold text-emerald-950">
+              <p className="text-sm font-semibold text-emerald-950">
                 Bạn đã thanh toán và có lịch đặt tại cơ sở này
               </p>
-              <p className="text-xs sm:text-sm text-emerald-800">
-                Mã lượt đặt: <strong className="font-mono">{confirmedBooking.id.slice(0, 8).toUpperCase()}</strong> · Trạng thái: Đã xác nhận
+              <p className="text-xs text-emerald-800">
+                Mã lượt đặt:{' '}
+                <strong className="font-mono">
+                  {confirmedBooking.id.slice(0, 8).toUpperCase()}
+                </strong>{' '}
+                · Trạng thái: Đã xác nhận
               </p>
             </div>
           </div>
           <Link
             href={`/customer/bookings/${confirmedBooking.id}`}
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-700"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-emerald-800"
           >
-            <Ticket className="h-4 w-4" />
+            <Ticket className="size-3.5" strokeWidth={1.75} />
             <span>Quay lại phần xác nhận</span>
           </Link>
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900">{f.name}</h1>
-          <div className="mt-2 flex items-center gap-2 text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0 text-rose-600" />
-            <p className="text-sm sm:text-base">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{f.name}</h1>
+          <div className="mt-1.5 flex items-center gap-1.5 text-slate-600">
+            <MapPin className="size-3.5 shrink-0 text-emerald-700" strokeWidth={1.75} />
+            <p className="text-xs sm:text-sm">
               {f.addressLine}, {f.ward}, {f.province}
             </p>
           </div>
@@ -92,7 +100,7 @@ export function PublicFacilityDetail({ id }: { id: string }) {
       </div>
 
       {images.data && images.data.length > 0 && (
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {images.data.map((i) => (
             <Image
               unoptimized
@@ -101,45 +109,46 @@ export function PublicFacilityDetail({ id }: { id: string }) {
               key={i.id}
               width={480}
               height={320}
-              className="h-52 w-full rounded-xl object-cover"
+              className="h-44 w-full rounded-xl border border-slate-200 object-cover"
             />
           ))}
         </div>
       )}
       {images.error && (
-        <p role="alert" className="mt-4 text-sm text-red-700">
+        <p role="alert" className="mt-4 text-xs text-red-700">
           Không tải được ảnh: {images.error}
         </p>
       )}
 
-      <div className="my-8 grid gap-8 md:grid-cols-[1fr_280px]">
+      <div className="my-6 grid gap-6 md:grid-cols-[1fr_260px]">
         <div>
-          <h2 className="text-xl font-bold">Về cơ sở</h2>
-          <p className="mt-3 leading-relaxed text-slate-600">
+          <h2 className="text-base font-bold text-slate-900">Về cơ sở</h2>
+          <p className="mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
             {f.description || 'Cơ sở chưa bổ sung mô tả.'}
           </p>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-1.5">
             {f.amenities.map((a) => (
               <span
                 key={a}
-                className="rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
+                className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
               >
                 {a}
               </span>
             ))}
           </div>
         </div>
-        <aside className="rounded-2xl bg-slate-50 p-5">
-          <h3 className="font-bold">Thông tin liên hệ</h3>
-          <p className="mt-3 text-sm">{f.phone}</p>
-          <p className="mt-2 text-sm text-slate-500">
+        <aside className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Thông tin liên hệ
+          </h3>
+          <p className="mt-2 text-sm font-semibold text-slate-900">{f.phone}</p>
+          <p className="mt-1.5 text-xs text-slate-500">
             Lịch và giờ chơi theo {timezoneLabel(f.timezone)}.
           </p>
         </aside>
       </div>
 
-      {/* Chỉ đường & Bản đồ điều hướng trực tiếp */}
-      <div className="my-10">
+      <div className="my-8">
         <DirectionsCard
           venueName={f.name}
           addressLine={f.addressLine}
@@ -150,30 +159,43 @@ export function PublicFacilityDetail({ id }: { id: string }) {
         />
       </div>
 
-      <h2 className="text-2xl font-bold">Chọn sân</h2>
-      {courts.loading && <p role="status" className="mt-5">Đang tải sân…</p>}
-      {courts.error && <p role="alert" className="mt-5 text-red-700">{courts.error}</p>}
-      {courts.data?.length === 0 && (
-        <p className="mt-5 text-slate-500">Hiện chưa có sân đang nhận đặt chỗ.</p>
+      <h2 className="text-lg font-bold text-slate-900">Chọn sân</h2>
+      {courts.loading && (
+        <p role="status" className="mt-4 text-xs text-slate-500">
+          Đang tải sân…
+        </p>
       )}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      {courts.error && (
+        <p role="alert" className="mt-4 text-xs text-red-700">
+          {courts.error}
+        </p>
+      )}
+      {courts.data?.length === 0 && (
+        <p className="mt-4 text-xs text-slate-500">Hiện chưa có sân đang nhận đặt chỗ.</p>
+      )}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {courts.data?.map((c) => (
-          <article className="flex flex-col justify-between rounded-xl border p-5" key={c.id}>
+          <article
+            className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs"
+            key={c.id}
+          >
             <div>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
                   {categories.data?.find((v) => v.id === c.sportCategoryId)?.name || 'Sân thể thao'}
                 </p>
               </div>
-              <h3 className="mt-2 text-xl font-bold">{c.name}</h3>
-              <p className="mt-2 text-sm text-slate-500">{c.description || c.code}</p>
-              {!c.enabled && <p className="mt-4 text-sm text-amber-800">Sân tạm ngừng nhận đặt.</p>}
+              <h3 className="mt-1.5 text-base font-semibold text-slate-900">{c.name}</h3>
+              <p className="mt-1 text-xs text-slate-500">{c.description || c.code}</p>
+              {!c.enabled && (
+                <p className="mt-3 text-xs font-medium text-amber-800">Sân tạm ngừng nhận đặt.</p>
+              )}
             </div>
             {c.enabled && (
-              <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
                 <Link
                   href={`/facilities/${id}/courts/${c.id}`}
-                  className="inline-flex rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                  className="inline-flex h-8 items-center rounded-lg bg-emerald-700 px-4 text-xs font-semibold text-white hover:bg-emerald-800 transition-colors"
                 >
                   Kiểm tra lịch trống
                 </Link>

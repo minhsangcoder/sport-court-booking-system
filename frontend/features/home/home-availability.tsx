@@ -1,50 +1,52 @@
 'use client'
-import { LocalCourtImage as Image } from '@/components/local-court-image'
 import type { DiscoveryResult } from '@/features/discovery/types'
-import { money } from '@/features/schedule/types'
 import { useApi } from '@/lib/use-api'
-import { ArrowRight, Building2, Clock, MapPin } from 'lucide-react'
+import { ArrowRight, Building2, Clock, SlidersHorizontal } from 'lucide-react'
 import Link from 'next/link'
+import { CourtCarousel } from './home-court-carousel'
+import { CourtLines, TennisBall } from './home-art'
 export function HomeAvailability({ today }: { today: string }) {
   const courtsResource = useApi<{ items: DiscoveryResult[]; truncated: boolean }>(
     `/bookings/search?date=${today}&sort=NAME`,
   )
   return (
-    <section className="border-t border-slate-200/80 bg-white py-16 dark:border-slate-800 dark:bg-slate-900/50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <section className="relative overflow-hidden border-y border-emerald-100 bg-gradient-to-br from-white/80 via-emerald-50/70 to-amber-50/60 py-16 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/50 dark:from-transparent dark:via-transparent dark:to-transparent">
+      <CourtLines className="pointer-events-none absolute -left-24 top-4 w-[520px] rotate-6 text-emerald-800/[0.07]" />
+      <TennisBall className="home-float pointer-events-none absolute right-[5%] top-8 hidden w-12 lg:block" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-400">
-              <Clock size={13} />
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              <Clock size={12} />
               <span>Cập nhật theo thời gian thực</span>
             </div>
-            <h2 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl dark:text-white">
-              Sân thể thao nổi bật & Còn lịch trống hôm nay
+            <h2 className="mt-1 text-lg font-bold tracking-tight text-slate-900 sm:text-xl dark:text-white">
+              Sân thể thao còn lịch trống hôm nay
             </h2>
           </div>
           <Link
             href="/search"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm hover:border-emerald-500 hover:text-emerald-600 transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 w-fit"
           >
+            <SlidersHorizontal size={13} />
             <span>Mở bộ lọc tìm kiếm</span>
-            <ArrowRight size={15} />
           </Link>
         </div>
 
         {/* Loading Skeleton */}
         {courtsResource.loading && (
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+                className="animate-pulse rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
               >
-                <div className="h-44 w-full rounded-xl bg-slate-200 dark:bg-slate-800" />
-                <div className="mt-4 h-5 w-2/3 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="mt-2 h-4 w-1/2 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="mt-6 flex justify-between">
-                  <div className="h-6 w-1/3 rounded bg-slate-200 dark:bg-slate-800" />
-                  <div className="h-9 w-1/3 rounded bg-slate-200 dark:bg-slate-800" />
+                <div className="h-36 w-full rounded-lg bg-slate-100 dark:bg-slate-800" />
+                <div className="mt-3 h-4 w-2/3 rounded bg-slate-100 dark:bg-slate-800" />
+                <div className="mt-2 h-3 w-1/2 rounded bg-slate-100 dark:bg-slate-800" />
+                <div className="mt-4 flex justify-between border-t border-slate-100 pt-3">
+                  <div className="h-5 w-1/3 rounded bg-slate-100 dark:bg-slate-800" />
+                  <div className="h-8 w-1/4 rounded bg-slate-100 dark:bg-slate-800" />
                 </div>
               </div>
             ))}
@@ -55,14 +57,14 @@ export function HomeAvailability({ today }: { today: string }) {
         {courtsResource.error && (
           <div
             role="alert"
-            className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+            className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
           >
-            <p className="font-bold">Không thể tải danh sách sân gợi ý.</p>
+            <p className="font-semibold">Không thể tải danh sách sân gợi ý.</p>
             <p className="mt-1">{courtsResource.error}</p>
             <button
               type="button"
               onClick={courtsResource.reload}
-              className="mt-3 inline-block font-bold text-red-800 underline dark:text-red-200"
+              className="mt-2 inline-block font-semibold text-red-800 underline dark:text-red-200"
             >
               Tải lại danh sách
             </button>
@@ -71,112 +73,33 @@ export function HomeAvailability({ today }: { today: string }) {
 
         {/* Empty State */}
         {!courtsResource.loading && courtsResource.data?.items.length === 0 && (
-          <div className="mt-8 rounded-2xl border border-dashed border-slate-300 p-12 text-center dark:border-slate-700">
-            <Building2 className="mx-auto size-12 text-slate-400" />
-            <h3 className="mt-3 text-lg font-bold text-slate-800 dark:text-slate-200">
-              Chưa có sân nào có khung giờ trống cho hôm nay
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Hãy thử chọn ngày mai hoặc mở rộng khu vực tìm kiếm trên hệ thống.
-            </p>
+          <div className="mt-6 flex flex-col items-start justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/70 p-5 sm:flex-row sm:items-center dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-start gap-3.5">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <Building2 size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Chưa có sân nào còn khung giờ trống cho hôm nay
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Chọn ngày chơi tiếp theo hoặc mở rộng bộ lọc khu vực để xem toàn bộ lịch sân trên
+                  hệ thống.
+                </p>
+              </div>
+            </div>
             <Link
               href="/search"
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-500"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-emerald-700 px-4 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-emerald-800"
             >
-              <span>Khám phá toàn bộ sân</span>
-              <ArrowRight size={16} />
+              <span>Tra cứu lịch các ngày tới</span>
+              <ArrowRight size={14} />
             </Link>
           </div>
         )}
 
-        {/* Court Cards Grid */}
         {!courtsResource.loading && courtsResource.data && courtsResource.data.items.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courtsResource.data.items.slice(0, 6).map((item) => {
-              const f = item.facility
-              return (
-                <article
-                  key={item.courtId}
-                  className="court-card-hover flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <div>
-                    {/* Top Image Preview & Sport Badge */}
-                    <div className="relative mb-4 h-44 w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                      <Image
-                        src={
-                          item.sportName?.toLowerCase().includes('tennis')
-                            ? '/images/hero-tennis.png'
-                            : item.sportName?.toLowerCase().includes('pickleball')
-                              ? '/images/hero-pickleball.png'
-                              : '/images/court-aerial.jpg'
-                        }
-                        alt={item.courtName}
-                        fill
-                        className="object-cover object-center"
-                      />
-                      <div className="absolute top-3 left-3 rounded-md bg-emerald-700/90 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white shadow-sm backdrop-blur-sm">
-                        {item.sportName}
-                      </div>
-                      <div className="absolute bottom-3 right-3 rounded-md bg-slate-950/80 px-2 py-0.5 text-[11px] font-bold text-emerald-400 backdrop-blur-sm">
-                        {item.availableSlots} khung giờ trống
-                      </div>
-                    </div>
-
-                    {/* Court & Facility Title */}
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white">
-                      {item.courtName}
-                    </h3>
-                    <Link
-                      href={`/facilities/${f.id}`}
-                      className="mt-1 block text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
-                    >
-                      {f.name}
-                    </Link>
-
-                    {/* Location */}
-                    <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                      <MapPin size={14} className="shrink-0 text-slate-400" />
-                      <span className="truncate">
-                        {f.addressLine}, {f.ward}, {f.province}
-                      </span>
-                    </p>
-
-                    {/* Amenities Pills */}
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {f.amenities.slice(0, 3).map((a) => (
-                        <span
-                          key={a}
-                          className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                        >
-                          {a}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Bottom Pricing & CTA */}
-                  <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <div>
-                      <span className="text-[11px] font-medium text-slate-400 block">Giá từ</span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-xl font-black text-emerald-700 dark:text-emerald-400">
-                          {money(item.fromPrice, item.currency)}
-                        </span>
-                        <span className="text-xs text-slate-400">/giờ</span>
-                      </div>
-                    </div>
-                    <Link
-                      href={`/facilities/${f.id}/courts/${item.courtId}?date=${item.date || today}`}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                    >
-                      <span>Đặt ngay</span>
-                      <ArrowRight size={14} />
-                    </Link>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
+          <CourtCarousel items={courtsResource.data.items} today={today} />
         )}
       </div>
     </section>

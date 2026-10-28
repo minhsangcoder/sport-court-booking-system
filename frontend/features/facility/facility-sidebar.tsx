@@ -35,24 +35,23 @@ export function FacilitySidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-30 flex w-72 flex-col border-r border-slate-200/80 bg-white transition-transform duration-200 lg:static lg:translate-x-0 dark:border-slate-800 dark:bg-slate-900 ${
+      className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200/80 bg-white transition-transform duration-200 lg:static lg:translate-x-0 dark:border-slate-800 dark:bg-slate-900 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      {/* Sidebar Top: Facility Switcher */}
-      <div className="border-b border-slate-200/80 p-4 dark:border-slate-800">
+      <div className="border-b border-slate-200/80 p-3.5 dark:border-slate-800">
         <div className="relative" ref={switcherRef}>
           <button
             type="button"
             onClick={() => setSwitcherOpen((prev) => !prev)}
-            className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-left transition hover:border-emerald-500 hover:bg-emerald-50/50 dark:border-slate-700 dark:bg-slate-800"
+            className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2 text-left transition hover:border-slate-300 hover:bg-slate-100/70 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white font-black shadow-sm">
-                <Building2 size={18} />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white shadow-2xs">
+                <Building2 size={15} strokeWidth={1.75} />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">
                   {data.name}
                 </p>
                 <p className="text-[11px] text-slate-500 truncate">
@@ -61,49 +60,49 @@ export function FacilitySidebar({
               </div>
             </div>
             <ChevronDown
-              size={16}
+              size={14}
+              strokeWidth={1.75}
               className={`text-slate-400 shrink-0 transition-transform ${switcherOpen ? 'rotate-180' : ''}`}
             />
           </button>
 
-          {/* Switcher Dropdown */}
           {switcherOpen && (
-            <div className="absolute top-full left-0 mt-2 w-full rounded-2xl border border-slate-200 bg-white p-2 shadow-xl z-50 dark:border-slate-800 dark:bg-slate-900 animate-in fade-in zoom-in-95 duration-150">
-              <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="absolute top-full left-0 mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-50 dark:border-slate-800 dark:bg-slate-900">
+              <p className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 Cơ sở của bạn
               </p>
-              <div className="max-h-52 overflow-y-auto space-y-1">
+              <div className="max-h-52 overflow-y-auto space-y-0.5">
                 {ownerFacilities.data?.map((f) => (
                   <Link
                     key={f.id}
                     href={`/owner/facilities/${f.id}`}
                     onClick={() => setSwitcherOpen(false)}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                    className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
                       f.id === data.id
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                        ? 'bg-emerald-50 text-emerald-800 font-semibold dark:bg-emerald-950 dark:text-emerald-400'
                         : 'hover:bg-slate-100 text-slate-700 dark:hover:bg-slate-800 dark:text-slate-300'
                     }`}
                   >
                     <span className="truncate">{f.name}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 ml-1">
+                    <span className="text-[10px] uppercase font-semibold text-slate-400 ml-1">
                       {displayLabel(f.status)}
                     </span>
                   </Link>
                 ))}
               </div>
-              <div className="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+              <div className="mt-1.5 border-t border-slate-100 pt-1.5 dark:border-slate-800">
                 <Link
                   href="/owner/facilities/new"
                   onClick={() => setSwitcherOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                  className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
                 >
-                  <PlusCircle size={14} />
+                  <PlusCircle size={13} strokeWidth={1.75} />
                   <span>Thêm cơ sở mới</span>
                 </Link>
                 <Link
                   href="/owner/facilities"
                   onClick={() => setSwitcherOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   <span>Tất cả cơ sở</span>
                 </Link>
@@ -113,11 +112,10 @@ export function FacilitySidebar({
         </div>
       </div>
 
-      {/* Sidebar Nav Links */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-6">
+      <nav className="flex-1 overflow-y-auto p-3 space-y-5">
         {!applicationId && (
           <div>
-            <p className="px-3 mb-1.5 text-[10px] font-bold tracking-widest text-slate-400">
+            <p className="px-2.5 mb-1 text-[10px] font-semibold tracking-wider text-slate-400">
               VẬN HÀNH LƯỢT ĐẶT
             </p>
             {[
@@ -128,7 +126,7 @@ export function FacilitySidebar({
                 key={href}
                 href={`${href}?facilityId=${data.id}`}
                 onClick={() => setSidebarOpen(false)}
-                className="flex rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
+                className="flex rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
               >
                 {label}
               </Link>
@@ -137,10 +135,10 @@ export function FacilitySidebar({
         )}
         {navGroups.map((group) => (
           <div key={group.group}>
-            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
+            <p className="px-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
               {group.group}
             </p>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {group.items.map((item) => {
                 const itemHref = base + item.suffix
                 const active = path === itemHref
@@ -150,13 +148,17 @@ export function FacilitySidebar({
                     key={item.suffix}
                     href={itemHref}
                     onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-bold transition ${
+                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
                       active
-                        ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
+                        ? 'bg-emerald-700 text-white font-semibold shadow-2xs'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                     }`}
                   >
-                    <Icon size={16} className={active ? 'text-white' : 'text-slate-400'} />
+                    <Icon
+                      size={14}
+                      strokeWidth={1.75}
+                      className={active ? 'text-white' : 'text-slate-400'}
+                    />
                     <span>{item.label}</span>
                   </Link>
                 )
@@ -166,19 +168,18 @@ export function FacilitySidebar({
         ))}
       </nav>
 
-      {/* Sidebar Footer Link to Public View */}
       <div className="border-t border-slate-200/80 p-3 dark:border-slate-800">
         <Link
           href={`/facilities/${data.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+          className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <div className="flex items-center gap-2">
-            <ExternalLink size={14} className="text-emerald-600" />
+            <ExternalLink size={13} strokeWidth={1.75} className="text-emerald-700" />
             <span>Xem trang công khai</span>
           </div>
-          <ChevronRight size={14} className="text-slate-400" />
+          <ChevronRight size={13} strokeWidth={1.75} className="text-slate-400" />
         </Link>
       </div>
     </aside>

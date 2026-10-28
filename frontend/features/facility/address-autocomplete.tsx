@@ -1,8 +1,8 @@
 'use client'
 
 import { Input } from '@/components/ui/input'
-import { useEffect,useId,useRef,useState } from 'react'
-import { addressFromComponents,loadGoogleMaps,type FacilityAddress } from './google-maps'
+import { useEffect, useId, useRef, useState } from 'react'
+import { addressFromComponents, loadGoogleMaps, type FacilityAddress } from './google-maps'
 
 export type FacilityPlaceSelection = {
   latitude: number
@@ -10,7 +10,13 @@ export type FacilityPlaceSelection = {
   address: FacilityAddress
 }
 
-export function AddressAutocomplete({ value, onChange, onSelect, disabled, error }: {
+export function AddressAutocomplete({
+  value,
+  onChange,
+  onSelect,
+  disabled,
+  error,
+}: {
   value: string
   onChange: (value: string) => void
   onSelect: (selection: FacilityPlaceSelection) => void
@@ -31,11 +37,15 @@ export function AddressAutocomplete({ value, onChange, onSelect, disabled, error
   useEffect(() => {
     let active = true
     void loadGoogleMaps()
-      .then(libraries => { if (active) setPlaces(libraries.places) })
+      .then((libraries) => {
+        if (active) setPlaces(libraries.places)
+      })
       .catch(() => {
         // Google Maps is optional - fallback to manual input or Leaflet
       })
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [])
 
   useEffect(() => {
@@ -58,21 +68,27 @@ export function AddressAutocomplete({ value, onChange, onSelect, disabled, error
         language: 'vi',
         region: 'vn',
         sessionToken: sessionToken.current,
-      }).then(response => {
-        if (sequence !== requestSequence.current) return
-        setSuggestions(response.suggestions
-          .flatMap(suggestion => suggestion.placePrediction ? [suggestion.placePrediction] : []))
-        setSuggestionsQuery(query)
-        setActiveSuggestion(-1)
-        setMessage('')
-      }).catch(() => {
-        if (sequence === requestSequence.current) {
-          setSuggestions([])
-          setMessage('Không thể tìm gợi ý địa chỉ. Bạn vẫn có thể nhập địa chỉ thủ công.')
-        }
-      }).finally(() => {
-        if (sequence === requestSequence.current) setLoading(false)
       })
+        .then((response) => {
+          if (sequence !== requestSequence.current) return
+          setSuggestions(
+            response.suggestions.flatMap((suggestion) =>
+              suggestion.placePrediction ? [suggestion.placePrediction] : [],
+            ),
+          )
+          setSuggestionsQuery(query)
+          setActiveSuggestion(-1)
+          setMessage('')
+        })
+        .catch(() => {
+          if (sequence === requestSequence.current) {
+            setSuggestions([])
+            setMessage('Không thể tìm gợi ý địa chỉ. Bạn vẫn có thể nhập địa chỉ thủ công.')
+          }
+        })
+        .finally(() => {
+          if (sequence === requestSequence.current) setLoading(false)
+        })
     }, 250)
 
     return () => window.clearTimeout(timer)
@@ -114,10 +130,10 @@ export function AddressAutocomplete({ value, onChange, onSelect, disabled, error
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'ArrowDown' && suggestions.length) {
       event.preventDefault()
-      setActiveSuggestion(index => (index + 1) % suggestions.length)
+      setActiveSuggestion((index) => (index + 1) % suggestions.length)
     } else if (event.key === 'ArrowUp' && suggestions.length) {
       event.preventDefault()
-      setActiveSuggestion(index => index <= 0 ? suggestions.length - 1 : index - 1)
+      setActiveSuggestion((index) => (index <= 0 ? suggestions.length - 1 : index - 1))
     } else if (event.key === 'Enter' && activeSuggestion >= 0) {
       event.preventDefault()
       void selectPrediction(suggestions[activeSuggestion])
@@ -127,59 +143,86 @@ export function AddressAutocomplete({ value, onChange, onSelect, disabled, error
     }
   }
 
-  return <div className="relative flex flex-col justify-start min-w-0 gap-2 text-sm font-medium self-start w-full">
-    <label htmlFor={`${id}-input`}>Địa chỉ <span className="ml-1 font-bold text-red-500">*</span></label>
-    <Input
-      id={`${id}-input`}
-      name="addressLine"
-      value={value}
-      onChange={event => {
-        selectedValue.current = null
-        setSuggestions([])
-        setSuggestionsQuery('')
-        setActiveSuggestion(-1)
-        setLoading(false)
-        onChange(event.target.value)
-      }}
-      onKeyDown={handleKeyDown}
-      maxLength={500}
-      required
-      disabled={disabled}
-      autoComplete="off"
-      placeholder="Số nhà, tên đường hoặc địa chỉ chi tiết"
-      role="combobox"
-      aria-autocomplete="list"
-      aria-expanded={suggestionsQuery === value.trim() && suggestions.length > 0}
-      aria-controls={`${id}-suggestions`}
-      aria-activedescendant={activeSuggestion >= 0 ? `${id}-suggestion-${activeSuggestion}` : undefined}
-      aria-invalid={Boolean(error)}
-    />
-    <span className="text-xs font-normal text-slate-500">Nhập số nhà, đường và địa chỉ chi tiết. Chọn tỉnh / thành phố và xã / phường ở các danh sách bên dưới.</span>
-    {loading && !disabled && value.trim().length >= 3 && <span role="status" className="text-xs text-slate-500">Đang tìm địa chỉ…</span>}
-    {suggestionsQuery === value.trim() && !disabled && suggestions.length > 0 && <ul
-      id={`${id}-suggestions`}
-      role="listbox"
-      className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border bg-white py-1 shadow-lg"
-    >
-      {suggestions.map((prediction, index) => <li
-        key={prediction.placeId}
-        id={`${id}-suggestion-${index}`}
-        role="option"
-        aria-selected={activeSuggestion === index}
-      >
-        <button
-          type="button"
-          className={`w-full px-3 py-2 text-left text-sm ${activeSuggestion === index ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}
-          onMouseDown={event => event.preventDefault()}
-          onClick={() => void selectPrediction(prediction)}
-          disabled={loading || disabled}
+  return (
+    <div className="relative flex flex-col justify-start min-w-0 gap-2 text-sm font-medium self-start w-full">
+      <label htmlFor={`${id}-input`}>
+        Địa chỉ <span className="ml-1 font-bold text-red-500">*</span>
+      </label>
+      <Input
+        id={`${id}-input`}
+        name="addressLine"
+        value={value}
+        onChange={(event) => {
+          selectedValue.current = null
+          setSuggestions([])
+          setSuggestionsQuery('')
+          setActiveSuggestion(-1)
+          setLoading(false)
+          onChange(event.target.value)
+        }}
+        onKeyDown={handleKeyDown}
+        maxLength={500}
+        required
+        disabled={disabled}
+        autoComplete="off"
+        placeholder="Số nhà, tên đường hoặc địa chỉ chi tiết"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={suggestionsQuery === value.trim() && suggestions.length > 0}
+        aria-controls={`${id}-suggestions`}
+        aria-activedescendant={
+          activeSuggestion >= 0 ? `${id}-suggestion-${activeSuggestion}` : undefined
+        }
+        aria-invalid={Boolean(error)}
+      />
+      <span className="text-xs font-normal text-slate-500">
+        Nhập số nhà, đường và địa chỉ chi tiết. Chọn tỉnh / thành phố và xã / phường ở các danh sách
+        bên dưới.
+      </span>
+      {loading && !disabled && value.trim().length >= 3 && (
+        <span role="status" className="text-xs text-slate-500">
+          Đang tìm địa chỉ…
+        </span>
+      )}
+      {suggestionsQuery === value.trim() && !disabled && suggestions.length > 0 && (
+        <ul
+          id={`${id}-suggestions`}
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border bg-white py-1 shadow-lg"
         >
-          <span className="block font-medium">{prediction.mainText?.text ?? prediction.text.text}</span>
-          {prediction.secondaryText?.text && <span className="mt-0.5 block text-xs text-slate-500">{prediction.secondaryText.text}</span>}
-        </button>
-      </li>)}
-    </ul>}
-    {error && <span className="text-xs text-red-700">{error}</span>}
-    {message && <span role="status" className="text-xs text-amber-800">{message}</span>}
-  </div>
+          {suggestions.map((prediction, index) => (
+            <li
+              key={prediction.placeId}
+              id={`${id}-suggestion-${index}`}
+              role="option"
+              aria-selected={activeSuggestion === index}
+            >
+              <button
+                type="button"
+                className={`w-full px-3 py-2 text-left text-sm ${activeSuggestion === index ? 'bg-emerald-50' : 'hover:bg-slate-50'}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => void selectPrediction(prediction)}
+                disabled={loading || disabled}
+              >
+                <span className="block font-medium">
+                  {prediction.mainText?.text ?? prediction.text.text}
+                </span>
+                {prediction.secondaryText?.text && (
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    {prediction.secondaryText.text}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <span className="text-xs text-red-700">{error}</span>}
+      {message && (
+        <span role="status" className="text-xs text-amber-800">
+          {message}
+        </span>
+      )}
+    </div>
+  )
 }

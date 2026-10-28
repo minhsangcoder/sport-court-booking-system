@@ -149,20 +149,22 @@ export function AvailabilityPage({
       minute: '2-digit',
     })
   return (
-    <div className="mx-auto max-w-6xl px-5 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+    <div className="mx-auto max-w-6xl px-5 py-6 sm:py-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
         <Link className="hover:underline" href={`/facilities/${facilityId}`}>
           {facility.data?.name || 'Cơ sở'} / {court?.name || 'Sân'}
         </Link>
         <Link
           href={`/facilities/${facilityId}/directions`}
-          className="inline-flex items-center gap-1.5 font-semibold text-rose-700 hover:text-rose-800 hover:underline"
+          className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 hover:text-emerald-800 hover:underline"
         >
-          <Navigation className="h-4 w-4" />
+          <Navigation className="size-3.5" strokeWidth={1.75} />
           <span>Chỉ đường đến sân</span>
         </Link>
       </div>
-      <h1 className="mt-5 text-3xl font-black">Chọn giờ chơi</h1>
+      <h1 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+        Chọn giờ chơi
+      </h1>
       {ownFacility && <OwnFacilityNotice facilityId={facilityId} />}
       {!counter && !ownFacility && (
         <>
@@ -170,31 +172,33 @@ export function AvailabilityPage({
           <AdmissionErrorContext failure={policyFailure} />
         </>
       )}
-      <p className="mt-1 text-base font-semibold text-slate-700">
+      <p className="mt-1 text-sm font-semibold text-slate-700">
         {court?.name || 'Sân'} {court?.code ? `(${court.code})` : ''} · {facility.data?.name}
       </p>
-      <p className="mt-3 text-sm text-slate-500">
+      <p className="mt-2 text-xs text-slate-500">
         Lịch trống cập nhật từ hệ thống. Chọn khung giờ chưa giữ chỗ; giờ theo{' '}
         {timezoneLabel(timezone || 'cơ sở')}.
       </p>
       {resource.data?.selectionStepMinutes === 30 && (
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-1.5 text-xs text-slate-500">
           Chọn liên tiếp từ 60 phút đến 4 giờ, theo bước 30 phút. Giá cuối tính theo toàn bộ khoảng
           chọn và làm tròn một lần.
         </p>
       )}
       {!counter && !ownFacility && (
-        <aside className="mt-4 space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-          <p className="font-semibold">Lượt đặt trực tiếp không được hoàn tiền khi khách tự hủy.</p>
-          <p>
+        <aside className="mt-4 space-y-1.5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-700">
+          <p className="font-semibold text-slate-900">
+            Lượt đặt trực tiếp không được hoàn tiền khi khách tự hủy.
+          </p>
+          <p className="leading-relaxed">
             Nếu không thể đến sân, bạn có thể đăng chuyển nhượng. Khi chuyển nhượng trực tiếp thành
             công, bạn nhận <strong>100% giá chuyển nhượng đã chốt</strong> từ người mua, không trừ
             phí. Nếu không chuyển nhượng được và không sử dụng sân, bạn mất toàn bộ tiền đã trả.
           </p>
         </aside>
       )}
-      <div className="my-6 flex flex-wrap items-end justify-between gap-4">
-        <label className="grid gap-2 text-sm">
+      <div className="my-5 flex flex-wrap items-end justify-between gap-4">
+        <label className="grid gap-1.5 text-xs font-medium text-slate-700">
           Ngày chơi
           <Input
             type="date"
@@ -211,6 +215,7 @@ export function AvailabilityPage({
         </label>
         <Button
           variant="outline"
+          size="sm"
           onClick={() => {
             resource.reload()
             setSelection([])
@@ -223,10 +228,10 @@ export function AvailabilityPage({
       </div>
       <section
         aria-label="Lịch trống"
-        className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5"
+        className="mb-5 rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4"
       >
-        <h2 className="font-bold">Các khoảng còn trống</h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <h2 className="text-sm font-semibold text-slate-900">Các khoảng còn trống</h2>
+        <p className="mt-0.5 text-xs text-slate-600">
           Tự cập nhật mỗi 5 giây. Chọn một khoảng hoặc tự chọn giờ bên dưới.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -234,6 +239,7 @@ export function AvailabilityPage({
             <Button
               key={`range-${range.startsAt}`}
               variant="outline"
+              size="sm"
               disabled={
                 busy ||
                 ownFacility ||
@@ -252,16 +258,21 @@ export function AvailabilityPage({
           ))}
         </div>
         {!resource.loading && !resource.error && ranges.length === 0 && (
-          <p className="mt-3 text-sm">Không còn giờ trống trong ngày này. Hãy chọn ngày khác.</p>
+          <p className="mt-2.5 text-xs text-slate-600">
+            Không còn giờ trống trong ngày này. Hãy chọn ngày khác.
+          </p>
         )}
       </section>
-      <section aria-label="Tự chọn giờ chơi" className="mb-6 rounded-2xl border p-5">
-        <h2 className="font-bold">Tự chọn giờ chơi</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2 text-sm">
+      <section
+        aria-label="Tự chọn giờ chơi"
+        className="mb-5 rounded-xl border border-slate-200 bg-white p-4"
+      >
+        <h2 className="text-sm font-semibold text-slate-900">Tự chọn giờ chơi</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-xs font-medium text-slate-700">
             Giờ bắt đầu
             <select
-              className="rounded-lg border bg-white p-3"
+              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-[13px] text-slate-900"
               value={start}
               disabled={busy || ownFacility || resource.loading}
               onChange={(e) => {
@@ -283,10 +294,10 @@ export function AvailabilityPage({
               ))}
             </select>
           </label>
-          <label className="grid gap-2 text-sm">
+          <label className="grid gap-1.5 text-xs font-medium text-slate-700">
             Giờ kết thúc
             <select
-              className="rounded-lg border bg-white p-3"
+              className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-[13px] text-slate-900"
               value={end}
               disabled={busy || ownFacility || resource.loading || !start}
               onChange={(e) => chooseRange(start, e.target.value)}
@@ -300,22 +311,29 @@ export function AvailabilityPage({
             </select>
           </label>
         </div>
-        <p className="mt-3 text-sm text-slate-600">
+        <p className="mt-2.5 text-xs text-slate-500">
           Chọn từ 60 phút đến 4 giờ. Chỉ các khoảng còn trống liên tục mới có thể đặt.
         </p>
       </section>
       {(resource.error || facility.error || courts.error || error) && (
-        <p role="alert" className="mb-5 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700"
+        >
           {error || resource.error || facility.error || courts.error}
         </p>
       )}
-      {resource.loading && <p role="status">Đang kiểm tra lịch trống…</p>}
+      {resource.loading && (
+        <p role="status" className="text-xs text-slate-500">
+          Đang kiểm tra lịch trống…
+        </p>
+      )}
       {resource.data?.slots.length === 0 && (
-        <p className="rounded-xl border p-6 text-slate-500">
+        <p className="rounded-xl border border-slate-200 bg-white p-5 text-xs text-slate-500">
           Không có khung giờ mở cửa trong ngày này. Hãy chọn ngày khác.
         </p>
       )}
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid gap-2.5 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {resource.data?.slots.map((s) => {
           const selected = selection.some((v) => v.startsAt === s.startsAt)
           return (
@@ -325,15 +343,15 @@ export function AvailabilityPage({
               disabled={busy || ownFacility || resource.loading || s.state !== 'AVAILABLE'}
               onClick={() => select(s)}
               aria-pressed={selected}
-              className={`rounded-xl border p-4 text-left transition ${selected ? 'border-emerald-600 bg-emerald-600 text-white' : s.state === 'AVAILABLE' ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-500' : 'border-slate-200 bg-slate-100 text-slate-400'}`}
+              className={`rounded-lg border p-3 text-left transition ${selected ? 'border-emerald-700 bg-emerald-700 text-white shadow-2xs' : s.state === 'AVAILABLE' ? 'border-slate-200 bg-white hover:border-emerald-600' : 'border-slate-200 bg-slate-50 text-slate-400'}`}
             >
-              <span className="block font-semibold">
+              <span className="block text-xs font-semibold">
                 {time(s.startsAt)}–{time(s.endsAt)}
               </span>
-              <span className="mt-2 block text-sm">
+              <span className="mt-1 block text-xs font-medium">
                 {s.amount == null ? 'Chưa có giá' : money(s.amount, s.currency)}
               </span>
-              <span className="mt-2 block text-xs">
+              <span className="mt-1 block text-[11px] opacity-80">
                 {s.reason
                   ? reasons[s.reason] || displayLabel(s.reason, 'Không thể đặt')
                   : 'Còn trống'}
@@ -345,7 +363,7 @@ export function AvailabilityPage({
       {pricing.quote?.warnings?.length ? (
         <div
           role="status"
-          className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"
+          className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs"
         >
           <p>Khoảng chọn để lại giờ trống dưới 60 phút. Bạn vẫn có thể tiếp tục hoặc chọn gợi ý:</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -353,6 +371,7 @@ export function AvailabilityPage({
               <Button
                 key={suggestion.startsAt + suggestion.endsAt}
                 variant="outline"
+                size="sm"
                 disabled={busy}
                 onClick={() => {
                   holdIntent.current = null
@@ -373,13 +392,13 @@ export function AvailabilityPage({
         </div>
       ) : null}
       {selection.length > 0 && (
-        <aside className="sticky bottom-3 mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-white p-5 shadow-xl">
+        <aside className="sticky bottom-3 mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
           <div>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs text-slate-500">
               {selection.length} khung giờ · {time(selection[0].startsAt)}–
               {time(selection[selection.length - 1].endsAt)}
             </p>
-            <p className="mt-1 text-2xl font-bold" aria-live="polite">
+            <p className="mt-0.5 text-lg font-bold text-slate-900" aria-live="polite">
               {pricing.loading
                 ? 'Đang tính giá…'
                 : pricing.quote
@@ -387,7 +406,7 @@ export function AvailabilityPage({
                   : 'Chọn đủ thời lượng'}
             </p>
             {(pricing.error || unavailable) && (
-              <p role="alert" className="mt-1 text-sm text-red-700">
+              <p role="alert" className="mt-1 text-xs text-red-700">
                 {unavailable
                   ? 'Khoảng đã chọn không còn trống. Vui lòng chọn lại giờ chơi.'
                   : pricing.error}
@@ -404,7 +423,7 @@ export function AvailabilityPage({
               pricing.loading ||
               !pricing.quote
             }
-            className="bg-emerald-600 px-6 text-white"
+            className="bg-emerald-700 px-5 text-white hover:bg-emerald-800"
           >
             {busy ? 'Đang kiểm tra…' : user ? 'Xem tóm tắt và giữ chỗ' : 'Đăng nhập để đặt sân'}
           </Button>

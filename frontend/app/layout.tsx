@@ -1,3 +1,4 @@
+import { PageBackdrop } from '@/components/page-backdrop'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
@@ -43,7 +44,11 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="antialiased">
-        <AuthProvider><AppHeader /><main className="min-h-[calc(100vh-64px)]">{children}</main></AuthProvider>
+        <PageBackdrop />
+        <AuthProvider>
+          <AppHeader />
+          <main className="min-h-[calc(100vh-56px)]">{children}</main>
+        </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

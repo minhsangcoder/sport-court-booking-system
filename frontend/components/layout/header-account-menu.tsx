@@ -7,7 +7,7 @@ import {
   Heart,
   Landmark,
   LogOut,
-  Shield,
+  ShieldCheck,
   User,
   Users,
 } from 'lucide-react'
@@ -18,16 +18,18 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
   const { user, isStaffOnly, busy, logout } = model
   if (!user) return null
   return (
-    <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 animate-in fade-in zoom-in-95 duration-150 z-50">
+    <div className="absolute right-0 mt-1.5 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-800 dark:bg-slate-900 z-50">
       {/* User Profile Header */}
-      <div className="border-b border-slate-100 p-3 dark:border-slate-800">
-        <p className="font-bold text-slate-900 dark:text-white truncate">{user.fullName}</p>
-        <p className="text-xs text-slate-500 truncate">{user.email || user.phone}</p>
-        <div className="mt-2 flex flex-wrap gap-1">
+      <div className="border-b border-slate-100 px-2.5 py-2 dark:border-slate-800">
+        <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+          {user.fullName}
+        </p>
+        <p className="text-[11px] text-slate-500 truncate">{user.email || user.phone}</p>
+        <div className="mt-1.5 flex flex-wrap gap-1">
           {user.roles.map((r) => (
             <span
               key={r}
-              className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+              className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
             >
               {displayLabel(r)}
             </span>
@@ -37,41 +39,41 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
 
       {/* Customer Links */}
       {!isStaffOnly && (
-        <div className="py-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+        <div className="py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
           <Link
             href="/customer/bookings"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <Calendar size={16} className="text-emerald-600" />
+            <Calendar size={14} className="text-slate-400" />
             <span>Lịch đặt của tôi</span>
           </Link>
           <Link
             href="/customer/groups"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <Users size={16} className="text-emerald-600" />
+            <Users size={14} className="text-slate-400" />
             <span>Hội nhóm thể thao</span>
           </Link>
           <Link
             href="/customer/favorites"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <Heart size={16} className="text-emerald-600" />
+            <Heart size={14} className="text-slate-400" />
             <span>Sân yêu thích</span>
           </Link>
           <Link
             href="/customer/profile"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <User size={16} className="text-emerald-600" />
+            <User size={14} className="text-slate-400" />
             <span>Hồ sơ cá nhân</span>
           </Link>
           {user.roles.includes('CUSTOMER') && (
             <Link
               href="/customer/profile/bank"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             >
-              <Landmark size={16} className="text-emerald-600" />
+              <Landmark size={14} className="text-slate-400" />
               <span>Ngân hàng nhận tiền chuyển nhượng</span>
             </Link>
           )}
@@ -80,19 +82,19 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
 
       {/* Staff Dedicated Links */}
       {isStaffOnly && (
-        <div className="py-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+        <div className="py-1 text-xs font-medium text-slate-700 dark:text-slate-300">
           <Link
             href="/staff/bookings"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-slate-900 dark:text-white"
+            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-slate-900 dark:text-white"
           >
-            <Briefcase size={16} className="text-emerald-600" />
+            <Briefcase size={14} className="text-emerald-700" />
             <span>Kiểm tra lượt đặt</span>
           </Link>
           <Link
             href="/staff/counter-booking"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <CalendarCheck2 size={16} className="text-emerald-600" />
+            <CalendarCheck2 size={14} className="text-slate-400" />
             <span>Đặt tại quầy</span>
           </Link>
         </div>
@@ -107,23 +109,23 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
             <>
               <Link
                 href="/owner/facilities"
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-emerald-50 dark:text-slate-200 dark:hover:bg-emerald-950"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                <Building2 size={16} className="text-emerald-600" />
+                <Building2 size={14} className="text-emerald-700" />
                 <span>Cơ sở của tôi</span>
               </Link>
               <Link
                 href="/owner/bookings"
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                <Briefcase size={16} />
+                <Briefcase size={14} className="text-emerald-700" />
                 <span>Lịch đặt & Check-in khách</span>
               </Link>
               <Link
                 href="/owner/counter-booking"
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                <CalendarCheck2 size={16} />
+                <CalendarCheck2 size={14} className="text-emerald-700" />
                 <span>Đặt tại quầy cho khách</span>
               </Link>
             </>
@@ -131,18 +133,18 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
           {user.roles.includes('STAFF') && !isStaffOnly && (
             <Link
               href="/staff/bookings"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-blue-50 dark:text-slate-200 dark:hover:bg-blue-950"
+              className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              <Briefcase size={16} className="text-blue-600" />
+              <Briefcase size={14} className="text-slate-500" />
               <span>Kiểm tra lượt đặt</span>
             </Link>
           )}
           {user.roles.includes('ADMIN') && (
             <Link
               href="/admin/accounts"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950"
+              className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              <Shield size={16} />
+              <ShieldCheck size={14} className="text-emerald-700" />
               <span>Bảng điều khiển quản trị viên</span>
             </Link>
           )}
@@ -155,9 +157,9 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
           type="button"
           onClick={logout}
           disabled={busy}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50 cursor-pointer"
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50 cursor-pointer"
         >
-          <LogOut size={16} />
+          <LogOut size={14} />
           <span>{busy ? 'Đang đăng xuất…' : 'Đăng xuất'}</span>
         </button>
       </div>

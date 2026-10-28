@@ -1,15 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import {
-  Compass,
-  MapPin,
-  Navigation,
-  Copy,
-  Check,
-  Share2,
-  ExternalLink,
-} from 'lucide-react'
+import { Compass, MapPin, Navigation, Copy, Check, Share2, ExternalLink } from 'lucide-react'
 
 export interface DirectionsCardProps {
   title?: string
@@ -115,12 +107,8 @@ export function DirectionsCard({
             <Compass className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              {title}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500 leading-relaxed">
-              {subtitle}
-            </p>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500 leading-relaxed">{subtitle}</p>
           </div>
         </div>
 
@@ -176,9 +164,7 @@ export function DirectionsCard({
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-slate-900 text-base sm:text-lg">
-                {venueName}
-              </span>
+              <span className="font-bold text-slate-900 text-base sm:text-lg">{venueName}</span>
               <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/90 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
                 <Check className="h-3 w-3 text-amber-700" />
                 Địa chỉ chính xác
@@ -198,11 +184,7 @@ export function DirectionsCard({
           title="Sao chép địa chỉ nhanh"
           aria-label="Sao chép địa chỉ nhanh"
         >
-          {copied ? (
-            <Check className="h-4 w-4 text-emerald-600" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
+          {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
         </button>
       </div>
 

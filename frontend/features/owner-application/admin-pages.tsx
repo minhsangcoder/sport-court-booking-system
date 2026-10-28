@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { AdminOwnerApplicationList } from './admin-list'
 import { RevisionHistory } from './revision-history'
-import { safeApplicationReturn,type ApplicationFilters } from './search'
+import { safeApplicationReturn, type ApplicationFilters } from './search'
 import { useApi } from '@/lib/use-api'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -15,25 +15,405 @@ import type { Media } from '@/features/facility/types'
 import { legalFields } from './legal-fields'
 import { Failure } from './application-page'
 import { translateError } from '@/lib/error-translator'
-import { applicationLabels,type OwnerApplication,type ApplicationDetail,type ApplicationState } from './types'
-export function AdminOwnerApplications({initial}:{initial:ApplicationFilters}){return <RequireAuth roles={['ADMIN']}><AdminOwnerApplicationList initial={initial}/></RequireAuth>}
-type Action='APPROVE'|'REJECT'|'SUPPLEMENT_REQUIRED'
-export function AdminOwnerApplication({id,returnTo}:{id:string;returnTo?:string}){return <RequireAuth roles={['ADMIN']}><Detail id={id} returnTo={safeApplicationReturn(returnTo)}/></RequireAuth>}
-function Detail({id,returnTo}:{id:string;returnTo:string}){
- const r=useApi<ApplicationDetail>(`/admin/owner-applications/${id}`);const [tab,setTab]=useState('profile'),[action,setAction]=useState<Action|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[feedback,setFeedback]=useState('')
- async function decide(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!action||busy)return;const f=new FormData(e.currentTarget);setBusy(true);setError('');setFeedback('');try{const next=await api<OwnerApplication>(`/admin/owner-applications/${id}/decision`,{method:'POST',body:JSON.stringify({action,reason:String(f.get('reason')||'').trim(),commissionPercent:action==='APPROVE'?Number(f.get('commissionPercent')):null})});setAction(null);setFeedback(`Đã lưu quyết định: ${applicationLabels[next.state]}. ${next.state==='APPROVED'?'Người đăng ký cần đăng nhập lại để sử dụng quyền chủ cơ sở.':''}`);r.reload()}catch(err){setError(err instanceof Error?err.message:'Không thể lưu quyết định.')}finally{setBusy(false)}}
- async function retry(){if(busy)return;setBusy(true);setError('');try{const next=await api<OwnerApplication>(`/admin/owner-applications/${id}/retry`,{method:'POST'});setFeedback(applicationLabels[next.state]);r.reload()}catch(err){setError(err instanceof Error?err.message:'Không thể thử lại.')}finally{setBusy(false)}}
- if(r.loading)return <p role="status" className="p-8">Đang tải hồ sơ thẩm định…</p>;if(!r.data)return <div className="p-8"><Failure message={r.error} retry={r.reload}/></div>;const d=r.data,a=d.application,f=d.facility.facility
- return <main className="mx-auto max-w-5xl px-5 py-10"><Link href={returnTo} className="text-sm text-slate-500">Đăng ký chủ cơ sở</Link><h1 className="mt-5 break-words text-3xl font-black">{a.businessName}</h1><p className="mt-3 font-semibold text-emerald-700">{applicationLabels[a.state]}</p><Link href={`/admin/accounts/${a.userId}`} className="mt-3 inline-block text-sm text-emerald-700 underline">Xem tài khoản người đăng ký</Link>{a.reason&&<p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">{a.reason}</p>}{a.lastError&&<p role="alert" className="mt-4 text-red-700">{translateError(a.lastError)}</p>}
- {d.applicant&&<section aria-label="Tài khoản đăng ký" className="mt-6 rounded-2xl border bg-slate-50 p-5"><h2 className="font-bold">Tài khoản đăng ký</h2><dl className="mt-4 grid min-w-0 grid-cols-1 gap-3 text-sm sm:grid-cols-2">{[['Họ tên',d.applicant.fullName],['Thư điện tử tài khoản',d.applicant.email],['Điện thoại',d.applicant.phone],['Trạng thái',({ACTIVE:'Đang hoạt động',LOCKED:'Đã khóa',PENDING_VERIFICATION:'Chưa xác minh',DEACTIVATED:'Đã vô hiệu hóa'} as Record<string,string>)[d.applicant.status]||d.applicant.status]].map(([label,value])=><div key={label} className="min-w-0"><dt className="text-slate-500">{label}</dt><dd className="mt-1 break-words font-medium">{value||'Chưa khai báo'}</dd></div>)}</dl></section>}
- <div role="tablist" aria-label="Hồ sơ đăng ký chủ cơ sở" className="mt-7 flex gap-2 overflow-x-auto border-b pb-4">{[['profile','Cơ sở và cấu hình'],['legal','Pháp lý và ngân hàng'],['documents','Tài liệu và ảnh'],['history','Lịch sử thẩm định']].map(([key,label])=><button role="tab" aria-selected={tab===key} key={key} onClick={()=>setTab(key)} className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${tab===key?'bg-emerald-600 text-white':'bg-slate-100'}`}>{label}</button>)}</div>
- {tab==='profile'&&<section className="mt-6 min-w-0 space-y-4 rounded-2xl border p-6"><h2 className="text-xl font-bold">{f.name}</h2><p>{f.addressLine}, {f.ward}, {f.province}</p><p className="text-sm text-slate-500">Liên hệ: {f.phone} · {timezoneLabel(f.timezone)}</p><dl className="text-sm"><dt className="text-slate-500">Thư điện tử liên hệ cơ sở</dt><dd className="mt-1 min-w-0 font-medium [overflow-wrap:anywhere]">{d.reviewSnapshot?.facility?.contactEmail||'Chưa có trong phiên bản hồ sơ này'}</dd></dl><p className="text-xs text-slate-500">{d.reviewSnapshot?'Thông tin thư điện tử từ bản hồ sơ gần nhất đã gửi thẩm định.':'Hồ sơ chưa gửi thẩm định.'}</p><p className="text-sm">GPS trong hồ sơ đã gửi: {d.reviewSnapshot?.facility?.latitude!=null&&d.reviewSnapshot.facility.longitude!=null?`${d.reviewSnapshot.facility.latitude}, ${d.reviewSnapshot.facility.longitude}`:'Chưa có trong phiên bản hồ sơ này'}</p><p>{f.description}</p><h3 className="pt-3 text-lg font-bold">{d.facility.courts.length} sân</h3>{d.facility.courts.map(c=><article key={c.id} className="rounded-lg bg-slate-50 p-4"><p className="font-semibold">{c.code} · {c.name}</p><p className="mt-2 text-sm text-slate-500">{c.enabled?'Đang bật':'Tạm tắt'} · {c.description}</p></article>)}<Configuration detail={d}/></section>}
- {tab==='legal'&&<section className="mt-6 rounded-2xl border p-6"><h2 className="text-xl font-bold">Thông tin pháp lý và ngân hàng</h2><dl className="mt-6 grid gap-5 sm:grid-cols-2">{legalFields.map(([key,label])=><div key={key}><dt className="text-sm text-slate-500">{label}</dt><dd className="mt-2 break-words font-medium">{d.legal[key]||'Chưa khai báo'}</dd></div>)}</dl><p className="mt-6 text-xs text-slate-500">Việc truy cập hồ sơ được ghi nhận trong nhật ký thẩm định.</p></section>}
- {tab==='documents'&&<Documents facilityId={f.id}/>}
- {tab==='history'&&<RevisionHistory detail={d}/>}
- {a.state==='PENDING_APPROVAL'&&<section className="mt-8 rounded-2xl border p-6"><h2 className="text-xl font-bold">Quyết định thẩm định</h2><div className="mt-5 flex flex-wrap gap-3"><Button onClick={()=>setAction('APPROVE')} disabled={busy} className="bg-emerald-600 text-white">Phê duyệt chủ cơ sở</Button><Button variant="outline" onClick={()=>setAction('SUPPLEMENT_REQUIRED')} disabled={busy}>Yêu cầu bổ sung</Button><Button variant="outline" onClick={()=>setAction('REJECT')} disabled={busy}>Từ chối hồ sơ</Button></div>
- {action&&<form role="dialog" aria-label="Xác nhận quyết định chủ cơ sở" onSubmit={decide} className="mt-6 space-y-5 rounded-xl bg-slate-50 p-5"><h3 className="font-bold">{action==='APPROVE'?'Kích hoạt quyền chủ cơ sở và công khai cơ sở':action==='REJECT'?'Từ chối đăng ký chủ cơ sở':'Mở lại hồ sơ để bổ sung'}</h3>{action==='APPROVE'&&<label className="grid max-w-sm gap-2 text-sm">Phí nền tảng (%)<Input name="commissionPercent" type="number" min={0} max={100} step="0.01" required disabled={busy}/></label>}<label className="grid gap-2 text-sm">Lý do và hướng dẫn<textarea name="reason" required minLength={action==='APPROVE'?1:20} maxLength={1200} disabled={busy} className="min-h-28 rounded-lg border p-3"/></label><p className="text-sm text-slate-600">{action==='APPROVE'?'Người đăng ký được cấp quyền chủ cơ sở khi kích hoạt hoàn tất và cần đăng nhập lại.':'Người đăng ký nhận được lý do qua thông báo.'}</p><div className="flex flex-wrap gap-3"><Button type="submit" disabled={busy}>{busy?'Đang xử lý…':'Xác nhận quyết định'}</Button><Button type="button" variant="outline" onClick={()=>setAction(null)} disabled={busy}>Quay lại</Button></div></form>}</section>}
- {(['SUBMITTING','APPROVING','DECIDING'] as ApplicationState[]).includes(a.state)&&<section className="mt-6 rounded-xl bg-amber-50 p-5"><p className="text-sm">Thao tác đã được ghi nhận và sẽ tự tiếp tục. Có thể thử lại an toàn khi dịch vụ sẵn sàng.</p><Button variant="outline" className="mt-4" disabled={busy} onClick={retry}>Thử lại thao tác</Button></section>}<Button className="mt-5" variant="outline" disabled={busy} onClick={r.reload}>Cập nhật hồ sơ</Button>{error&&<p role="alert" className="mt-5 text-red-700">{error}</p>}{feedback&&<p role="status" className="mt-5 text-emerald-700">{feedback}</p>}</main>
+import {
+  applicationLabels,
+  type OwnerApplication,
+  type ApplicationDetail,
+  type ApplicationState,
+} from './types'
+export function AdminOwnerApplications({ initial }: { initial: ApplicationFilters }) {
+  return (
+    <RequireAuth roles={['ADMIN']}>
+      <AdminOwnerApplicationList initial={initial} />
+    </RequireAuth>
+  )
 }
-function Configuration({detail}:{detail:ApplicationDetail}){const review=detail.facility.reviews[0];const snapshot=review?.snapshot as {hours?:{dayOfWeek:number;opensAt:string;closesAt:string;slotMinutes:number}[];prices?:{label:string;startsAt:string;endsAt:string;pricePerSlot:number;currency:string}[]}|undefined;return <><h3 className="pt-4 text-lg font-bold">Lịch và giá đã gửi</h3>{!snapshot&&<p className="text-sm text-slate-500">Hồ sơ chưa gửi thẩm định.</p>}<div className="grid gap-3 sm:grid-cols-2">{snapshot?.hours?.map((h,i)=><p key={i} className="rounded-lg bg-slate-50 p-3 text-sm">Ngày {h.dayOfWeek} · {h.opensAt}–{h.closesAt} · {h.slotMinutes} phút/khung giờ</p>)}</div>{snapshot?.prices?.map((p,i)=><p key={i} className="text-sm">{p.label} · {p.startsAt}–{p.endsAt} · {p.pricePerSlot.toLocaleString('vi-VN')} {p.currency}/khung giờ</p>)}</>}
-function Documents({facilityId}:{facilityId:string}){const docs=useApi<ReviewDocument[]>(`/admin/facilities/${facilityId}/documents`),images=useApi<Media[]>(`/admin/facilities/${facilityId}/images`);return <section className="mt-6 space-y-4">{(docs.loading||images.loading)&&<p role="status">Đang tải tài liệu…</p>}{(docs.error||images.error)&&<Failure message={docs.error||images.error} retry={()=>{docs.reload();images.reload()}}/>}<h2 className="text-xl font-bold">Giấy tờ định danh và địa điểm</h2>{docs.data?.length===0&&<p className="text-sm text-slate-500">Chưa có tài liệu.</p>}{docs.data?.map(d=><a className="block rounded-xl border p-5 text-sm text-emerald-700 underline" href={d.url} target="_blank" rel="noopener noreferrer" key={d.id}>{d.name} · {Math.ceil(d.sizeBytes/1024)} KB{d.archived?' · Bản lưu hồ sơ trước':''}</a>)}<h2 className="pt-4 text-xl font-bold">Ảnh cơ sở</h2>{images.data?.map((m,i)=><a className="block rounded-xl border p-4 text-sm text-emerald-700 underline" href={m.url} target="_blank" rel="noopener noreferrer" key={m.id}>Xem ảnh cơ sở {i+1}</a>)}</section>}
+type Action = 'APPROVE' | 'REJECT' | 'SUPPLEMENT_REQUIRED'
+export function AdminOwnerApplication({ id, returnTo }: { id: string; returnTo?: string }) {
+  return (
+    <RequireAuth roles={['ADMIN']}>
+      <Detail id={id} returnTo={safeApplicationReturn(returnTo)} />
+    </RequireAuth>
+  )
+}
+function Detail({ id, returnTo }: { id: string; returnTo: string }) {
+  const r = useApi<ApplicationDetail>(`/admin/owner-applications/${id}`)
+  const [tab, setTab] = useState('profile'),
+    [action, setAction] = useState<Action | null>(null),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [feedback, setFeedback] = useState('')
+  async function decide(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!action || busy) return
+    const f = new FormData(e.currentTarget)
+    setBusy(true)
+    setError('')
+    setFeedback('')
+    try {
+      const next = await api<OwnerApplication>(`/admin/owner-applications/${id}/decision`, {
+        method: 'POST',
+        body: JSON.stringify({
+          action,
+          reason: String(f.get('reason') || '').trim(),
+          commissionPercent: action === 'APPROVE' ? Number(f.get('commissionPercent')) : null,
+        }),
+      })
+      setAction(null)
+      setFeedback(
+        `Đã lưu quyết định: ${applicationLabels[next.state]}. ${next.state === 'APPROVED' ? 'Người đăng ký cần đăng nhập lại để sử dụng quyền chủ cơ sở.' : ''}`,
+      )
+      r.reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể lưu quyết định.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function retry() {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const next = await api<OwnerApplication>(`/admin/owner-applications/${id}/retry`, {
+        method: 'POST',
+      })
+      setFeedback(applicationLabels[next.state])
+      r.reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể thử lại.')
+    } finally {
+      setBusy(false)
+    }
+  }
+  if (r.loading)
+    return (
+      <p role="status" className="p-8">
+        Đang tải hồ sơ thẩm định…
+      </p>
+    )
+  if (!r.data)
+    return (
+      <div className="p-8">
+        <Failure message={r.error} retry={r.reload} />
+      </div>
+    )
+  const d = r.data,
+    a = d.application,
+    f = d.facility.facility
+  return (
+    <main className="mx-auto max-w-5xl px-5 py-10">
+      <Link href={returnTo} className="text-sm text-slate-500">
+        Đăng ký chủ cơ sở
+      </Link>
+      <h1 className="mt-5 break-words text-3xl font-black">{a.businessName}</h1>
+      <p className="mt-3 font-semibold text-emerald-700">{applicationLabels[a.state]}</p>
+      <Link
+        href={`/admin/accounts/${a.userId}`}
+        className="mt-3 inline-block text-sm text-emerald-700 underline"
+      >
+        Xem tài khoản người đăng ký
+      </Link>
+      {a.reason && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">{a.reason}</p>}
+      {a.lastError && (
+        <p role="alert" className="mt-4 text-red-700">
+          {translateError(a.lastError)}
+        </p>
+      )}
+      {d.applicant && (
+        <section aria-label="Tài khoản đăng ký" className="mt-6 rounded-2xl border bg-slate-50 p-5">
+          <h2 className="font-bold">Tài khoản đăng ký</h2>
+          <dl className="mt-4 grid min-w-0 grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            {[
+              ['Họ tên', d.applicant.fullName],
+              ['Thư điện tử tài khoản', d.applicant.email],
+              ['Điện thoại', d.applicant.phone],
+              [
+                'Trạng thái',
+                (
+                  {
+                    ACTIVE: 'Đang hoạt động',
+                    LOCKED: 'Đã khóa',
+                    PENDING_VERIFICATION: 'Chưa xác minh',
+                    DEACTIVATED: 'Đã vô hiệu hóa',
+                  } as Record<string, string>
+                )[d.applicant.status] || d.applicant.status,
+              ],
+            ].map(([label, value]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-slate-500">{label}</dt>
+                <dd className="mt-1 break-words font-medium">{value || 'Chưa khai báo'}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+      <div
+        role="tablist"
+        aria-label="Hồ sơ đăng ký chủ cơ sở"
+        className="mt-7 flex gap-2 overflow-x-auto border-b pb-4"
+      >
+        {[
+          ['profile', 'Cơ sở và cấu hình'],
+          ['legal', 'Pháp lý và ngân hàng'],
+          ['documents', 'Tài liệu và ảnh'],
+          ['history', 'Lịch sử thẩm định'],
+        ].map(([key, label]) => (
+          <button
+            role="tab"
+            aria-selected={tab === key}
+            key={key}
+            onClick={() => setTab(key)}
+            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm ${tab === key ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {tab === 'profile' && (
+        <section className="mt-6 min-w-0 space-y-4 rounded-2xl border p-6">
+          <h2 className="text-xl font-bold">{f.name}</h2>
+          <p>
+            {f.addressLine}, {f.ward}, {f.province}
+          </p>
+          <p className="text-sm text-slate-500">
+            Liên hệ: {f.phone} · {timezoneLabel(f.timezone)}
+          </p>
+          <dl className="text-sm">
+            <dt className="text-slate-500">Thư điện tử liên hệ cơ sở</dt>
+            <dd className="mt-1 min-w-0 font-medium [overflow-wrap:anywhere]">
+              {d.reviewSnapshot?.facility?.contactEmail || 'Chưa có trong phiên bản hồ sơ này'}
+            </dd>
+          </dl>
+          <p className="text-xs text-slate-500">
+            {d.reviewSnapshot
+              ? 'Thông tin thư điện tử từ bản hồ sơ gần nhất đã gửi thẩm định.'
+              : 'Hồ sơ chưa gửi thẩm định.'}
+          </p>
+          <p className="text-sm">
+            GPS trong hồ sơ đã gửi:{' '}
+            {d.reviewSnapshot?.facility?.latitude != null &&
+            d.reviewSnapshot.facility.longitude != null
+              ? `${d.reviewSnapshot.facility.latitude}, ${d.reviewSnapshot.facility.longitude}`
+              : 'Chưa có trong phiên bản hồ sơ này'}
+          </p>
+          <p>{f.description}</p>
+          <h3 className="pt-3 text-lg font-bold">{d.facility.courts.length} sân</h3>
+          {d.facility.courts.map((c) => (
+            <article key={c.id} className="rounded-lg bg-slate-50 p-4">
+              <p className="font-semibold">
+                {c.code} · {c.name}
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                {c.enabled ? 'Đang bật' : 'Tạm tắt'} · {c.description}
+              </p>
+            </article>
+          ))}
+          <Configuration detail={d} />
+        </section>
+      )}
+      {tab === 'legal' && (
+        <section className="mt-6 rounded-2xl border p-6">
+          <h2 className="text-xl font-bold">Thông tin pháp lý và ngân hàng</h2>
+          <dl className="mt-6 grid gap-5 sm:grid-cols-2">
+            {legalFields.map(([key, label]) => (
+              <div key={key}>
+                <dt className="text-sm text-slate-500">{label}</dt>
+                <dd className="mt-2 break-words font-medium">{d.legal[key] || 'Chưa khai báo'}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-6 text-xs text-slate-500">
+            Việc truy cập hồ sơ được ghi nhận trong nhật ký thẩm định.
+          </p>
+        </section>
+      )}
+      {tab === 'documents' && <Documents facilityId={f.id} />}
+      {tab === 'history' && <RevisionHistory detail={d} />}
+      {a.state === 'PENDING_APPROVAL' && (
+        <section className="mt-8 rounded-2xl border p-6">
+          <h2 className="text-xl font-bold">Quyết định thẩm định</h2>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button
+              onClick={() => setAction('APPROVE')}
+              disabled={busy}
+              className="bg-emerald-600 text-white"
+            >
+              Phê duyệt chủ cơ sở
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setAction('SUPPLEMENT_REQUIRED')}
+              disabled={busy}
+            >
+              Yêu cầu bổ sung
+            </Button>
+            <Button variant="outline" onClick={() => setAction('REJECT')} disabled={busy}>
+              Từ chối hồ sơ
+            </Button>
+          </div>
+          {action && (
+            <form
+              role="dialog"
+              aria-label="Xác nhận quyết định chủ cơ sở"
+              onSubmit={decide}
+              className="mt-6 space-y-5 rounded-xl bg-slate-50 p-5"
+            >
+              <h3 className="font-bold">
+                {action === 'APPROVE'
+                  ? 'Kích hoạt quyền chủ cơ sở và công khai cơ sở'
+                  : action === 'REJECT'
+                    ? 'Từ chối đăng ký chủ cơ sở'
+                    : 'Mở lại hồ sơ để bổ sung'}
+              </h3>
+              {action === 'APPROVE' && (
+                <label className="grid max-w-sm gap-2 text-sm">
+                  Phí nền tảng (%)
+                  <Input
+                    name="commissionPercent"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    required
+                    disabled={busy}
+                  />
+                </label>
+              )}
+              <label className="grid gap-2 text-sm">
+                Lý do và hướng dẫn
+                <textarea
+                  name="reason"
+                  required
+                  minLength={action === 'APPROVE' ? 1 : 20}
+                  maxLength={1200}
+                  disabled={busy}
+                  className="min-h-28 rounded-lg border p-3"
+                />
+              </label>
+              <p className="text-sm text-slate-600">
+                {action === 'APPROVE'
+                  ? 'Người đăng ký được cấp quyền chủ cơ sở khi kích hoạt hoàn tất và cần đăng nhập lại.'
+                  : 'Người đăng ký nhận được lý do qua thông báo.'}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button type="submit" disabled={busy}>
+                  {busy ? 'Đang xử lý…' : 'Xác nhận quyết định'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAction(null)}
+                  disabled={busy}
+                >
+                  Quay lại
+                </Button>
+              </div>
+            </form>
+          )}
+        </section>
+      )}
+      {(['SUBMITTING', 'APPROVING', 'DECIDING'] as ApplicationState[]).includes(a.state) && (
+        <section className="mt-6 rounded-xl bg-amber-50 p-5">
+          <p className="text-sm">
+            Thao tác đã được ghi nhận và sẽ tự tiếp tục. Có thể thử lại an toàn khi dịch vụ sẵn
+            sàng.
+          </p>
+          <Button variant="outline" className="mt-4" disabled={busy} onClick={retry}>
+            Thử lại thao tác
+          </Button>
+        </section>
+      )}
+      <Button className="mt-5" variant="outline" disabled={busy} onClick={r.reload}>
+        Cập nhật hồ sơ
+      </Button>
+      {error && (
+        <p role="alert" className="mt-5 text-red-700">
+          {error}
+        </p>
+      )}
+      {feedback && (
+        <p role="status" className="mt-5 text-emerald-700">
+          {feedback}
+        </p>
+      )}
+    </main>
+  )
+}
+function Configuration({ detail }: { detail: ApplicationDetail }) {
+  const review = detail.facility.reviews[0]
+  const snapshot = review?.snapshot as
+    | {
+        hours?: { dayOfWeek: number; opensAt: string; closesAt: string; slotMinutes: number }[]
+        prices?: {
+          label: string
+          startsAt: string
+          endsAt: string
+          pricePerSlot: number
+          currency: string
+        }[]
+      }
+    | undefined
+  return (
+    <>
+      <h3 className="pt-4 text-lg font-bold">Lịch và giá đã gửi</h3>
+      {!snapshot && <p className="text-sm text-slate-500">Hồ sơ chưa gửi thẩm định.</p>}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {snapshot?.hours?.map((h, i) => (
+          <p key={i} className="rounded-lg bg-slate-50 p-3 text-sm">
+            Ngày {h.dayOfWeek} · {h.opensAt}–{h.closesAt} · {h.slotMinutes} phút/khung giờ
+          </p>
+        ))}
+      </div>
+      {snapshot?.prices?.map((p, i) => (
+        <p key={i} className="text-sm">
+          {p.label} · {p.startsAt}–{p.endsAt} · {p.pricePerSlot.toLocaleString('vi-VN')}{' '}
+          {p.currency}/khung giờ
+        </p>
+      ))}
+    </>
+  )
+}
+function Documents({ facilityId }: { facilityId: string }) {
+  const docs = useApi<ReviewDocument[]>(`/admin/facilities/${facilityId}/documents`),
+    images = useApi<Media[]>(`/admin/facilities/${facilityId}/images`)
+  return (
+    <section className="mt-6 space-y-4">
+      {(docs.loading || images.loading) && <p role="status">Đang tải tài liệu…</p>}
+      {(docs.error || images.error) && (
+        <Failure
+          message={docs.error || images.error}
+          retry={() => {
+            docs.reload()
+            images.reload()
+          }}
+        />
+      )}
+      <h2 className="text-xl font-bold">Giấy tờ định danh và địa điểm</h2>
+      {docs.data?.length === 0 && <p className="text-sm text-slate-500">Chưa có tài liệu.</p>}
+      {docs.data?.map((d) => (
+        <a
+          className="block rounded-xl border p-5 text-sm text-emerald-700 underline"
+          href={d.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          key={d.id}
+        >
+          {d.name} · {Math.ceil(d.sizeBytes / 1024)} KB{d.archived ? ' · Bản lưu hồ sơ trước' : ''}
+        </a>
+      ))}
+      <h2 className="pt-4 text-xl font-bold">Ảnh cơ sở</h2>
+      {images.data?.map((m, i) => (
+        <a
+          className="block rounded-xl border p-4 text-sm text-emerald-700 underline"
+          href={m.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          key={m.id}
+        >
+          Xem ảnh cơ sở {i + 1}
+        </a>
+      ))}
+    </section>
+  )
+}

@@ -1,9 +1,11 @@
 'use client'
 import type { useProfile } from '@/features/profile/use-profile'
 import { PRESET_AVATARS } from '@/features/profile/use-profile-shared'
-import { Building2, CheckCircle2, Shield, ShieldCheck, Trophy } from 'lucide-react'
+import { Building2, CalendarCheck2, CheckCircle2, Shield, ShieldCheck } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { ProfileAvatar } from './profile-avatar'
+
 export function ProfileIdentity({
   model,
 }: {
@@ -29,44 +31,41 @@ export function ProfileIdentity({
     getRoleBadge,
   } = model
   return (
-    <div className="-mt-16 relative z-10 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900 sm:p-6 lg:p-8">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        {/* Left: Avatar + Identity */}
+    <div className="mt-6 relative z-10 rounded-xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          {/* Avatar with Camera Overlay */}
           <ProfileAvatar model={model} />
 
-          {/* Name, Roles, ID */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
                 {fullName || user?.fullName || 'Người dùng SportHub'}
               </h2>
               {user?.status === 'ACTIVE' && (
-                <span title="Tài khoản đã kích hoạt" className="flex items-center text-emerald-600">
+                <span title="Tài khoản đã kích hoạt" className="flex items-center text-emerald-700">
                   <CheckCircle2
-                    size={18}
-                    className="fill-emerald-50 text-emerald-600 dark:fill-emerald-950"
+                    size={16}
+                    strokeWidth={1.75}
+                    className="fill-emerald-50 text-emerald-700 dark:fill-emerald-950"
                   />
                 </span>
               )}
             </div>
 
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {user?.email || user?.phone || 'Chưa cung cấp thông tin liên hệ'}
             </p>
 
-            {/* Role Badges */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
               {user?.roles?.map((role) => {
                 const badge = getRoleBadge(role)
                 const IconComponent = badge.icon
                 return (
                   <span
                     key={role}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${badge.className}`}
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${badge.className}`}
                   >
-                    <IconComponent size={12} />
+                    <IconComponent size={11} />
                     {badge.label}
                   </span>
                 )
@@ -75,22 +74,21 @@ export function ProfileIdentity({
           </div>
         </div>
 
-        {/* Right: Quick Portal Navigation Links */}
-        <div className="flex flex-wrap items-center gap-2.5 border-t border-slate-100 pt-4 md:border-t-0 md:pt-0">
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 md:border-t-0 md:pt-0">
           <Link
             href="/customer/bookings"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
           >
-            <Trophy size={16} className="text-emerald-600" />
+            <CalendarCheck2 size={14} strokeWidth={1.75} className="text-emerald-700" />
             Lịch đặt của tôi
           </Link>
 
           {user?.roles?.includes('ADMIN') && (
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-rose-700 hover:shadow-rose-600/20"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-slate-800"
             >
-              <ShieldCheck size={16} />
+              <ShieldCheck size={14} strokeWidth={1.75} className="text-emerald-400" />
               Trang quản trị viên
             </Link>
           )}
@@ -98,9 +96,9 @@ export function ProfileIdentity({
           {user?.roles?.includes('OWNER') && (
             <Link
               href="/owner"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-700 hover:shadow-amber-600/20"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-emerald-800"
             >
-              <Building2 size={16} />
+              <Building2 size={14} strokeWidth={1.75} />
               Kênh Chủ sân
             </Link>
           )}
@@ -108,31 +106,30 @@ export function ProfileIdentity({
           {user?.roles?.includes('STAFF') && (
             <Link
               href="/staff"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-blue-600/20"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-800 shadow-2xs transition-colors hover:bg-slate-100"
             >
-              <Shield size={16} />
+              <Shield size={14} strokeWidth={1.75} className="text-slate-600" />
               Kênh Nhân viên
             </Link>
           )}
         </div>
       </div>
 
-      {/* Quick Avatar Preset Selector Accordion */}
       {showAvatarPicker && (
-        <div className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-800">
+        <div className="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
           <div className="flex items-center justify-between pb-3">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Chọn nhanh ảnh đại diện phong cách thể thao
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Chọn nhanh ảnh đại diện
             </div>
             <button
               type="button"
               onClick={() => setShowAvatarPicker(false)}
-              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
             >
               Đóng lại
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
             {PRESET_AVATARS.map((preset) => (
               <button
                 key={preset.name}
@@ -141,22 +138,22 @@ export function ProfileIdentity({
                   setAvatarUrl(preset.url)
                   setShowAvatarPicker(false)
                 }}
-                className={`group relative flex flex-col items-center gap-1.5 rounded-xl border p-2 text-center transition-all ${
+                className={`group relative flex flex-col items-center gap-1.5 rounded-lg border p-2 text-center transition-colors ${
                   avatarUrl === preset.url
-                    ? 'border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-600/30 dark:bg-emerald-950/20'
-                    : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800'
+                    ? 'border-emerald-700 bg-emerald-50/50 ring-1 ring-emerald-700/20'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                 }`}
               >
                 <Image
                   unoptimized
-                  width={48}
-                  height={48}
+                  width={40}
+                  height={40}
                   src={preset.url}
                   alt={preset.name}
-                  className="size-12 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform"
+                  className="size-10 rounded-full object-cover shadow-2xs"
                 />
                 <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate w-full">
-                  {preset.icon} {preset.name}
+                  {preset.name}
                 </span>
               </button>
             ))}
@@ -166,5 +163,3 @@ export function ProfileIdentity({
     </div>
   )
 }
-
-import { ProfileAvatar } from './profile-avatar'

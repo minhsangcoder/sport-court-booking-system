@@ -1,4 +1,5 @@
 'use client'
+import { PageBanner, bannerGhost } from '@/components/page-banner'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useApi } from '@/lib/use-api'
@@ -19,86 +20,93 @@ function Loaded() {
   const purchases = useApi<Acquisition[]>('/transfers/acquisitions')
   const r = tab === 'listings' ? listings : purchases
   return (
-    <div className="mx-auto max-w-5xl px-5 py-10">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-black">Chuyển nhượng của tôi</h1>
-        <Link href="/transfers" className="text-sm text-emerald-700">
-          Mở chợ chuyển nhượng
-        </Link>
+    <>
+      <PageBanner
+        eyebrow="Chuyển nhượng P2P"
+        title="Chuyển nhượng của tôi"
+        description="Tin đã đăng và các giao dịch bạn đang tham gia."
+        icon="shuttle"
+        actions={
+          <Link href="/transfers" className={bannerGhost}>
+            Mở chợ chuyển nhượng
+          </Link>
+        }
+      />
+      <div className="mx-auto max-w-5xl px-5 py-10">
+        <AdmissionNotice market />
+        <div
+          role="tablist"
+          aria-label="Giao dịch chuyển nhượng"
+          className="mt-6 flex gap-3 border-b pb-4"
+        >
+          {[
+            ['listings', 'Tin đã đăng'],
+            ['purchases', 'Giao dịch tham gia'],
+          ].map(([value, label]) => (
+            <button
+              role="tab"
+              aria-selected={tab === value}
+              key={value}
+              onClick={() => setTab(value)}
+              className={`rounded-full px-5 py-2 text-sm ${tab === value ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {r.loading && (
+          <p role="status" className="mt-6">
+            Đang tải giao dịch…
+          </p>
+        )}
+        {r.error && (
+          <p role="alert" className="mt-6 text-red-700">
+            {r.error}
+          </p>
+        )}
+        {r.data?.length === 0 && (
+          <p className="mt-6 rounded-2xl border p-6 text-slate-500">
+            Chưa có giao dịch. Đăng tin từ chi tiết lượt đặt đã thanh toán hoặc chọn lượt đặt trên
+            chợ.
+          </p>
+        )}
+        <div className="mt-6 space-y-4">
+          {tab === 'listings'
+            ? listings.data?.map((l) => (
+                <Link
+                  key={l.id}
+                  href={`/transfers/${l.id}`}
+                  className="flex flex-wrap justify-between gap-4 rounded-2xl border p-5"
+                >
+                  <div>
+                    <h2 className="font-bold">
+                      {l.venue.facilityName} · {l.venue.courtName}
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {new Date(l.startsAt).toLocaleString('vi-VN', { timeZone: l.venue.timezone })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-emerald-700">{money(l.price, l.currency)}</p>
+                    <p className="mt-2 text-sm">{transferStates[l.state]}</p>
+                  </div>
+                </Link>
+              ))
+            : purchases.data?.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/customer/transfers/acquisitions/${a.id}`}
+                  className="flex justify-between gap-4 rounded-2xl border p-5"
+                >
+                  <span>
+                    Giao dịch {a.id.slice(0, 8).toUpperCase()}
+                    <p className="mt-2 text-sm text-slate-500">{transferStates[a.state]}</p>
+                  </span>
+                  <strong className="text-emerald-700">{money(a.amount, a.currency)}</strong>
+                </Link>
+              ))}
+        </div>
       </div>
-      <AdmissionNotice market />
-      <div
-        role="tablist"
-        aria-label="Giao dịch chuyển nhượng"
-        className="mt-6 flex gap-3 border-b pb-4"
-      >
-        {[
-          ['listings', 'Tin đã đăng'],
-          ['purchases', 'Giao dịch tham gia'],
-        ].map(([value, label]) => (
-          <button
-            role="tab"
-            aria-selected={tab === value}
-            key={value}
-            onClick={() => setTab(value)}
-            className={`rounded-full px-5 py-2 text-sm ${tab === value ? 'bg-emerald-600 text-white' : 'bg-slate-100'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {r.loading && (
-        <p role="status" className="mt-6">
-          Đang tải giao dịch…
-        </p>
-      )}
-      {r.error && (
-        <p role="alert" className="mt-6 text-red-700">
-          {r.error}
-        </p>
-      )}
-      {r.data?.length === 0 && (
-        <p className="mt-6 rounded-2xl border p-6 text-slate-500">
-          Chưa có giao dịch. Đăng tin từ chi tiết lượt đặt đã thanh toán hoặc chọn lượt đặt trên
-          chợ.
-        </p>
-      )}
-      <div className="mt-6 space-y-4">
-        {tab === 'listings'
-          ? listings.data?.map((l) => (
-              <Link
-                key={l.id}
-                href={`/transfers/${l.id}`}
-                className="flex flex-wrap justify-between gap-4 rounded-2xl border p-5"
-              >
-                <div>
-                  <h2 className="font-bold">
-                    {l.venue.facilityName} · {l.venue.courtName}
-                  </h2>
-                  <p className="mt-2 text-sm text-slate-500">
-                    {new Date(l.startsAt).toLocaleString('vi-VN', { timeZone: l.venue.timezone })}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-emerald-700">{money(l.price, l.currency)}</p>
-                  <p className="mt-2 text-sm">{transferStates[l.state]}</p>
-                </div>
-              </Link>
-            ))
-          : purchases.data?.map((a) => (
-              <Link
-                key={a.id}
-                href={`/customer/transfers/acquisitions/${a.id}`}
-                className="flex justify-between gap-4 rounded-2xl border p-5"
-              >
-                <span>
-                  Giao dịch {a.id.slice(0, 8).toUpperCase()}
-                  <p className="mt-2 text-sm text-slate-500">{transferStates[a.state]}</p>
-                </span>
-                <strong className="text-emerald-700">{money(a.amount, a.currency)}</strong>
-              </Link>
-            ))}
-      </div>
-    </div>
+    </>
   )
 }

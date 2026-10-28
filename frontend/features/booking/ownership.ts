@@ -4,16 +4,30 @@ import type { Booking, Payment } from './types'
 type Actor = Pick<UserProfile, 'id' | 'roles'> | null
 
 export function ownsBooking(booking: Booking, actor: Actor): boolean {
-  return Boolean(actor?.roles.includes('CUSTOMER') && booking.currentHolderId && booking.currentHolderId === actor.id)
+  return Boolean(
+    actor?.roles.includes('CUSTOMER') &&
+    booking.currentHolderId &&
+    booking.currentHolderId === actor.id,
+  )
 }
 
-export function operationsWorkspace(actor: Actor, facilityId: string, ownedFacilityIds: readonly string[] = []): 'owner' | 'staff' | null {
+export function operationsWorkspace(
+  actor: Actor,
+  facilityId: string,
+  ownedFacilityIds: readonly string[] = [],
+): 'owner' | 'staff' | null {
   if (actor?.roles.includes('OWNER') && ownedFacilityIds.includes(facilityId)) return 'owner'
   return actor?.roles.includes('STAFF') ? 'staff' : null
 }
 
-export function bookingResultPath(payment: Payment, booking: Booking | undefined, actor: Actor, ownedFacilityIds?: readonly string[]): string | null {
-  if (payment.purpose === 'TRANSFER') return `/customer/transfers/acquisitions/${payment.acquisitionId}`
+export function bookingResultPath(
+  payment: Payment,
+  booking: Booking | undefined,
+  actor: Actor,
+  ownedFacilityIds?: readonly string[],
+): string | null {
+  if (payment.purpose === 'TRANSFER')
+    return `/customer/transfers/acquisitions/${payment.acquisitionId}`
   if (payment.purpose === 'GROUP_CONTRIBUTION') return `/customer/groups/${payment.bookingId}`
   if (!booking || !actor) return null
   if (ownsBooking(booking, actor)) return `/customer/bookings/${booking.id}`
@@ -26,5 +40,10 @@ export function bookingResultPath(payment: Payment, booking: Booking | undefined
 }
 
 export function canPayBooking(booking: Booking, actor: Actor, canCreateCounter: boolean): boolean {
-  return ownsBooking(booking, actor) || Boolean(booking.source === 'OFFLINE_COUNTER' && actor?.id === booking.createdBy && canCreateCounter)
+  return (
+    ownsBooking(booking, actor) ||
+    Boolean(
+      booking.source === 'OFFLINE_COUNTER' && actor?.id === booking.createdBy && canCreateCounter,
+    )
+  )
 }

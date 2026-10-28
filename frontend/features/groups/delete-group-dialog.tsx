@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { AlertTriangle,Trash2,X } from 'lucide-react'
+import { AlertTriangle, Trash2, X } from 'lucide-react'
 
 interface DeleteGroupDialogProps {
   isOpen: boolean
@@ -53,13 +53,15 @@ export function DeleteGroupDialog({
         </h2>
 
         <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-          Bạn sắp xóa nhóm <strong className="text-slate-900 font-semibold">{groupName}</strong> khỏi danh sách Nhóm đặt sân của bạn.
+          Bạn sắp xóa nhóm <strong className="text-slate-900 font-semibold">{groupName}</strong>{' '}
+          khỏi danh sách Nhóm đặt sân của bạn.
         </p>
 
         <div className="mt-3.5 flex items-start gap-2.5 rounded-xl bg-amber-50 p-3 border border-amber-200/80 text-xs text-amber-900 leading-relaxed">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
           <span>
-            Nhóm sẽ bị ẩn khỏi trang của bạn. Bạn vẫn có thể xem lại hoặc khôi phục bất cứ lúc nào trong mục <strong>Đã xóa / Ẩn</strong>.
+            Nhóm sẽ bị ẩn khỏi trang của bạn. Bạn vẫn có thể xem lại hoặc khôi phục bất cứ lúc nào
+            trong mục <strong>Đã xóa / Ẩn</strong>.
           </span>
         </div>
 

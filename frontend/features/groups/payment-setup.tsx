@@ -37,7 +37,9 @@ export function GroupPaymentSetup({ group, reload }: { group: Group; reload: () 
       })
       reload()
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Không thể chia tiền. Vui lòng thử lại.')
+      setError(
+        failure instanceof Error ? failure.message : 'Không thể chia tiền. Vui lòng thử lại.',
+      )
       reload()
     } finally {
       flight.current = false
@@ -46,7 +48,10 @@ export function GroupPaymentSetup({ group, reload }: { group: Group; reload: () 
   }
 
   return (
-    <section aria-label="Mời thành viên và chia tiền" className="mt-6 space-y-4 rounded-2xl border p-5">
+    <section
+      aria-label="Mời thành viên và chia tiền"
+      className="mt-6 space-y-4 rounded-2xl border p-5"
+    >
       <h2 className="text-lg font-bold">Mời bạn cùng thanh toán</h2>
       {accepting && (
         <>
@@ -57,17 +62,30 @@ export function GroupPaymentSetup({ group, reload }: { group: Group; reload: () 
           {invite.loading && !invite.data && <p role="status">Đang tải mã mời…</p>}
           {invite.error && (
             <p role="alert" className="text-sm text-red-700">
-              {invite.error} <button className="underline" onClick={invite.reload}>Thử lại</button>
+              {invite.error}{' '}
+              <button className="underline" onClick={invite.reload}>
+                Thử lại
+              </button>
             </p>
           )}
           {invite.data && (
             <div className="space-y-3">
               <label className="grid gap-2 text-sm font-medium">
                 Mã mời nhóm
-                <textarea readOnly value={invite.data.code} rows={3} className="w-full rounded-lg border p-3 font-mono text-xs" />
+                <textarea
+                  readOnly
+                  value={invite.data.code}
+                  rows={3}
+                  className="w-full rounded-lg border p-3 font-mono text-xs"
+                />
               </label>
-              <Button variant="outline" onClick={copy}>Sao chép mã mời</Button>
-              <Link className="ml-4 text-sm text-emerald-700 underline" href={`/customer/groups/${group.id}/invite`}>
+              <Button variant="outline" onClick={copy}>
+                Sao chép mã mời
+              </Button>
+              <Link
+                className="ml-4 text-sm text-emerald-700 underline"
+                href={`/customer/groups/${group.id}/invite`}
+              >
                 Xem QR và liên kết mời
               </Link>
             </div>
@@ -75,17 +93,30 @@ export function GroupPaymentSetup({ group, reload }: { group: Group; reload: () 
         </>
       )}
       <p className="text-sm text-slate-600">
-        Hiện có {group.members.length}/{group.maxMembers} thành viên. Chốt chia tiền sẽ đóng lời mời;
-        mỗi người thanh toán phần của mình trong danh sách bên dưới.
+        Hiện có {group.members.length}/{group.maxMembers} thành viên. Chốt chia tiền sẽ đóng lời
+        mời; mỗi người thanh toán phần của mình trong danh sách bên dưới.
       </p>
       <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={busy} onClick={split}>Chia đều và bắt đầu thanh toán</Button>
-        <Link className="text-sm text-emerald-700 underline" href={`/customer/groups/${group.id}/split`}>
+        <Button disabled={busy} onClick={split}>
+          Chia đều và bắt đầu thanh toán
+        </Button>
+        <Link
+          className="text-sm text-emerald-700 underline"
+          href={`/customer/groups/${group.id}/split`}
+        >
           Tùy chỉnh phần tiền từng người
         </Link>
       </div>
-      {message && <p role="status" className="text-sm">{message}</p>}
-      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      {message && (
+        <p role="status" className="text-sm">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      )}
     </section>
   )
 }

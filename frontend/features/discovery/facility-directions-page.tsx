@@ -3,13 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import {
-  ChevronRight,
-  MapPin,
-  ArrowLeft,
-  Ticket,
-  CheckCircle2,
-} from 'lucide-react'
+import { ChevronRight, MapPin, ArrowLeft, Ticket, CheckCircle2 } from 'lucide-react'
 import { useApi } from '@/lib/use-api'
 import { useAuth } from '@/lib/auth-context'
 import type { Facility } from '@/features/facility/types'
@@ -32,11 +26,8 @@ export function FacilityDirectionsPage({
   // Find confirmed or active booking for this facility from user's history
   const matchingBooking =
     bookingsRes.data?.find(
-      (b) =>
-        b.facilityId === facilityId &&
-        (b.status === 'CONFIRMED' || b.status === 'CHECKED_IN')
-    ) ||
-    bookingsRes.data?.find((b) => b.facilityId === facilityId)
+      (b) => b.facilityId === facilityId && (b.status === 'CONFIRMED' || b.status === 'CHECKED_IN'),
+    ) || bookingsRes.data?.find((b) => b.facilityId === facilityId)
 
   const effectiveBookingId = paramBookingId || matchingBooking?.id
 
@@ -62,11 +53,7 @@ export function FacilityDirectionsPage({
   const amenities =
     f?.amenities && f.amenities.length > 0
       ? f.amenities
-      : [
-          '🏸 Sân Chuẩn Thi Đấu',
-          '🅿️ Bãi Đỗ Ô Tô & Xe Máy',
-          '❄️ Điều Hòa & Phòng Nghỉ VIP',
-        ]
+      : ['🏸 Sân Chuẩn Thi Đấu', '🅿️ Bãi Đỗ Ô Tô & Xe Máy', '❄️ Điều Hòa & Phòng Nghỉ VIP']
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/50 pb-20">
@@ -123,7 +110,11 @@ export function FacilityDirectionsPage({
                   Lượt đặt của bạn đã thanh toán thành công
                 </p>
                 <p className="text-xs text-emerald-800">
-                  Mã lượt đặt: <strong className="font-mono">{effectiveBookingId.slice(0, 8).toUpperCase()}</strong> · Trạng thái: Đã xác nhận
+                  Mã lượt đặt:{' '}
+                  <strong className="font-mono">
+                    {effectiveBookingId.slice(0, 8).toUpperCase()}
+                  </strong>{' '}
+                  · Trạng thái: Đã xác nhận
                 </p>
               </div>
             </div>
@@ -192,7 +183,9 @@ export function FacilityDirectionsPage({
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-xs transition hover:bg-slate-50 hover:text-slate-900"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>{effectiveBookingId ? 'Xem chi tiết cơ sở' : 'Quay lại trang chi tiết cơ sở'}</span>
+            <span>
+              {effectiveBookingId ? 'Xem chi tiết cơ sở' : 'Quay lại trang chi tiết cơ sở'}
+            </span>
           </Link>
         </div>
       </div>
