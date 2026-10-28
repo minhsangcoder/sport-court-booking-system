@@ -14,6 +14,7 @@ import { money } from '@/features/schedule/types'
 import type { Hold, Booking, Payment } from './types'
 import { Countdown, useRemaining } from './countdown'
 import { RefundPolicyNotice } from './refund-policy-notice'
+import { OwnFacilityNotice } from './own-facility-notice'
 import type { Group } from '@/features/groups/types'
 export function HoldSummary({ id }: { id: string }) {
   return (
@@ -47,9 +48,10 @@ function Loaded({ id }: { id: string }) {
   const courts = useApi<Court[]>(
     resource.data ? `/facilities/${resource.data.facilityId}/courts` : null,
   )
+  const ownFacility = !counter && Boolean(user && facility.data?.ownerId === user.id)
   async function confirm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (busy || !resource.data) return
+    if (busy || !resource.data || ownFacility || !facility.data) return
     setBusy(true)
     setError('')
     const values = new FormData(e.currentTarget)
@@ -176,6 +178,7 @@ function Loaded({ id }: { id: string }) {
         </p>
         <RefundPolicyNotice policy={h.quote.refundPolicy} />
       </section>
+      {ownFacility && <OwnFacilityNotice facilityId={h.facilityId} />}
       <form onSubmit={confirm} className="mt-6 space-y-4">
         {!counter && !booking && (
           <label className="grid gap-2 text-sm">
@@ -251,7 +254,9 @@ function Loaded({ id }: { id: string }) {
         <Button
           className="h-12 w-full bg-emerald-600 text-white"
           type="submit"
-          disabled={busy || expired || !h.quote.refundPolicy?.configured}
+          disabled={
+            busy || expired || ownFacility || !facility.data || !h.quote.refundPolicy?.configured
+          }
         >
           {busy
             ? 'Đang xác nhận…'

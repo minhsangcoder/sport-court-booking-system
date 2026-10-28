@@ -51,7 +51,8 @@ class SepayCollectionFlowTest {
             banks,
             f.json,
             manager,
-            "https://sporthub.example");
+            "https://sporthub.example",
+            "");
     channel =
         channels.configure(
             f.facility,
@@ -92,6 +93,21 @@ class SepayCollectionFlowTest {
 
   Payment create() {
     return orders.create(new CreatePayment(f.booking, null), "pay", f.customer, "token");
+  }
+
+  @Test
+  void separateWebhookOriginPreservesTheAppOriginAndBlankFallsBackToIt() {
+    var manager = new DataSourceTransactionManager(f.repo.jdbc().getDataSource());
+    for (String origin : List.of("", "https://webhook.example/")) {
+      var configured =
+          new SepayChannels(
+              f.repo, mock(PaymentBankAccess.class), mock(PaymentSecretVault.class),
+              mock(BankCatalog.class), f.json, manager, "https://sporthub.example", origin);
+      assertThat(configured.own(f.facility, f.owner, "token").webhookUrl())
+          .isEqualTo(
+              (origin.isBlank() ? "https://sporthub.example" : "https://webhook.example")
+                  + "/api/v1/payments/providers/sepay/" + channel.channelId() + "/webhook");
+    }
   }
 
   ObjectNode webhook(Payment p, long id, long amount) {

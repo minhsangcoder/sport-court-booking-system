@@ -6,6 +6,30 @@ Bảo vệ quyền tiếp cận giờ sân bằng hạn mức giữ chỗ chung,
 
 ## ADDED Requirements
 
+### Requirement: Facility ownership separates personal booking from counter operations
+
+The server SHALL reject personal holds/new bookings for the facility owner, using ownership from Facility service and failing closed when it cannot be verified. This SHALL cover hold replay, group creation and linked counter Customers. Owner counter booking for other Customers/guests SHALL remain supported without making the operator the holder.
+
+#### Scenario: An Owner uses a personal or old hold to book their own court
+- **WHEN** the facility owner requests an online hold, replays a hold or converts an old hold into an individual/group booking
+- **THEN** the server rejects the new action without creating a booking or new hold claim; existing bookings and payments are not rewritten
+
+#### Scenario: Owner operates the counter for a customer
+- **WHEN** Owner chooses their facility in the counter workspace and supplies a guest or another Customer's details
+- **THEN** the booking creator is Owner, holder is the linked Customer orNULL, and normal sufficient-payment/check-in guards apply
+
+#### Scenario: Owner cannot disguise self-booking as a linked counter customer
+- **WHEN** the guest phone resolves to the facility owner's Customer account
+- **THEN** new booking creation is rejected, including direct API requests
+
+#### Scenario: Owner finds operational actions in the interface
+- **WHEN** Owner opens the account menu or facility sidebar
+- **THEN** explicit links open scoped booking/check-in and counter booking workspaces; Owner does not need a Staff role to operate their own facility
+
+#### Scenario: Owner books another facility personally
+- **WHEN** an Owner with Customer access books a facility belonging to another person
+- **THEN** normal personal booking remains allowed, subject to existing availability, admission and payment rules
+
 ### Requirement: One active online claim is shared across booking and resale
 
 Mỗi user SHALL có tối đa1 claim đang giữ trên toàn hệ thống cho booking online và mua chuyển nhượng, kể cả phiên chờ A/tranh chấp. Quote hoặc chat không tạo claim. Retry cùng yêu cầu SHALL dùng claim/hạn cũ, không gia hạn hoặc chiếm thêm.

@@ -68,7 +68,15 @@ class TransferFinancialTermsTest {
     repo = new TransferRepository(jdbc, json);
     tx = new TransactionTemplate(new DataSourceTransactionManager(ds));
     deps = mock(TransferDependencies.class);
-    service = new TransferService(repo, deps, clock, 600, json, true, true, demoQuotes());
+    service =
+        new TransferService(
+            repo,
+            deps,
+            clock,
+            json,
+            true,
+            new com.sporthub.common.money.CollectionRuntime(
+                "DEMO", new org.springframework.mock.env.MockEnvironment()));
     seller = customer();
     buyer = customer();
     booking = UUID.randomUUID();
@@ -139,254 +147,60 @@ class TransferFinancialTermsTest {
                         List.of()),
                     "court",
                     Map.of("name", "Court 1", "sportCategoryId", UUID.randomUUID()))));
-    when(deps.feePolicy(facility))
-        .thenReturn(
-            json.valueToTree(
-                Map.of(
-                    "configured",
-                    true,
-                    "version",
-                    1,
-                    "feeBps",
-                    500,
-                    "currency",
-                    "VND",
-                    "rounding",
-                    "HALF_UP",
-                    "termsHash",
-                    Signatures.sha256(facility + "|1|500|VND|HALF_UP|FACILITY_TRANSFER_FEE"))));
-    when(deps.beneficiary(beneficiary, seller.id()))
-        .thenReturn(
-            json.valueToTree(
-                Map.of(
-                    "revisionId",
-                    beneficiary,
-                    "sellerId",
-                    seller.id(),
-                    "provider",
-                    "DEMO",
-                    "providerAccount",
-                    "demo-main",
-                    "currency",
-                    "VND",
-                    "moneyClass",
-                    "DEMO",
-                    "verified",
-                    true)));
-  }
-
-  FacilityTransferQuotes demoQuotes() {
-    return new FacilityTransferQuotes(
-        deps,
-        mock(com.sporthub.common.money.FacilityPaymentClient.class),
-        new com.sporthub.common.money.CollectionRuntime(
-            "DEMO", new org.springframework.core.env.StandardEnvironment()),
-        json);
   }
 
   Caller customer() {
-    return new Caller(UUID.randomUUID(), "Customer", Set.of("CUSTOMER"), Map.of(), "ACTIVE", true, false);
-  }
-
-  Create quoteInput() {
-    return new Create(booking, new BigDecimal("100000"), deadline, beneficiary, null);
+    return new Caller(
+        UUID.randomUUID(), "Customer", Set.of("CUSTOMER"), Map.of(), "ACTIVE", true, false);
   }
 
   UUID listing() {
-    var quote = service.quote(quoteInput(), seller);
-    UUID id =
-        tx.execute(
-            s ->
-                service.create(
-                    new Create(
-                        booking,
-                        new BigDecimal("100000"),
-                        deadline,
-                        beneficiary,
-                        quote.path("termsHash").asText()),
-                    UUID.randomUUID().toString(),
-                    seller));
+    var fee =
+        json.createObjectNode()
+            .put("configured", true)
+            .put("version", 1)
+            .put("feeBps", 500)
+            .put(
+                "termsHash",
+                Signatures.sha256(facility + "|1|500|VND|HALF_UP|FACILITY_TRANSFER_FEE"));
+    var terms =
+        com.sporthub.common.money.DemoTransferTerms.seller(
+            json,
+            source,
+            deps.context(court).path("facility"),
+            fee,
+            seller.id(),
+            new BigDecimal("100000"),
+            deadline);
+    UUID id = HistoricalTransfers.listing(repo, source, deps.context(court), terms, deadline);
     jdbc.update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", id);
     return id;
   }
 
   @Test
-  void sellerAcceptsExactPriceFeeAndOwnDestinationBeforePublishingAndBuyerAcceptsSamePolicy()
-      throws Exception {
-    var q = service.quote(quoteInput(), seller);
-    assertThat(q.path("quotedFeeAmount").asText()).isEqualTo("5000");
-    assertThat(q.path("quotedSellerNetAmount").asText()).isEqualTo("95000");
-    UUID listing = listing();
-    var view = service.detail(listing, buyer);
-    String publicJson = json.writeValueAsString(view);
-    assertThat(publicJson)
-        .doesNotContain(
-            "bookingId",
-            "sellerId",
-            "beneficiaryRevisionId",
-            "providerAccount",
-            seller.id().toString());
-    assertThatThrownBy(
-            () -> tx.execute(s -> service.acquire(listing, UUID.randomUUID().toString(), buyer)))
-        .isInstanceOf(ConflictException.class);
-    String key = UUID.randomUUID().toString();
-    UUID acquisition =
-        tx.execute(
-            s ->
-                service.acquire(
-                    listing, key, buyer, view.financeTerms().path("termsHash").asText()));
-    UUID replay =
-        tx.execute(
-            s ->
-                service.acquire(
-                    listing, key, buyer, view.financeTerms().path("termsHash").asText()));
-    assertThat(replay).isEqualTo(acquisition);
-    var a = service.acquisition(acquisition, buyer);
-    assertThat(a.financeTerms().path("refundPolicy").path("rateBps").asInt()).isEqualTo(8000);
-    assertThat(a.financeTerms().path("buyerId").asText()).isEqualTo(buyer.id().toString());
+  void historicalTermsRemainPrivateAndAcquisitionAmountsImmutable() throws Exception {
+    var f = locked();
+    var view = service.detail(f.listing(), buyer);
+    assertThat(json.writeValueAsString(view))
+        .doesNotContain("beneficiaryRevisionId", "providerAccount", seller.id().toString());
+    var a = service.acquisition(f.acquisition(), buyer);
     assertThat(a.financeTerms().path("amount").asText()).isEqualTo("100000");
+    assertThat(a.financeTerms().path("quotedSellerNetAmount").asText()).isEqualTo("95000");
     assertThatThrownBy(
             () ->
                 jdbc.update(
                     "UPDATE transfer_acquisitions SET"
                         + " finance_terms=jsonb_set(finance_terms,'{quotedFeeAmount}','0') WHERE"
                         + " id=?",
-                    acquisition))
+                    a.id()))
         .isInstanceOf(org.springframework.dao.DataAccessException.class);
-  }
-
-  @Test
-  void demoNeedsOwnerFeeAndFreshConsentButNoVerifiedDestination() {
-    assertThatCode(
-            () -> service.quote(new Create(booking, new BigDecimal("100000"), deadline), seller))
-        .doesNotThrowAnyException();
-    assertThatThrownBy(() -> service.quote(quoteInput(), buyer))
-        .isInstanceOf(ForbiddenException.class);
-    var q = service.quote(quoteInput(), seller);
-    assertThatThrownBy(
-            () ->
-                tx.execute(
-                    s ->
-                        service.create(
-                            new Create(
-                                booking,
-                                new BigDecimal("90000"),
-                                deadline,
-                                beneficiary,
-                                q.path("termsHash").asText()),
-                            UUID.randomUUID().toString(),
-                            seller)))
-        .isInstanceOf(ConflictException.class);
-    when(deps.feePolicy(facility)).thenReturn(json.valueToTree(Map.of("configured", false)));
-    assertThatThrownBy(
-            () ->
-                tx.execute(
-                    s ->
-                        service.create(
-                            new Create(
-                                booking,
-                                new BigDecimal("100000"),
-                                deadline,
-                                beneficiary,
-                                q.path("termsHash").asText()),
-                            UUID.randomUUID().toString(),
-                            seller)))
-        .isInstanceOf(ConflictException.class);
-    assertThat(jdbc.queryForObject("SELECT count(*) FROM transfer_listings", Integer.class))
-        .isZero();
-    verify(deps, never()).beneficiary(any(), any());
-  }
-
-  @Test
-  void changedPriceRequiresNewConsentAndLockedSnapshotCannotBeReplaced() {
-    UUID id = listing();
-    var old = repo.find(id).financeTerms();
-    assertThatThrownBy(
-            () ->
-                tx.executeWithoutResult(
-                    s ->
-                        service.edit(
-                            id,
-                            new Edit(
-                                new BigDecimal("90000"),
-                                deadline,
-                                beneficiary,
-                                old.path("termsHash").asText()),
-                            seller)))
-        .isInstanceOf(ConflictException.class);
-    var q =
-        service.quote(
-            new Create(booking, new BigDecimal("90000"), deadline, beneficiary, null), seller);
-    tx.executeWithoutResult(
-        s ->
-            service.edit(
-                id,
-                new Edit(
-                    new BigDecimal("90000"), deadline, beneficiary, q.path("termsHash").asText()),
-                seller));
-    jdbc.update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", id);
-    UUID acquisition =
-        tx.execute(
-            s ->
-                service.acquire(
-                    id, UUID.randomUUID().toString(), buyer, q.path("termsHash").asText()));
-    assertThatThrownBy(
-            () ->
-                tx.executeWithoutResult(
-                    s ->
-                        service.edit(
-                            id,
-                            new Edit(
-                                new BigDecimal("80000"),
-                                deadline,
-                                beneficiary,
-                                q.path("termsHash").asText()),
-                            seller)))
-        .isInstanceOf(ConflictException.class);
-    assertThat(
-            service
-                .acquisition(acquisition, buyer)
-                .financeTerms()
-                .path("quotedSellerNetAmount")
-                .asText())
-        .isEqualTo("85500");
-  }
-
-  @Test
-  void legacyListingNeedsExplicitSellerAcceptanceWhenNewCohortIsEnabled() {
-    var legacyService =
-        new TransferService(repo, deps, clock, 600, json, false, true, demoQuotes());
-    UUID id =
-        tx.execute(
-            s ->
-                legacyService.create(
-                    new Create(booking, new BigDecimal("100000"), deadline),
-                    UUID.randomUUID().toString(),
-                    seller));
-    jdbc.update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", id);
-    assertThat(repo.find(id).financeTerms()).isNull();
-    assertThatThrownBy(
-            () -> tx.execute(s -> service.acquire(id, UUID.randomUUID().toString(), buyer)))
-        .isInstanceOf(ConflictException.class)
-        .hasMessageContaining("explicitly");
-    var q = service.quote(quoteInput(), seller);
-    tx.executeWithoutResult(
-        s ->
-            service.edit(
-                id,
-                new Edit(
-                    new BigDecimal("100000"), deadline, beneficiary, q.path("termsHash").asText()),
-                seller));
-    assertThat(repo.find(id).financeTerms().path("quotedFeeAmount").asText()).isEqualTo("5000");
   }
 
   record Locked(UUID listing, UUID acquisition) {}
 
   Locked locked() {
     UUID id = listing();
-    String hash = repo.find(id).financeTerms().path("termsHash").asText();
-    UUID acquisition =
-        tx.execute(s -> service.acquire(id, UUID.randomUUID().toString(), buyer, hash));
+    UUID acquisition = HistoricalTransfers.acquisition(repo, id, buyer.id(), clock.instant());
     jdbc.update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", id);
     return new Locked(id, acquisition);
   }
@@ -543,56 +357,6 @@ class TransferFinancialTermsTest {
                 Object.class,
                 f.acquisition()))
         .isNull();
-  }
-
-  @Test
-  void changedOwnerFeeRequiresFreshSellerConsentBeforeLockButNeverRepricesAnAcquisition() {
-    UUID id = listing();
-    String old = repo.find(id).financeTerms().path("termsHash").asText();
-    when(deps.feePolicy(facility))
-        .thenReturn(
-            json.valueToTree(
-                Map.of(
-                    "configured",
-                    true,
-                    "version",
-                    2,
-                    "feeBps",
-                    1000,
-                    "termsHash",
-                    Signatures.sha256(facility + "|2|1000|VND|HALF_UP|FACILITY_TRANSFER_FEE"))));
-    assertThatThrownBy(
-            () -> tx.execute(s -> service.acquire(id, UUID.randomUUID().toString(), buyer, old)))
-        .isInstanceOf(ConflictException.class);
-    var quote = service.quoteEdit(id, new Edit(new BigDecimal("100000"), deadline), seller);
-    tx.executeWithoutResult(
-        s ->
-            service.edit(
-                id,
-                new Edit(
-                    new BigDecimal("100000"), deadline, null, quote.path("termsHash").asText()),
-                seller));
-    jdbc.update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", id);
-    UUID acquisition =
-        tx.execute(
-            s ->
-                service.acquire(
-                    id, UUID.randomUUID().toString(), buyer, quote.path("termsHash").asText()));
-    when(deps.feePolicy(facility))
-        .thenReturn(
-            json.valueToTree(
-                Map.of(
-                    "configured",
-                    true,
-                    "version",
-                    3,
-                    "feeBps",
-                    5000,
-                    "termsHash",
-                    Signatures.sha256(facility + "|3|5000|VND|HALF_UP|FACILITY_TRANSFER_FEE"))));
-    assertThat(repo.acquisition(acquisition).financeTerms().path("feeBps").asInt()).isEqualTo(1000);
-    assertThat(repo.acquisition(acquisition).financeTerms().path("quotedSellerNetAmount").asText())
-        .isEqualTo("90000");
   }
 
   @Test

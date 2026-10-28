@@ -68,9 +68,20 @@ export function SepayChannelPage() {
         nhượng.
       </p>
       {resource.loading && <p role="status">Đang tải kênh nhận tiền…</p>}
+      {!resource.loading && !resource.error && !resource.data && (
+        <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+          Cơ sở chưa có tài khoản nhận tiền. Nhập thông tin bên dưới để tạo QR SePay cho khách đặt
+          sân. Đây là tài khoản của cơ sở; khách đặt sân không cần khai tài khoản ngân hàng.
+        </p>
+      )}
       {(error || resource.error) && (
         <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">
           {error || resource.error}
+          {resource.error && (
+            <button type="button" className="ml-2 underline" onClick={resource.reload}>
+              Tải lại kênh nhận tiền
+            </button>
+          )}
         </p>
       )}
       {message && (
@@ -136,7 +147,7 @@ export function SepayChannelPage() {
           máy chủ và không trả lại khi đọc thông tin kênh. SePay cần gọi được địa chỉ HTTPS công
           khai; localhost chỉ phục vụ phát triển.
         </p>
-        <Button disabled={busy || resource.loading || Boolean(resource.error)}>
+        <Button type="submit" disabled={busy || resource.loading || Boolean(resource.error)}>
           {busy ? 'Đang lưu…' : 'Lưu kênh SePay'}
         </Button>
       </form>

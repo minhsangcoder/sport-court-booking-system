@@ -4,11 +4,29 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: proposal + tasks section 21 (2026-10-27): SePay for new
+Latest business revision: proposal + tasks sections 21–26 (2026-10-28): SePay for new
 facility collections with authenticated sufficient-money webhooks; SePay B→A P2P
 without facility fees; no Customer self-cancellation of paid bookings. Old DEMO
 records do not become REAL funding. Read this revision before applying older
 completed task descriptions inside the current change.
+Customer bank registration is required only for the seller publishing a resale,
+not for an initial booking or resale purchase. Owner configures the facility's
+receiving channel separately; first-time setup must remain usable.
+Customer screens no longer show facility payout/refund dashboards, including the
+DEMO equivalent. Existing financial obligations and operational records remain.
+Only the current Customer holder can read the ten-character check-in code or
+signed booking QR. Owner/Staff consume credentials presented by that Customer;
+operational APIs never issue them. Counter guests use scoped attendance without
+an exposed code. Owner/Staff cannot cancel Customer bookings under the removed
+facility-refund policy; old quote/cancel endpoints and rejection stubs are deleted (HTTP404).
+An Owner cannot create a personal booking at their own facility, including through
+an existing hold, group creation or linking themselves as the counter Customer.
+Owner counter booking for other Customers/walk-in guests and scoped check-in remain
+available through explicit Owner navigation. Personal booking elsewhere is allowed.
+Latest cleanup (section 26): show the QR and ten-character manual code without the
+raw signed token below it. Delete unused fee-based transfer creation/quote/edit/
+acquisition code; retain live historical reconciliation, readers and guards.
+Historical test fixtures must not call removed production creation flows.
 
 ## Mandatory selection rule
 

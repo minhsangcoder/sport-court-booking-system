@@ -1486,6 +1486,9 @@
               }
             }
           },
+          "204": {
+            "description": "No receiving channel configured yet; Owner can enter the first configuration"
+          },
           "400": {
             "description": "Invalid input"
           },

@@ -5,7 +5,6 @@ import { useApi } from '@/lib/use-api'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { money } from '@/features/schedule/types'
 import { type Listing, type Acquisition, transferStates } from './types'
-import { ParticipantMoney } from '@/features/booking/finance-panels'
 import { AdmissionNotice } from '@/features/booking/admission-notice'
 export function MyTransfers() {
   return (
@@ -100,7 +99,6 @@ function Loaded() {
               </Link>
             ))}
       </div>
-      <ParticipantMoney />
     </div>
   )
 }

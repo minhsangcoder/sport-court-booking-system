@@ -94,6 +94,9 @@ public class BookingCreation {
       return reads.replayView(old, caller);
     }
     var h = holds.ownHold(input.holdId(), caller, token);
+    if (!counter) dependencies.requireExternalCustomer(h.facilityId(), caller.id());
+    else if (linkedCustomer != null)
+      dependencies.requireExternalCustomer(h.facilityId(), linkedCustomer);
     repo.lock(h.courtId());
     String channel = h.quote().path("admissionChannel").asText();
     if (!channel.isBlank() && !channel.equals(counter ? "COUNTER" : "ONLINE"))
@@ -206,7 +209,7 @@ public class BookingCreation {
         "BOOKING_CREATED",
         Map.of("source", counter ? "OFFLINE_COUNTER" : "ONLINE"));
     keys.remember(caller.id(), "BOOKING", key, fingerprint, id);
-    return reads.projectEffective(repo.find(id));
+    return reads.personalView(reads.projectEffective(repo.find(id)), caller);
   }
 
   @Transactional
@@ -280,6 +283,6 @@ public class BookingCreation {
             linkedCustomer,
             Signatures.sha256(repo.write(createInput) + "|true"));
     keys.remember(caller.id(), "COUNTER_BOOKING", key, fingerprint, booking.id());
-    return reads.projectEffective(booking);
+    return reads.personalView(reads.projectEffective(booking), caller);
   }
 }

@@ -9,9 +9,11 @@ Quyết định 27/10/2026: SePay cho cả tiền đặt sân và chuyển như�
 
 ## Owner cấu hình
 
+Customer không cần khai tài khoản ngân hàng để đặt sân hoặc mua lại lượt đặt. Chỉ người bán cần khai trước khi đăng chuyển nhượng: menu tài khoản → **Ngân hàng nhận tiền chuyển nhượng** (`/customer/profile/bank`), hoặc khai ngay tại form đăng chuyển nhượng. Tài khoản cá nhân này khác tài khoản nhận tiền đặt sân của cơ sở do Owner cấu hình dưới đây.
+
 1. Kết nối tài khoản ngân hàng thật của cơ sở trong **SePay Live**.
 2. Vào SportHub → Cơ sở của tôi → cơ sở tương ứng → **Kênh nhận tiền**. Chọn BIN, nhập STK, tên người nhận và khóa webhook riêng ít nhất 32 ký tự. Dùng cùng khóa tại SePay; không gửi khóa vào chat hoặc đưa vào Git. API chỉ trả STK che bớt, không trả khóa.
-3. Đặt `APP_PUBLIC_URL` thành URL HTTPS công khai của ứng dụng rồi khởi động lại backend. Sao chép URL webhook hiển thị sau khi lưu kênh. SePay không thể gửi đến `localhost` trên máy phát triển.
+3. Đặt `PAYMENT_WEBHOOK_ORIGIN` thành URL HTTPS công khai dẫn tới payment-service/Gateway (ví dụ Cloudflare Tunnel), rồi khởi động lại payment-service. SportHub vẫn có thể chạy ở `APP_PUBLIC_URL=http://localhost:3001`; nếu không đặt URL webhook riêng, hệ thống dùng URL ứng dụng. Sao chép URL webhook hiển thị sau khi lưu kênh. SePay không thể gửi đến `localhost` trên máy phát triển.
 4. Trong SePay, tạo webhook **Có tiền vào**, đúng tài khoản ngân hàng, xác thực **API Key**. Nếu lọc theo mã thanh toán thì chọn tiền tố `SC`. SePay gửi header `Authorization: Apikey <khóa đã cấu hình>`.
 5. Chọn JSON làm định dạng webhook. Cơ sở cần chính sách vận hành/hoàn hợp lệ hiện hành trước khi nhận đặt sân. Không dùng webhook/khóa Sandbox để chứng nhận tiền REAL.
 6. Đặt một lượt mới để lấy QR thật; giao dịch DEMO đã tạo trước đây chỉ giữ lịch sử/quyền sử dụng cũ, không biến thành chứng từ thật. Booking đã trả tiền không có thao tác Customer tự hủy; vẫn cho giải phóng giữ chỗ chưa thanh toán.
@@ -19,6 +21,8 @@ Quyết định 27/10/2026: SePay cho cả tiền đặt sân và chuyển như�
 `SPORTHUB_MONEY_MODE=REAL`, `SPORTHUB_COLLECTION_PROVIDER=SEPAY`, `SEPAY_COLLECTION_CREATE_ENABLED=true`. P2P chỉ bật cho facility allowlist `SPORTHUB_PEER_RESALE_FACILITIES`. Cần giữ nguyên `PAYMENT_SECRET_KEYS` qua các lần restart để giải mã lịch sử. Tên launcher `scripts/demo` không chọn chế độ DEMO.
 
 ## Khi giao dịch có vấn đề
+
+Cloudflare Quick Tunnel dùng cho thử local: `cloudflared tunnel --url http://127.0.0.1:18085 --protocol http2 --edge-ip-version 4 --no-autoupdate`. Điền origin `https://…trycloudflare.com` được in ra vào `PAYMENT_WEBHOOK_ORIGIN`, rồi khởi động lại payment-service. Địa chỉ đầy đủ là origin đó + `/api/v1/payments/providers/sepay/{channelId}/webhook`; lấy channelId từ kênh đã lưu trong SportHub, không dùng facilityId. Quick Tunnel đổi hostname khi tạo lại và cần giữ tiến trình chạy; URL cố định cần tunnel có tên miền. Không bật xác thực email tương tác trước webhook; webhook dùng API Key đã cấu hình. Xem [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
 
 Webhook được ghi bền vững trước ACK `{ "success": true }`. SePay ID và tham chiếu ngân hàng chống ghi trùng. Sai khóa không được ghi tiền; sai tài khoản/ngân hàng hoặc dữ kiện xung đột đưa phiên vào REVIEW. Không ghép mơ hồ khi có nhiều mã đơn. Tham chiếu ngân hàng rỗng dùng SePay ID ổn định. Giao dịch đi hoặc không khớp đơn được lưu dấu, không cấp quyền.
 

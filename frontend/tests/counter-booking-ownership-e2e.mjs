@@ -153,12 +153,12 @@ try{
   assert.ok(!(await call('staff','GET','/bookings')).some(b=>b.id===fixture.guest.id))
   assert.equal(await staffPage.getByRole('img',{name:'QR check-in booking'}).count(),0)
   assert.equal(await staffPage.getByRole('link',{name:'Đăng tin chuyển nhượng lượt đặt'}).count(),0)
-  const guestCode=(await staffPage.getByTestId('operational-booking-code').innerText()).trim()
-  const guestCheckin=staffPage.waitForResponse(r=>new URL(r.url()).pathname===`/api/v1/bookings/facility/${fid}/check-in-by-code`&&r.status()===200)
-  await staffPage.locator('input[name=token]').first().fill(guestCode.toLowerCase())
-  await staffPage.getByRole('button',{name:'Check-in booking',exact:true}).click();await guestCheckin
+  assert.equal(await staffPage.getByTestId('operational-booking-code').count(),0)
+  assert.equal(guestDetail.detail.booking.bookingCode,null)
+  const guestCheckin=staffPage.waitForResponse(r=>new URL(r.url()).pathname===`/api/v1/bookings/${fixture.guest.id}/check-in-guest`&&r.status()===200)
+  await staffPage.getByRole('button',{name:'Xác nhận khách vãng lai đến sân',exact:true}).click();await guestCheckin
   await staffPage.getByRole('heading',{name:'CHECKED_IN',exact:true}).waitFor();await assertNoAlert(staffPage)
-  record('Guest creation, DEMO payment, operational redirect/code and manual CHECKED_IN all complete through UI; no personal ownership','browser')
+  record('Guest creation, payment and scoped attendance reach CHECKED_IN without exposing a code or assigning Staff ownership','browser')
 
   fixture.linked=await createViaBrowser(staffPage,'linked',{counter:true,guestName:'Linked Customer at counter',guestPhone:customerPhone})
   const linked=await call('customer','GET',`/bookings/${fixture.linked.id}`)
@@ -174,7 +174,8 @@ try{
   await call('owner','PUT',`/staff-bindings/facilities/${fid}/${binding.id}/permissions`,{permissions:permissions.filter(p=>p!=='BOOKING_CHECK_IN'),expectedVersion:version.version})
   await staffPage.reload();await staffPage.getByRole('heading',{name:'Chi tiết vận hành booking'}).waitFor()
   assert.equal(await staffPage.getByRole('button',{name:'Check-in booking',exact:true}).count(),0)
-  const linkedCode=(await staffPage.getByTestId('operational-booking-code').innerText()).trim()
+  assert.equal(await staffPage.getByTestId('operational-booking-code').count(),0)
+  const linkedCode=linked.booking.bookingCode
   await call('staff','POST',`/bookings/facility/${fid}/check-in-by-code`,{bookingCode:linkedCode},403)
   await call('staff','POST',`/bookings/facility/${foreign.id}/check-in-by-code`,{bookingCode:linkedCode},403)
   const freshVersion=await call('owner','GET',`/staff-bindings/facilities/${fid}/${binding.id}/permissions`)

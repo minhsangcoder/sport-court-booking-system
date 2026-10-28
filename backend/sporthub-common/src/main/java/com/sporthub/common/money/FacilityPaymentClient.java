@@ -35,7 +35,13 @@ public class FacilityPaymentClient {
   }
 
   public JsonNode receiver(UUID facility) {
-    return call("GET", "/api/v1/payments/internal/facilities/" + facility + "/receiver", "");
+    try {
+      return call("GET", "/api/v1/payments/internal/facilities/" + facility + "/receiver", "");
+    } catch (com.sporthub.common.exception.ConflictException ex) {
+      throw new com.sporthub.common.exception.ConflictException(
+          "Cơ sở chưa có kênh nhận tiền SePay sẵn sàng. Vui lòng liên hệ chủ sân cấu hình."
+              + " Bạn không cần khai tài khoản ngân hàng để đặt sân.");
+    }
   }
 
   public JsonNode credits(UUID facility, UUID owner, Instant from, Instant to, UUID after) {

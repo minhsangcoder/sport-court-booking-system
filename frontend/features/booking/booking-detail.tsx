@@ -15,7 +15,6 @@ import type { Facility, Court } from '@/features/facility/types'
 import { type BookingDetail, type Payment, statusLabels } from './types'
 import { Countdown } from './countdown'
 import { operationsWorkspace, ownsBooking } from './ownership'
-import { ParticipantMoney } from './finance-panels'
 export function BookingDetailPage({ id }: { id: string }) {
   return (
     <RequireAuth>
@@ -183,7 +182,6 @@ function Loaded({ id }: { id: string }) {
           )}
         </div>
       )}
-      <ParticipantMoney bookingId={id} moneyClass={b.priceSnapshot.moneyClass} />
       {b.status === 'PENDING' && isOwner && (
         <div className="mt-6 space-y-4">
           <Countdown expiresAt={b.holdExpiresAt} />
@@ -218,12 +216,6 @@ function Loaded({ id }: { id: string }) {
               className="mt-5 rounded-xl bg-white p-3"
             />
           )}
-          <details className="mt-4 text-sm">
-            <summary>Mã dùng khi nhập thủ công</summary>
-            <p className="mt-3 break-all rounded-lg bg-white p-3 font-mono text-xs">
-              {detail.checkinToken}
-            </p>
-          </details>
           <button onClick={resource.reload} className="mt-4 text-sm text-emerald-700 underline">
             Làm mới mã
           </button>

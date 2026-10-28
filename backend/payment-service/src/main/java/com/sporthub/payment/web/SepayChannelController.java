@@ -6,6 +6,7 @@ import com.sporthub.payment.service.SepayChannels;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,8 +21,12 @@ public class SepayChannelController {
   }
 
   @GetMapping
-  public ApiResponse<SepayChannels.Channel> own(@PathVariable UUID id, HttpServletRequest r) {
-    return ApiResponse.success(channels.own(id, identity.current(r), r.getHeader("Authorization")));
+  public ResponseEntity<ApiResponse<SepayChannels.Channel>> own(
+      @PathVariable UUID id, HttpServletRequest r) {
+    var channel = channels.own(id, identity.current(r), r.getHeader("Authorization"));
+    return channel == null
+        ? ResponseEntity.noContent().build()
+        : ResponseEntity.ok(ApiResponse.success(channel));
   }
 
   @PutMapping

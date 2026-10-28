@@ -148,13 +148,48 @@ try {
   assert.equal(Number(flexible.amount),150000)
   pass('Schedule and Booking HTTP quote integrates 30 minutes at 100k/h plus 30 at 200k/h to 150k')
   await call('owner','PUT',`/owner/facilities/${facility}/refund-policy`,{rateBps:8000,version:0})
-  const ready=await call('owner','PUT',`/payments/facilities/${facility}/sepay-channel`,{version:0,bankBin:'970436',accountNumber:'000555666777',accountName:'SYNTHETIC FACILITY',webhookApiKey:webhookSecret},200,key())
+  assert.equal(await call('owner','GET',`/payments/facilities/${facility}/sepay-channel`,undefined,204),null)
+  const browserChannel=process.env.SPORTHUB_E2E_BROWSER_CHANNEL||process.env.SPORTHUB_E2E_BROWSER
+  browser=await chromium.launch({headless:true,...(browserChannel?{channel:browserChannel}:{})})
+  const setupPage=await loginPage('owner')
+  await setupPage.goto(config.baseURL+`/owner/facilities/${facility}/payment-channel`)
+  await setupPage.getByText('Cơ sở chưa có tài khoản nhận tiền.',{exact:false}).waitFor()
+  await setupPage.locator('select[name=bankBin]').selectOption('970436')
+  await setupPage.locator('input[name=accountNumber]').fill('000555666777')
+  await setupPage.locator('input[name=accountName]').fill('SYNTHETIC FACILITY')
+  await setupPage.locator('input[name=webhookApiKey]').fill(webhookSecret)
+  const channelButton=setupPage.getByRole('button',{name:'Lưu kênh SePay',exact:true})
+  assert.equal(await channelButton.getAttribute('type'),'submit')
+  const [channelResponse]=await Promise.all([
+    setupPage.waitForResponse(reply=>reply.request().method()==='PUT'&&new URL(reply.url()).pathname.endsWith('/sepay-channel')),
+    channelButton.click(),
+  ]);assert.equal(channelResponse.status(),200)
+  const ready=(await channelResponse.json()).data
   collectionChannel=ready.channelId
   assert.equal(ready.status,'READY');assert.ok(!JSON.stringify(ready).match(/webhookApiKey|checksumKey|ciphertext/))
+  await setupPage.getByText('Đã cấu hình SePay',{exact:false}).waitFor()
+  await setupPage.screenshot({path:path.join(config.output,'owner-first-sepay-setup.png'),fullPage:true})
+  pass('Owner configures the first SePay channel through the production browser form after a valid empty GET')
   await call('owner','PUT',`/owner/facilities/${facility}/transfer-policy`,{enabled:true,minLeadSeconds:0})
+  assert.equal((await call('a','GET','/payments/bank-profile')).initialized,false)
   const main=await paidBook('a','main',true)
-  const firstProfile=await call('a','GET','/payments/bank-profile');assert.equal(firstProfile.canRegisterFirst,true)
-  await bank('a');await bank('b','000888999111');await bank('c','000888999222');await bank('refundBuyer','000888999333')
+  const firstProfile=await call('a','GET','/payments/bank-profile');assert.equal(firstProfile.canRegisterFirst,true);assert.equal(firstProfile.initialized,false)
+  const sellerSettings=await loginPage('a')
+  await sellerSettings.goto(config.baseURL+'/customer/profile/bank')
+  await sellerSettings.getByRole('heading',{name:'Ngân hàng nhận tiền chuyển nhượng',exact:true}).waitFor()
+  await sellerSettings.locator('select[name=bankBin]').selectOption('970436')
+  await sellerSettings.locator('input[name=accountNumber]').fill('000123456789')
+  await sellerSettings.locator('input[name=accountName]').fill('SYNTHETIC SELLER')
+  await sellerSettings.locator('input[type=checkbox]').check()
+  const [bankResponse]=await Promise.all([
+    sellerSettings.waitForResponse(reply=>reply.request().method()==='POST'&&new URL(reply.url()).pathname.endsWith('/bank-destinations')),
+    sellerSettings.getByRole('button',{name:'Lưu tài khoản nhận',exact:true}).click(),
+  ]);assert.equal(bankResponse.status(),201)
+  destinations.a=(await bankResponse.json()).data.id
+  await sellerSettings.locator(`option[value="${destinations.a}"]`).waitFor({state:'attached'})
+  await sellerSettings.screenshot({path:path.join(config.output,'customer-first-resale-bank.png'),fullPage:true})
+  pass('Customer books and pays with no personal bank, then registers the first resale bank through the production settings form')
+  await bank('c','000888999222');await bank('refundBuyer','000888999333')
   await call('a','POST','/payments/bank-destinations',{bankBin:'970436',accountNumber:'999999',accountName:'A',consentReference:randomUUID(),expectedProfileVersion:1},409,key())
   assert.equal((await call('a','GET','/payments/bank-profile')).activeRevisionId,destinations.a)
   pass('REAL partial payment has no usage; full original bank proof enables booking; first bank registration is allowed but replacement locks')
@@ -171,6 +206,7 @@ try {
   } else await call('race','DELETE',`/bookings/holds/${winners[0].id}`,undefined,204)
   await poll(()=>call('b','GET',`/transfers/${sale.listing.id}`),value=>value.available)
   pass('Concurrent Booking and Transfer HTTP calls on different courts grant one shared user claim; loser leaves listing usable')
+  assert.equal((await call('b','GET','/payments/bank-profile')).initialized,false)
   const purchaseKey=key(),purchase=await acquire('b',sale,purchaseKey),replay=await acquire('b',sale,purchaseKey)
   assert.equal(replay.id,purchase.id);assert.equal(replay.expiresAt,purchase.expiresAt)
   const instruction=await call('b','GET',`/payments/peer-acquisitions/${purchase.id}/instruction`)
@@ -192,6 +228,8 @@ try {
   assert.equal(buyerDetail.booking.currentHolderId,actors.b.id);assert.equal(buyerDetail.resaleConsumed,true);assert.ok(buyerDetail.checkinToken)
   assert.notEqual(buyerDetail.booking.bookingCode,main.booking.bookingCode)
   await call('staff','POST',`/bookings/facility/${facility}/check-in-by-code`,{bookingCode:main.booking.bookingCode},404)
+  assert.equal((await call('b','GET','/payments/bank-profile')).initialized,false)
+  await bank('b','000888999111')
   const resaleRejected=await call('b','POST','/transfers/quote',{bookingId:main.booking.id,price:70000,deadline:sale.terms.deadline,bankDestinationRevisionId:destinations.b},409)
   assert.match(resaleRejected.message,/chỉ được chuyển nhượng thành công một lần/)
   const buyerAfterResale=await call('b','GET',`/bookings/${main.booking.id}`)
@@ -224,8 +262,8 @@ try {
   const refundable=await paidBook('a','technical'),refundSale=await publish('a',refundable.booking,100000),refundPurchase=await acquire('refundBuyer',refundSale)
   await declare('refundBuyer',refundPurchase.id);await confirm('a',refundPurchase.id)
   for (const actor of ['refundBuyer','owner','staff']) {
-    await call(actor,'POST',`/bookings/${refundable.booking.id}/cancellation-quote`,undefined,409)
-    await call(actor,'POST',`/bookings/${refundable.booking.id}/cancel-with-policy`,{quoteId:randomUUID(),reason:'Buyer cancellation'},409,key())
+    await call(actor,'POST',`/bookings/${refundable.booking.id}/cancellation-quote`,undefined,404)
+    await call(actor,'POST',`/bookings/${refundable.booking.id}/cancel-with-policy`,{quoteId:randomUUID(),reason:'Buyer cancellation'},404,key())
   }
   assert.equal(sql('booking',`SELECT count(*) FROM facility_disbursement_obligations WHERE booking_id='${refundable.booking.id}'`),'0')
   const report=await call('owner','GET',`/bookings/reports/facility/${facility}/dashboard?fromDate=${today}&toDate=${today}&mode=REAL&size=25`)
@@ -233,8 +271,6 @@ try {
   assert.equal(report.summary.money.policyRefunded,'0');assert.equal(report.summary.money.afterRefund,'360000')
   assert.equal(report.summary.money.transferFees,'0');assert.equal(report.summary.money.sellerDue,'0');assert.equal(report.peer.openMoneyCases,1)
   pass('Resold bookings reject new refunds; R remains facility cash while P and A returns stay separate')
-  const browserChannel=process.env.SPORTHUB_E2E_BROWSER_CHANNEL||process.env.SPORTHUB_E2E_BROWSER
-  browser=await chromium.launch({headless:true,...(browserChannel?{channel:browserChannel}:{})})
   const buyerPage=await loginPage('b',390)
   await buyerPage.goto(config.baseURL+`/customer/bookings/${main.booking.id}`)
   await buyerPage.getByText('Lượt đặt đã chuyển nhượng một lần, không thể đăng bán tiếp.').waitFor()

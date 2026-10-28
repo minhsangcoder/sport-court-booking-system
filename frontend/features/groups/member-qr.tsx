@@ -28,10 +28,6 @@ export function MemberQr({ id, owner }: { id: string; owner: boolean }) {
             Chỉ dùng trong khung giờ xác nhận vào sân. Mã hết hạn{' '}
             {new Date(r.data.expiresAt).toLocaleTimeString('vi-VN')}.
           </p>
-          <details>
-            <summary>Mã thành viên để nhân viên quét</summary>
-            <p className="mt-2 break-all text-xs">{r.data.token}</p>
-          </details>
           <Button
             variant="outline"
             onClick={() => {

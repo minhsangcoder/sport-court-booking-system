@@ -2,9 +2,9 @@ package com.sporthub.transfer.service;
 
 import static com.sporthub.transfer.web.TransferDtos.*;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sporthub.common.exception.*;
+import com.sporthub.common.money.CollectionRuntime;
 import com.sporthub.common.security.RemoteIdentity.Caller;
 import com.sporthub.transfer.repository.TransferRepository;
 import com.sporthub.transfer.repository.TransferRepository.Row;
@@ -18,28 +18,19 @@ final class TransferListingReads {
   private final TransferDependencies deps;
   private final Clock clock;
   private final ObjectMapper json;
-  private final FacilityTransferQuotes facilityQuotes;
-
-  static TransferListingReads create(
-      TransferRepository repo,
-      TransferDependencies deps,
-      Clock clock,
-      ObjectMapper json,
-      FacilityTransferQuotes facilityQuotes) {
-    return new TransferListingReads(repo, deps, clock, json, facilityQuotes);
-  }
+  private final CollectionRuntime runtime;
 
   TransferListingReads(
       TransferRepository repo,
       TransferDependencies deps,
       Clock clock,
       ObjectMapper json,
-      FacilityTransferQuotes facilityQuotes) {
+      CollectionRuntime runtime) {
     this.repo = repo;
     this.deps = deps;
     this.clock = clock;
     this.json = json;
-    this.facilityQuotes = facilityQuotes;
+    this.runtime = runtime;
   }
 
   public List<Listing> market(
@@ -64,7 +55,7 @@ final class TransferListingReads {
     var args = new ArrayList<Object>();
     args.add(Timestamp.from(clock.instant()));
     args.add(Timestamp.from(clock.instant()));
-    if (facilityQuotes.live()) sql.append(" AND finance_terms->>'mode'='REAL'");
+    if (runtime.live()) sql.append(" AND finance_terms->>'mode'='REAL'");
     if (q != null && !q.isBlank()) {
       sql.append(
           " AND concat_ws('"
@@ -165,8 +156,8 @@ final class TransferListingReads {
               .minusSeconds(policy.path("minLeadSeconds").asLong())
               .isAfter(clock.instant());
     }
-    if (facilityQuotes.live()
-        && !com.sporthub.common.money.FacilityTransferTerms.isReal(r.financeTerms())) return false;
+    if (runtime.live() && !com.sporthub.common.money.FacilityTransferTerms.isReal(r.financeTerms()))
+      return false;
     if (!validBooking(r)) return false;
     var p = deps.policy(r.facilityId());
     return p != null
@@ -200,86 +191,5 @@ final class TransferListingReads {
     if (!r.sellerId().equals(caller.id()))
       throw new ForbiddenException("Listing belongs to another seller");
     return r;
-  }
-
-  public void validateBooking(JsonNode b) {
-    if (b.path("resaleConsumed").asBoolean())
-      throw new ConflictException("Mỗi lượt đặt chỉ được chuyển nhượng thành công một lần.");
-    if (!b.path("transferBlockedReason").asText().isBlank())
-      throw new ConflictException(b.path("transferBlockedReason").asText());
-    if (!b.path("status").asText().equals("CONFIRMED")
-        || (b.path("paidAt").isNull() || b.path("paidAt").isMissingNode())
-        || !Instant.parse(b.path("startsAt").asText()).isAfter(clock.instant()))
-      throw new ConflictException("A paid confirmed future booking is required");
-  }
-
-  public Instant policy(UUID id, Instant starts) {
-    var p = deps.policy(id);
-    if (!p.path("configured").asBoolean())
-      throw new ConflictException(
-          "BLOCKED_RULE: facility Owner must configure its transfer eligibility policy");
-    Instant cutoff = starts.minusSeconds(p.path("minLeadSeconds").asLong());
-    if (!p.path("enabled").asBoolean() || !cutoff.isAfter(clock.instant()))
-      throw new ConflictException("Facility transfer policy does not permit this booking");
-    return cutoff;
-  }
-
-  public void price(BigDecimal amount, BigDecimal original, String currency) {
-    if (amount.signum() <= 0
-        || amount.compareTo(original) > 0
-        || amount.scale() > 2
-        || currency.equals("VND") && amount.stripTrailingZeros().scale() > 0)
-      throw new ConflictException(
-          "Transfer price must be positive and no greater than the original paid amount");
-  }
-
-  public void deadline(Instant value, Instant starts) {
-    if (!value.isAfter(clock.instant()) || value.isAfter(starts))
-      throw new ConflictException(
-          "Transfer deadline must be in the future and no later than play starts");
-  }
-
-  public com.fasterxml.jackson.databind.JsonNode quote(
-      Create input, Caller caller, boolean financeEnabled) {
-    caller.requireRole("CUSTOMER");
-    caller.requireActiveVerified();
-    deps.marketAllowed(caller.id());
-    if (!financeEnabled)
-      throw new ConflictException("New transfer finance is disabled during rollout");
-    var b = deps.booking(input.bookingId());
-    if (!b.path("currentHolderId").asText().equals(caller.id().toString()))
-      throw new ForbiddenException("Only your current booking can be transferred");
-    validateBooking(b);
-    price(input.price(), b.path("amount").decimalValue(), b.path("currency").asText());
-    deadline(input.deadline(), Instant.parse(b.path("startsAt").asText()));
-    policy(
-        UUID.fromString(b.path("facilityId").asText()), Instant.parse(b.path("startsAt").asText()));
-    return facilityQuotes.quote(
-        b,
-        input.price(),
-        input.deadline(),
-        (facilityQuotes.live() ? input.bankDestinationRevisionId() : input.beneficiaryRevisionId()),
-        caller.id());
-  }
-
-  public com.fasterxml.jackson.databind.JsonNode quoteEdit(
-      UUID id, Edit input, Caller caller, boolean financeEnabled) {
-    caller.requireRole("CUSTOMER");
-    var listing = owner(id, caller);
-    TransferService.requireLegacy(listing.financeTerms());
-    if (!financeEnabled)
-      throw new ConflictException("New transfer finance is disabled during rollout");
-    if (!listing.state().equals("ACTIVE") || !listing.workflow().equals("READY"))
-      throw new ConflictException("Only an unlocked active listing may accept new terms");
-    return quote(
-        new Create(
-            listing.bookingId(),
-            input.price(),
-            input.deadline(),
-            input.beneficiaryRevisionId(),
-            null,
-            input.bankDestinationRevisionId()),
-        caller,
-        financeEnabled);
   }
 }

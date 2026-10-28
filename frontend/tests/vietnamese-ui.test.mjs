@@ -127,7 +127,7 @@ test('validation, permissions, dynamic limits and unknown server errors cannot l
   const { translateError } = app.load('lib/error-translator.ts')
   assert.equal(
     translateError('Missing facility permission: BOOKING_REFUND'),
-    'Bạn chưa có quyền thực hiện thao tác này tại cơ sở: Hoàn tiền theo chính sách.',
+    'Bạn chưa có quyền thực hiện thao tác này tại cơ sở: Xử lý khoản hoàn đã ghi nhận.',
   )
   assert.equal(
     translateError('Slot is not eligible: BOOKED'),
@@ -254,25 +254,28 @@ test('history records translate keys, booleans and enums without rewriting custo
   assert.doesNotMatch(html, /CHECKED_IN|OFFLINE_COUNTER|>OWNER<|>STAFF<|>true</)
 })
 
-
 test('booking policy notice removes the entire obsolete resale refund block', () => {
   const app = application()
-  const html = app.render(app.load('features/booking/refund-policy-notice.tsx').RefundPolicyNotice, {
-    policy: { configured: true, rateBps: 9500 },
-  })
+  const html = app.render(
+    app.load('features/booking/refund-policy-notice.tsx').RefundPolicyNotice,
+    {
+      policy: { configured: true, rateBps: 9500 },
+    },
+  )
   assert.match(html, /Quy định hoàn tiền:/)
   assert.match(html, /Đăng chuyển nhượng lượt đặt/)
-  assert.doesNotMatch(html, /95%|100%|<details|người mua lại|Chỉ được xác nhận vào sân|Khoản thu lỗi/)
+  assert.doesNotMatch(
+    html,
+    /95%|100%|<details|người mua lại|Chỉ được xác nhận vào sân|Khoản thu lỗi/,
+  )
 })
 
 test('legacy cancellation errors no longer advertise refunds for resold bookings', () => {
   const { translateError } = application().load('lib/error-translator.ts')
-  assert.equal(
-    translateError('Review a cancellation quote and use cancel-with-policy for this booking'),
-    'Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.',
-  )
   assert.match(
-    translateError('BLOCKED_RULE: facility paid cancellation requires the 100% refund execution/reconciliation protocol'),
+    translateError(
+      'BLOCKED_RULE: facility paid cancellation requires the 100% refund execution/reconciliation protocol',
+    ),
     /không hỗ trợ hủy trực tiếp/,
   )
 })

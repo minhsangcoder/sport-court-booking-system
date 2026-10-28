@@ -27,7 +27,7 @@ export default function ProfilePage() {
                 href="/customer/profile/bank"
                 className="pb-3 text-sm font-medium text-emerald-700"
               >
-                Ngân hàng
+                Ngân hàng nhận tiền
               </Link>
               <Link
                 href="/customer/profile"

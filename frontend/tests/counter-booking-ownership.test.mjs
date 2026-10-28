@@ -14,6 +14,7 @@ function harness({
   api = async () => ({}),
   resource = () => undefined,
   globals = {},
+  searchParams = '',
 } = {}) {
   const hooks = new Map(),
     cache = new Map()
@@ -56,7 +57,7 @@ function harness({
     '@/lib/use-polling': { usePolling() {} },
     'next/navigation': {
       useRouter: () => ({ push() {} }),
-      useSearchParams: () => new URLSearchParams(),
+      useSearchParams: () => new URLSearchParams(searchParams),
     },
     '@/lib/api': { api },
     '@/lib/auth-context': { useAuth: () => ({ user, ready: true }) },
@@ -80,7 +81,7 @@ function harness({
     },
     './qr-checkin': { QrUploadButton: 'qr-upload', QuickQrCheckinModal: 'qr-modal' },
     './group': { StaffGroupAttendance: 'attendance' },
-    './countdown': { Countdown: 'countdown' },
+    './countdown': { Countdown: 'countdown', useRemaining: () => 600 },
     'lucide-react': new Proxy({}, { get: (_, name) => String(name) }),
   }
   function load(relative) {
@@ -195,6 +196,166 @@ const payment = (b, status = 'PENDING') => ({
   currency: 'VND',
 })
 
+test('owner can reach check-in and counter booking from both account menus', () => {
+  const h = harness()
+  const model = {
+    user: { fullName: 'Owner', roles: ['OWNER', 'CUSTOMER'] },
+    isStaffOnly: false,
+    isActive: () => false,
+  }
+  for (const [file, exported] of [
+    ['header-account-menu', 'HeaderAccountMenu'],
+    ['header-mobile-menu', 'HeaderMobileMenu'],
+  ]) {
+    const tree = h.render(h.load(`components/layout/${file}.tsx`)[exported], { model })
+    for (const href of ['/owner/bookings', '/owner/counter-booking'])
+      assert.equal(nodes(tree, (n) => n.type === 'a' && n.props.href === href).length, 1)
+  }
+})
+
+test('counter toolbar uses the active owner or staff workspace and selected facility', () => {
+  const h = harness()
+  const { OperationToolbar } = h.load('features/operations/operation-toolbar.tsx')
+  for (const owner of [true, false]) {
+    const tree = h.render(OperationToolbar, {
+      model: { owner, facilityId: 'facility-A', can: () => true },
+    })
+    assert.equal(
+      nodes(tree, (n) => n.type === 'a' && text(n) === 'Đặt tại quầy')[0].props.href,
+      `/${owner ? 'owner' : 'staff'}/counter-booking?facilityId=facility-A`,
+    )
+  }
+})
+
+test('owner counter chooser defaults to an owned facility and preserves it in court links', () => {
+  const h = harness({
+    user: { id: 'owner', roles: ['OWNER'] },
+    searchParams: 'facilityId=someone-elses-facility',
+    resource: (url) =>
+      url === '/owner/facilities'
+        ? [{ id: 'mine', name: 'My facility' }]
+        : url === '/facilities/mine/courts'
+          ? [{ id: 'court', name: 'Court' }]
+          : undefined,
+  })
+  const tree = h.render(h.load('features/operations/counter-page.tsx').CounterPage, { owner: true })
+  assert.equal(
+    nodes(tree, (n) => n.type === 'a' && text(n) === 'Court')[0].props.href,
+    '/owner/counter-booking/court?facilityId=mine',
+  )
+  assert.equal(nodes(tree, (n) => n.type === 'select')[0].props.value, 'mine')
+})
+
+test('owner personal availability is blocked with a counter link; other courts remain bookable', () => {
+  for (const own of [true, false]) {
+    const h = harness({
+      user: { id: 'owner', roles: ['OWNER', 'CUSTOMER'] },
+      resource: (url) =>
+        url === '/facilities/facility-A'
+          ? { ownerId: own ? 'owner' : 'someone-else' }
+          : url?.startsWith('/bookings/availability?')
+            ? {
+                slots: [
+                  {
+                    startsAt: '2030-01-01T01:00:00Z',
+                    endsAt: '2030-01-01T02:00:00Z',
+                    state: 'AVAILABLE',
+                    amount: 100000,
+                  },
+                ],
+              }
+            : undefined,
+    })
+    const tree = h.render(h.load('features/discovery/availability-page.tsx').AvailabilityPage, {
+      facilityId: 'facility-A',
+      courtId: 'court',
+    })
+    const slot = nodes(tree, (n) => n.type === 'button' && n.props['aria-pressed'] !== undefined)[0]
+    assert.equal(Boolean(slot.props.disabled), own)
+    assert.equal(text(tree).includes('Đây là cơ sở của bạn'), own)
+    assert.equal(
+      nodes(
+        tree,
+        (n) => n.type === 'a' && n.props.href === '/owner/counter-booking?facilityId=facility-A',
+      ).length,
+      own ? 1 : 0,
+    )
+  }
+})
+
+test('counter booking retains availability at own facility without obsolete refund promotion', () => {
+  const h = harness({
+    user: { id: 'owner', roles: ['OWNER', 'CUSTOMER'] },
+    resource: (url) =>
+      url === '/facilities/mine'
+        ? { ownerId: 'owner' }
+        : url?.startsWith('/bookings/availability?')
+          ? { slots: [] }
+          : undefined,
+  })
+  const tree = h.render(h.load('features/discovery/availability-page.tsx').AvailabilityPage, {
+    facilityId: 'mine',
+    courtId: 'court',
+    counter: true,
+  })
+  assert.doesNotMatch(text(tree), /Đây là cơ sở của bạn|Chính sách hoàn của cơ sở khi đủ điều kiện/)
+})
+
+test('an old personal hold at own facility cannot be confirmed while counter checkout stays available', () => {
+  for (const counter of [false, true]) {
+    const h = harness({
+      user: { id: 'owner', roles: ['OWNER', 'CUSTOMER'] },
+      searchParams: counter ? 'counter=true' : '',
+      resource: (url) =>
+        url === '/bookings/holds/held'
+          ? {
+              id: 'held',
+              facilityId: 'mine',
+              courtId: 'court',
+              state: 'HOLD',
+              startsAt: '2030-01-01T01:00:00Z',
+              endsAt: '2030-01-01T02:00:00Z',
+              expiresAt: '2030-01-01T00:50:00Z',
+              quote: {
+                amount: 100000,
+                currency: 'VND',
+                segments: [],
+                refundPolicy: { configured: true },
+              },
+            }
+          : url === '/facilities/mine'
+            ? { id: 'mine', ownerId: 'owner' }
+            : url === '/owner/facilities'
+              ? [{ id: 'mine' }]
+              : undefined,
+    })
+    const tree = h.render(h.load('features/booking/hold-summary.tsx').HoldSummary, { id: 'held' })
+    assert.equal(
+      Boolean(
+        nodes(tree, (n) => n.type === 'button' && n.props.type === 'submit')[0].props.disabled,
+      ),
+      !counter,
+    )
+    assert.equal(text(tree).includes('Đây là cơ sở của bạn'), !counter)
+  }
+})
+
+test('owner counter slots require facility ownership, not merely the global role', () => {
+  for (const allowed of [true, false]) {
+    const h = harness({
+      user: { id: 'owner', roles: ['OWNER'] },
+      searchParams: 'facilityId=mine',
+      resource: (url) => (url === '/owner/facilities/mine' && allowed ? { id: 'mine' } : undefined),
+    })
+    const tree = h.render(h.load('features/operations/counter-slots.tsx').CounterSlots, {
+      courtId: 'court',
+      owner: true,
+    })
+    assert.equal(text(tree).includes('Chọn giờ chơi'), allowed)
+    assert.equal(text(tree).includes('Bạn chưa có quyền đặt tại quầy'), !allowed)
+  }
+})
+
 test('manual check-in uses the real API prefix, normalizes codes and keeps signed QR separate', async () => {
   const calls = []
   const h = harness({
@@ -230,8 +391,8 @@ test('manual check-in uses the real API prefix, normalizes codes and keeps signe
   assert.throws(() => check.checkInBooking(booking(), 'bad code'), /10 ký tự/)
 })
 
-test('operational guest detail exposes the operational code, submits once and refreshes CHECKED_IN', async () => {
-  let b = booking(),
+test('operational account detail hides the code, accepts customer input once and refreshes CHECKED_IN', async () => {
+  let b = booking('booking-A', { currentHolderId: 'customer', customerId: 'customer' }),
     reloads = 0,
     release
   const requests = []
@@ -263,9 +424,13 @@ test('operational guest detail exposes the operational code, submits once and re
   })
   const { OperationalDetail } = h.load('features/operations/operational-detail.tsx')
   let tree = h.render(OperationalDetail, { id: b.id })
-  assert.match(text(tree), /Khách vãng lai/)
+  assert.match(text(tree), /Khách có tài khoản/)
   assert.match(text(tree), /Khách lúc đặt: Synthetic Guest/)
-  assert.match(text(tree), /Mã xác nhận vào sân vận hành:\s+ABCDEF1234/)
+  assert.doesNotMatch(text(tree), /ABCDEF1234|Mã xác nhận vào sân vận hành/)
+  assert.equal(
+    nodes(tree, (n) => n.type === 'input' && n.props.name === 'token')[0].props.value,
+    '',
+  )
   nodes(tree, (n) => n.type === 'input' && n.props.name === 'token')[0].props.onChange({
     target: { value: 'abcdef1234' },
   })
@@ -283,7 +448,7 @@ test('operational guest detail exposes the operational code, submits once and re
   assert.equal(nodes(tree, (n) => n.type === 'form').length, 0)
 })
 
-test('read-only staff can read the operational code but cannot check in or pay another operator booking', () => {
+test('read-only staff cannot read the operational code, check in or pay another operator booking', () => {
   const b = booking('readonly', { createdBy: 'another-staff', status: 'PENDING' })
   const h = harness({
     resource: (url) =>
@@ -302,13 +467,13 @@ test('read-only staff can read the operational code but cannot check in or pay a
   })
   const { OperationalDetail } = h.load('features/operations/operational-detail.tsx')
   const tree = h.render(OperationalDetail, { id: b.id })
-  assert.match(text(tree), /ABCDEF1234/)
+  assert.doesNotMatch(text(tree), /ABCDEF1234|Xác nhận khách vãng lai đến sân/)
   assert.equal(nodes(tree, (n) => n.type === 'form').length, 0)
   assert.doesNotMatch(text(tree), /Thanh toán DEMO tại quầy/)
 })
 
 test('manual check-in permission failure stays visible and does not report success', async () => {
-  const b = booking()
+  const b = booking('booking-A', { currentHolderId: 'customer', customerId: 'customer' })
   let reloads = 0
   const h = harness({
     api: async () => {
@@ -533,12 +698,12 @@ test('the actual payment page renders the customer result for a self-linked staf
   assert.equal(result.props.href, '/customer/bookings/self')
 })
 
-test('the operational list exposes guest codes and uses the same scoped manual request', async () => {
+test('the operational list hides guest codes and uses the scoped guest attendance command', async () => {
   const b = booking()
   const requests = []
   const h = harness({
     api: async (url, options) => {
-      requests.push({ url, body: JSON.parse(options.body) })
+      requests.push({ url, body: options.body && JSON.parse(options.body) })
       return { ...b, status: 'CHECKED_IN' }
     },
     resource: (url) =>
@@ -556,15 +721,15 @@ test('the operational list exposes guest codes and uses the same scoped manual r
   })
   const { OperationBookings } = h.load('features/operations/bookings-page.tsx')
   let tree = h.render(OperationBookings, {})
-  assert.match(text(tree), /Mã xác nhận vào sân vận hành:\s+ABCDEF1234/)
-  nodes(tree, (n) => n.type === 'input' && n.props.name === 'token')[0].props.onChange({
-    target: { value: 'abcdef1234' },
-  })
-  tree = h.render(OperationBookings, {})
-  nodes(tree, (n) => n.type === 'form')[0].props.onSubmit(event)
+  assert.doesNotMatch(text(tree), /ABCDEF1234|Mã xác nhận vào sân vận hành/)
+  assert.equal(nodes(tree, (n) => n.type === 'input' && n.props.name === 'token').length, 0)
+  nodes(
+    tree,
+    (n) => n.type === 'button' && text(n).includes('Xác nhận khách vãng lai đến sân'),
+  )[0].props.onClick()
   await flush()
-  assert.equal(requests[0].url, '/bookings/facility/facility-A/check-in-by-code')
-  assert.deepEqual(requests[0].body, { bookingCode: 'ABCDEF1234' })
+  assert.equal(requests[0].url, '/bookings/booking-A/check-in-guest')
+  assert.equal(requests[0].body, undefined)
 })
 
 test('personal detail keeps QR and transfer for real owners while hiding them for guest operators and history', () => {
@@ -606,6 +771,8 @@ test('personal detail keeps QR and transfer for real owners while hiding them fo
       example.expected ? 1 : 0,
     )
     assert.equal(text(tree).includes('Mã xác nhận vào sân thủ công'), example.expected)
+    assert.equal(text(tree).includes('signed_payload.signature'), false)
+    assert.equal(text(tree).includes('Mã dùng khi nhập thủ công'), false)
     const back = nodes(tree, (n) => n.type === 'a' && text(n).includes('Lịch đặt /'))[0]
     assert.equal(
       back.props.href,

@@ -32,10 +32,10 @@ export function OperationToolbar({
           <span>Tải ảnh QR xác nhận vào sân</span>
         </Button>
       )}
-      {!owner && can('BOOKING_CREATE_COUNTER') && facilityId && (
+      {can('BOOKING_CREATE_COUNTER') && facilityId && (
         <Link
           className="rounded-full border border-emerald-600 bg-white px-5 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-          href={`/staff/counter-booking?facilityId=${facilityId}`}
+          href={`/${owner ? 'owner' : 'staff'}/counter-booking?facilityId=${facilityId}`}
         >
           Đặt tại quầy
         </Link>

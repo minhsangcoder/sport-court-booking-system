@@ -57,14 +57,15 @@ public class SepayChannels {
       BankCatalog banks,
       ObjectMapper json,
       PlatformTransactionManager manager,
-      @Value("${APP_PUBLIC_URL:http://localhost:3001}") String origin) {
+      @Value("${APP_PUBLIC_URL:http://localhost:3001}") String appOrigin,
+      @Value("${PAYMENT_WEBHOOK_ORIGIN:}") String webhookOrigin) {
     this.repo = repo;
     this.access = access;
     this.vault = vault;
     this.banks = banks;
     this.json = json;
     this.tx = new TransactionTemplate(manager);
-    this.origin = origin.replaceAll("/+$", "");
+    this.origin = (webhookOrigin.isBlank() ? appOrigin : webhookOrigin).replaceAll("/+$", "");
   }
 
   public Channel own(UUID facility, Caller actor, String token) {

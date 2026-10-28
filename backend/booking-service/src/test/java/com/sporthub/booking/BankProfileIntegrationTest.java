@@ -147,7 +147,7 @@ class BankProfileIntegrationTest extends RealBookingIntegrationTest {
   }
 
   @Test
-  void bankGuestCounterRefundKeepsTheGuestRecipientWithoutRestrictingTheStaffPersonalProfile() {
+  void bankGuestPolicyRefundIsRejectedWithoutRestrictingTheStaffPersonalProfile() {
     var staff = staff();
     banks.activate(command(staff.id(), 0, false));
     scopePermissions();
@@ -167,26 +167,16 @@ class BankProfileIntegrationTest extends RealBookingIntegrationTest {
             "token");
     UUID payment = UUID.randomUUID();
     consumer.apply(event(booking, payment, staff.id(), "BOOKING", null, booking.amount()));
-    var quote = cancellation.quote(booking.id(), staff, "token");
-    cancellation.cancel(
-        booking.id(),
-        new com.sporthub.booking.service.BookingPolicyCancellation.Input(
-            (UUID) quote.get("id"),
-            "Khách yêu cầu hủy",
-            List.of(
-                new com.sporthub.booking.service.BookingPolicyCancellation.BankBinding(
-                    payment, UUID.randomUUID()))),
-        key(),
-        staff,
-        "token");
-    var obligation =
-        repo.jdbc()
-            .queryForMap(
-                "SELECT payee_id,guest_booking_id FROM facility_disbursement_obligations WHERE"
-                    + " booking_id=?",
-                booking.id());
-    assertThat(obligation.get("payee_id")).isNull();
-    assertThat(obligation.get("guest_booking_id")).isEqualTo(booking.id());
+    when(identity.current(any())).thenReturn(staff);
+    RemovedPolicyRoutes.assertAbsent(http, booking.id());
+    assertThat(
+            repo.jdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM facility_disbursement_obligations WHERE booking_id=?",
+                    Integer.class,
+                    booking.id()))
+        .isZero();
+    assertThat(repo.find(booking.id()).currentHolderId()).isNull();
     assertThat(banks.status(staff.id(), true).canChange()).isTrue();
   }
 

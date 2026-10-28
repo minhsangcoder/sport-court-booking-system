@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.sporthub.booking.service.BookingBankProfiles;
-import com.sporthub.booking.service.BookingPolicyCancellation;
 import com.sporthub.common.money.BankProfileContract.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
@@ -26,16 +25,7 @@ class LegacyCounterBankProfileTest extends BookingIntegrationTest {
     var deal = demoDeal(booking, user, customer(), demoOwner(), 500, true);
     register(user.id());
     register(deal.buyer().id());
-    var quote = policyCancellation.quote(booking.id(), deal.buyer(), "token");
-    var result =
-        policyCancellation.cancel(
-            booking.id(),
-            new BookingPolicyCancellation.Input(
-                (UUID) quote.get("id"), "Synthetic legacy buyer cancellation"),
-            key(),
-            deal.buyer(),
-            "token");
-    UUID refund = (UUID) ((Map<?, ?>) result.get("refund")).get("id");
+    UUID refund = seedHistoricalDemoRefund(booking, deal.buyer());
     assertThat(banks.status(deal.buyer().id(), true).responsibilities())
         .extracting(Responsibility::kind)
         .containsExactly("DEMO_REFUND");
@@ -84,14 +74,7 @@ class LegacyCounterBankProfileTest extends BookingIntegrationTest {
       consumer.apply(outcome);
       register(staff.id());
       if (linked) register(user.id());
-      var priced = policyCancellation.quote(booking.id(), staff, "token");
-      policyCancellation.cancel(
-          booking.id(),
-          new BookingPolicyCancellation.Input(
-              (UUID) priced.get("id"), "Synthetic counter refund review"),
-          key(),
-          staff,
-          "token");
+      seedHistoricalDemoRefund(booking, staff);
       int refunds =
           repo.jdbc()
               .queryForObject(

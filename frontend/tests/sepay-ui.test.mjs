@@ -138,6 +138,10 @@ test('the Owner SePay setup writes the bank and secret, and reads only masked ch
   const secret = nodes(tree).find((n) => n.props?.name === 'webhookApiKey')
   assert.equal(secret.props.type, 'password')
   assert.equal(secret.props.value, undefined)
+  assert.match(text(tree), /Cơ sở chưa có tài khoản nhận tiền/)
+  assert.equal(nodes(tree).find((n) => n.type === 'banks').props.disabled, false)
+  assert.equal(nodes(tree).find((n) => n.type === 'button').props.disabled, false)
+  assert.equal(nodes(tree).find((n) => n.type === 'button').props.type, 'submit')
   await nodes(tree)
     .find((n) => n.type === 'form')
     .props.onSubmit({ preventDefault() {}, currentTarget: { reset() {} } })
@@ -210,3 +214,71 @@ for (const provider of ['SEPAY', 'DEMO']) {
     driver.unmount()
   })
 }
+
+test('an absent facility channel is a valid empty response through the real API adapter', async () => {
+  const load = moduleLoader({
+    fetch: async (url) => {
+      assert.equal(url, '/api/v1/payments/facilities/facility/sepay-channel')
+      return new Response(null, { status: 204 })
+    },
+  })
+  const result = await load('lib/api.ts').api('/payments/facilities/facility/sepay-channel')
+  assert.equal(result, undefined)
+})
+
+for (const component of ['HeaderAccountMenu', 'HeaderMobileMenu']) {
+  test(`${component} exposes Customer bank settings without showing them to Staff`, () => {
+    const load = moduleLoader(
+      {},
+      {
+        'react/jsx-runtime': { jsx, jsxs: jsx },
+        'next/link': { default: 'a' },
+        'lucide-react': new Proxy({}, { get: (_, name) => String(name) }),
+      },
+    )
+    const file = component === 'HeaderAccountMenu' ? 'header-account-menu' : 'header-mobile-menu'
+    const Menu = load(`components/layout/${file}.tsx`)[component]
+    const model = {
+      user: { id: 'customer', roles: ['CUSTOMER'], fullName: 'Customer' },
+      isStaffOnly: false,
+      busy: false,
+      logout() {},
+      setMobileMenuOpen() {},
+      isActive() {
+        return false
+      },
+    }
+    const bankLinks = (tree) =>
+      nodes(tree).filter((n) => n.type === 'a' && n.props.href === '/customer/profile/bank')
+    const links = bankLinks(Menu({ model }))
+    assert.equal(links.length, 1)
+    assert.match(text(links[0]), /Ngân hàng nhận tiền chuyển nhượng/)
+    assert.equal(
+      bankLinks(
+        Menu({ model: { ...model, user: { ...model.user, roles: ['STAFF'] }, isStaffOnly: true } }),
+      ).length,
+      0,
+    )
+  })
+}
+
+test('Customer bank settings explain that only selling a booking requires bank registration', () => {
+  const driver = hookDriver()
+  const load = moduleLoader(
+    {},
+    {
+      react: driver.react,
+      'react/jsx-runtime': { jsx, jsxs: jsx },
+      'next/link': { default: 'a' },
+      '@/lib/auth-context': { useAuth: () => ({ user: { id: 'customer' } }) },
+      '@/features/auth/require-auth': { RequireAuth: 'auth' },
+      '@/features/payments/bank-destination-form': { BankDestinationForm: 'bank-form' },
+    },
+  )
+  const wrapper = load('app/customer/profile/bank/page.tsx').default()
+  const tree = driver.render(wrapper.props.children.type)
+  assert.match(text(tree), /không cần khai tài khoản ngân hàng để đặt sân hoặc mua lại/)
+  assert.match(text(tree), /100% giá đã chốt trực tiếp/)
+  assert.equal(nodes(tree).filter((n) => n.type === 'bank-form').length, 1)
+  driver.unmount()
+})

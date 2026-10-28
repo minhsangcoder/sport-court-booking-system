@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarCheck2,
   Heart,
+  Landmark,
   LogOut,
   Repeat,
   Search,
@@ -192,19 +193,47 @@ export function HeaderMobileMenu({ model }: { model: HeaderModel }) {
                   <User size={18} className="text-emerald-600" />
                   <span>Hồ sơ cá nhân</span>
                 </Link>
+                {user?.roles.includes('CUSTOMER') && (
+                  <Link
+                    href="/customer/profile/bank"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <Landmark size={18} className="shrink-0 text-emerald-600" />
+                    <span>Ngân hàng nhận tiền chuyển nhượng</span>
+                  </Link>
+                )}
               </>
             )}
 
             {/* Role Links */}
             {user?.roles.includes('OWNER') && (
-              <Link
-                href="/owner/facilities"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
-              >
-                <Building2 size={18} />
-                <span>Không gian Chủ sân</span>
-              </Link>
+              <>
+                <Link
+                  href="/owner/facilities"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                >
+                  <Building2 size={18} />
+                  <span>Không gian Chủ sân</span>
+                </Link>
+                <Link
+                  href="/owner/bookings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-emerald-700 hover:bg-emerald-50"
+                >
+                  <Briefcase size={18} />
+                  <span>Lịch đặt & Check-in khách</span>
+                </Link>
+                <Link
+                  href="/owner/counter-booking"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-emerald-700 hover:bg-emerald-50"
+                >
+                  <CalendarCheck2 size={18} />
+                  <span>Đặt tại quầy cho khách</span>
+                </Link>
+              </>
             )}
             {user?.roles.includes('CUSTOMER') && !user.roles.includes('OWNER') && (
               <Link

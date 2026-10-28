@@ -82,8 +82,20 @@ test('DEMO execution accepts only an outcome and never client amounts or recipie
   }
   assert.equal(schemas.DemoSettlement.properties.sellerNetAmount.type, 'string')
   assert.equal(schemas.DemoRefundAllocation.properties.refundAmount.type, 'string')
-  assert.ok(booking.paths['/bookings/{id}/cancellation-quote'].post)
-  assert.ok(booking.paths['/bookings/{id}/cancel-with-policy'].post)
+  for (const route of ['cancellation-quote', 'cancel-with-policy']) {
+    assert.equal(booking.paths[`/bookings/{id}/${route}`], undefined)
+  }
+})
+
+test('check-in credentials are private and counter guest attendance preserves the guards', () => {
+  assert.match(booking.components.schemas.Booking.properties.bookingCode.description, /only.*current Customer holder/)
+  const operation = booking.paths['/bookings/{id}/check-in-guest'].post
+  assert.deepEqual(operation.security, [{ bearerAuth: [] }])
+  assert.equal(operation.requestBody, undefined)
+  assert.match(operation.description, /BOOKING_CHECK_IN.*OFFLINE_COUNTER.*fully verified.*time window.*no frozen transfer/)
+  assert.match(operation.description, /Rejects online or linked-Customer/)
+  assert.ok(operation.responses['403'])
+  assert.ok(operation.responses['409'])
 })
 
 test('DEMO report uses simple pagination, exact amounts and distinct fee/cashflow facts', () => {

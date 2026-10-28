@@ -108,10 +108,10 @@ class PeerProtocolIsolationTest {
             mock(ReliableOutbox.class),
             10);
     workflow.sync(listing);
-    var quotes = mock(FacilityTransferQuotes.class);
+    var runtime = mock(com.sporthub.common.money.CollectionRuntime.class);
     var service =
         new TransferService(
-            repo, dependencies, Clock.fixed(now, ZoneOffset.UTC), 300, json, true, true, quotes);
+            repo, dependencies, Clock.fixed(now, ZoneOffset.UTC), json, true, runtime);
     var actor = new Caller(buyer, "B", Set.of("CUSTOMER"), Map.of());
     assertThatThrownBy(() -> service.payable(acquisition, actor))
         .isInstanceOf(ConflictException.class);
@@ -120,7 +120,7 @@ class PeerProtocolIsolationTest {
     assertThatThrownBy(
             () -> service.withdraw(listing, new Caller(seller, "A", Set.of("CUSTOMER"), Map.of())))
         .isInstanceOf(ConflictException.class);
-    verifyNoInteractions(dependencies, quotes);
+    verifyNoInteractions(dependencies, runtime);
     verify(repo, never()).jdbc();
   }
 
@@ -174,20 +174,17 @@ class PeerProtocolIsolationTest {
   @Test
   void directAcquisitionRejectsUnverifiedAndInactiveCallersBeforeAnyLeaseOrPaymentWork() {
     var service =
-        new TransferService(
+        new PeerTransferAcquisitions(
             repo,
-            dependencies,
+            mock(PeerBookingClient.class),
+            mock(PeerTransferProjection.class),
             Clock.fixed(now, ZoneOffset.UTC),
-            300,
-            json,
-            true,
-            true,
-            mock(FacilityTransferQuotes.class));
+            mock(PlatformTransactionManager.class));
     for (var caller :
         List.of(
             new Caller(buyer, "B", Set.of("CUSTOMER"), Map.of(), "ACTIVE", false, false),
             new Caller(buyer, "B", Set.of("CUSTOMER"), Map.of(), "SUSPENDED", true, true)))
-      assertThatThrownBy(() -> service.acquire(listing, "request", caller))
+      assertThatThrownBy(() -> service.acquire(listing, "request", caller, null))
           .isInstanceOf(com.sporthub.common.exception.ActionPolicyException.class);
     verifyNoInteractions(repo, dependencies);
   }

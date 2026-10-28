@@ -72,8 +72,7 @@ class RealTransferFlowTest {
     deadline = start.minusSeconds(7200);
     Clock clock = Clock.fixed(now, ZoneOffset.UTC);
     var runtime = new CollectionRuntime("REAL", new MockEnvironment());
-    var quotes = new FacilityTransferQuotes(dependencies, bank, runtime, json);
-    service = new TransferService(repo, dependencies, clock, 600, json, true, true, quotes);
+    service = new TransferService(repo, dependencies, clock, json, true, runtime);
     var outbox = mock(ReliableOutbox.class);
     consumer =
         new TransferPaymentConsumer(
@@ -154,7 +153,6 @@ class RealTransferFlowTest {
                         List.of()),
                     "court",
                     Map.of("name", "Court 1", "sportCategoryId", UUID.randomUUID()))));
-    when(dependencies.feePolicy(facility)).thenReturn(fee(700));
     when(bank.receiver(facility))
         .thenReturn(
             json.createObjectNode()
@@ -168,7 +166,8 @@ class RealTransferFlowTest {
   }
 
   Caller customer() {
-    return new Caller(UUID.randomUUID(), "Customer", Set.of("CUSTOMER"), Map.of(), "ACTIVE", true, false);
+    return new Caller(
+        UUID.randomUUID(), "Customer", Set.of("CUSTOMER"), Map.of(), "ACTIVE", true, false);
   }
 
   ObjectNode fee(int value) {
@@ -188,32 +187,28 @@ class RealTransferFlowTest {
         .put("destinationHash", Signatures.sha256(id + "|synthetic-destination"));
   }
 
-  Create input(String accepted) {
-    return new Create(booking, BigDecimal.valueOf(100000), deadline, null, accepted, destination);
-  }
-
   UUID listing() {
-    var terms = service.quote(input(null), seller);
-    UUID listing =
-        tx.execute(
-            status ->
-                service.create(
-                    input(terms.path("termsHash").asText()), UUID.randomUUID().toString(), seller));
-    repo.jdbc().update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", listing);
-    return listing;
+    var terms =
+        FacilityTransferTerms.seller(
+            json,
+            source,
+            dependencies.context(court).path("facility"),
+            fee(700),
+            bank.receiver(facility),
+            destination(destination),
+            seller.id(),
+            BigDecimal.valueOf(100000),
+            deadline);
+    UUID id =
+        HistoricalTransfers.listing(repo, source, dependencies.context(court), terms, deadline);
+    repo.jdbc().update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", id);
+    return id;
   }
 
   UUID acquisition(UUID listing) {
-    UUID acquisition =
-        tx.execute(
-            status ->
-                service.acquire(
-                    listing,
-                    UUID.randomUUID().toString(),
-                    buyer,
-                    repo.find(listing).financeTerms().path("termsHash").asText()));
+    UUID id = HistoricalTransfers.acquisition(repo, listing, buyer.id(), now);
     repo.jdbc().update("UPDATE transfer_listings SET workflow='READY' WHERE id=?", listing);
-    return acquisition;
+    return id;
   }
 
   ObjectNode outcome(UUID acquisition, UUID payment) {
@@ -253,45 +248,15 @@ class RealTransferFlowTest {
   }
 
   @Test
-  void sellerMustSupplyOwnBankAndAcceptExactOwnerFeeBeforePublishing() throws Exception {
-    assertThatThrownBy(
-            () -> service.quote(new Create(booking, BigDecimal.valueOf(100000), deadline), seller))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-    var terms = service.quote(input(null), seller);
-    assertThat(terms.path("quotedFeeAmount").asText()).isEqualTo("7000");
-    assertThat(terms.path("quotedSellerNetAmount").asText()).isEqualTo("93000");
-    UUID listing = listing();
-    assertThat(json.writeValueAsString(service.detail(listing, buyer)))
+  void historicalListingDoesNotExposeBankDestinationOrCredentials() throws Exception {
+    assertThat(json.writeValueAsString(service.detail(listing(), buyer)))
         .doesNotContain(
             "sellerDestination", "accountNumber", destination.toString(), "apiKey", "checksumKey");
-    UUID changed = UUID.randomUUID();
-    when(bank.destination(eq(changed), eq(seller.id()), isNull(), eq(false)))
-        .thenReturn(destination(changed));
-    var input =
-        new Edit(
-            BigDecimal.valueOf(100000), deadline, null, terms.path("termsHash").asText(), changed);
-    assertThatThrownBy(
-            () -> tx.executeWithoutResult(status -> service.edit(listing, input, seller)))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-    var quote = service.quoteEdit(listing, input, seller);
-    assertThat(quote.path("termsHash").asText()).isNotEqualTo(terms.path("termsHash").asText());
-    when(bank.destination(eq(changed), eq(seller.id()), isNull(), eq(false)))
-        .thenReturn(destination(changed).put("principalId", buyer.id().toString()));
-    assertThatThrownBy(() -> service.quoteEdit(listing, input, seller))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
   }
 
   @Test
-  void newAcquisitionRejectsChangedOwnerFeeAndLockedTermsStayImmutable() {
+  void historicalAcquisitionTermsStayImmutable() {
     UUID listing = listing();
-    String hash = repo.find(listing).financeTerms().path("termsHash").asText();
-    when(dependencies.feePolicy(facility)).thenReturn(fee(300));
-    assertThatThrownBy(
-            () ->
-                tx.execute(
-                    status -> service.acquire(listing, UUID.randomUUID().toString(), buyer, hash)))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-    when(dependencies.feePolicy(facility)).thenReturn(fee(700));
     UUID acquisition = acquisition(listing);
     assertThat(
             repo.acquisition(acquisition)

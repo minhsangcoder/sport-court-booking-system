@@ -11,7 +11,7 @@ import org.springframework.web.client.RestClient;
 
 @Component
 public class TransferDependencies {
-  private final RestClient booking, facility, payment;
+  private final RestClient booking, facility;
   private final String secret;
   private final ObjectMapper json;
 
@@ -19,18 +19,12 @@ public class TransferDependencies {
   public TransferDependencies(
       @Value("${BOOKING_SERVICE_URL:http://localhost:8084}") String bookUrl,
       @Value("${FACILITY_SERVICE_URL:http://localhost:8082}") String facUrl,
-      @Value("${PAYMENT_SERVICE_URL:http://localhost:8085}") String paymentUrl,
       @Value("${SERVICE_CALL_SECRET}") String secret,
       ObjectMapper json) {
     this.booking = client(bookUrl);
     this.facility = client(facUrl);
-    this.payment = client(paymentUrl);
     this.secret = secret;
     this.json = json;
-  }
-
-  public TransferDependencies(String bookUrl, String facUrl, String secret, ObjectMapper json) {
-    this(bookUrl, facUrl, "http://localhost:8085", secret, json);
   }
 
   private RestClient client(String url) {
@@ -48,10 +42,6 @@ public class TransferDependencies {
 
   public JsonNode booking(UUID id) {
     return signedGet("/api/v1/internal/bookings/" + id);
-  }
-
-  public void marketAllowed(UUID principal) {
-    signedPost(booking, "/api/v1/internal/bookings/market-admission/" + principal, Map.of());
   }
 
   public JsonNode peerListing(UUID id) {
@@ -72,13 +62,6 @@ public class TransferDependencies {
         booking,
         "/api/v1/internal/bookings/transfer-acquisitions/" + acquisition + "/abort",
         Map.of("command", command, "reason", reason));
-  }
-
-  public JsonNode beneficiary(UUID revision, UUID seller) {
-    return signedPost(
-        payment,
-        "/api/v1/internal/finance/beneficiaries/verify",
-        Map.of("revisionId", revision, "sellerId", seller));
   }
 
   private JsonNode signedPost(RestClient target, String path, Object input) {
@@ -195,10 +178,6 @@ public class TransferDependencies {
 
   public JsonNode policy(UUID facilityId) {
     return facilityGet("/api/v1/facilities/" + facilityId + "/transfer-policy");
-  }
-
-  public JsonNode feePolicy(UUID facilityId) {
-    return facilityGet("/api/v1/facilities/" + facilityId + "/transfer-fee-policy");
   }
 
   private JsonNode facilityGet(String path) {

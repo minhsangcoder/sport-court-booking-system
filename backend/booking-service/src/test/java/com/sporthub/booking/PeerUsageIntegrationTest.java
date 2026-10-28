@@ -848,7 +848,6 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
         .isInstanceOf(ConflictException.class)
         .hasMessageContaining("không hỗ trợ hủy trực tiếp")
         .hasMessageNotContaining("cancel-with-policy");
-    var request = new BookingPolicyCancellation.Input(UUID.randomUUID(), "Buyer cancellation");
     for (var actor :
         List.of(
             sale.buyer(),
@@ -858,13 +857,8 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
                 "Staff",
                 Set.of("STAFF"),
                 Map.of(facility, Set.of("BOOKING_REFUND"))))) {
-      assertThatThrownBy(() -> cancellation.quote(sale.original().id(), actor, "token"))
-          .isInstanceOf(ConflictException.class)
-          .hasMessageContaining("không áp dụng hoàn tiền");
-      assertThatThrownBy(
-              () -> cancellation.cancel(sale.original().id(), request, key(), actor, "token"))
-          .isInstanceOf(ConflictException.class)
-          .hasMessageContaining("không áp dụng hoàn tiền");
+      when(identity.current(any())).thenReturn(actor);
+      RemovedPolicyRoutes.assertAbsent(http, sale.original().id());
     }
     assertThat(repo.find(sale.original().id()).status()).isEqualTo("CONFIRMED");
     assertThat(repo.find(sale.original().id()).currentHolderId()).isEqualTo(sale.buyer().id());

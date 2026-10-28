@@ -66,7 +66,6 @@ test('group page polls membership, removes the obsolete refund panel and hides i
     '@/lib/use-api': { useApi: path => ({ data: path === '/groups/g' ? group : path?.includes('/courts') ? [] : null, reload: () => reloads++ }) },
     '@/lib/use-polling': { usePolling: (callback, options) => polls.push({ callback, options }) },
     '@/features/booking/countdown': { Countdown: () => null },
-    '@/features/booking/finance-panels': { ParticipantMoney: () => null, PolicyCancellationPanel: () => 'OBSOLETE-REFUND' },
     './hidden-groups': { useHiddenGroups: () => ({ isGroupHidden: () => false }) },
     './delete-group-dialog': { DeleteGroupDialog: () => null }, './group-extras': { GroupExtras: () => null },
     './payment-tracking': { GroupPaymentTracking: () => null },

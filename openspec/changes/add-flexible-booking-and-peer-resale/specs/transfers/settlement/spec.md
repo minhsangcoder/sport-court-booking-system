@@ -18,6 +18,14 @@ Protocol PEER_RESALE_V1 SHALL chỉ nhận booking gốc REAL đã đủ chứng
 - **WHEN** user gọi trực tiếp quote/publish/acquire P2P thật cho booking gốc DEMO
 - **THEN** server từ chối bằng lý do phù hợp; không tạo QR tiền thật, bank proof hoặc khoản thu/hoàn REAL từ dữ liệu DEMO
 
+### Requirement: Removed fee based creation code is absent from production
+
+Các hàm create/quote/edit/acquire theo mô hình phí cũ không có caller production SHALL bị xóa cùng calculator/client/config chỉ dùng cho chúng. Lịch sử, payable/cancel phiên chưa trả và workflow đối soát đã mở SHALL giữ nguyên quyền/proof/idempotency. Kiểm thử lịch sử SHALL seed fixture riêng, không gọi lại creator đã bỏ.
+
+#### Scenario: An existing legacy acquisition awaits reconciliation
+- **WHEN** bộ đối soát nhận lại chứng từ hoặc quyết định bàn giao của phiên đã mở
+- **THEN** vẫn kiểm chứng từ, chống áp dụng trùng và giữ lịch sử; không cần khôi phục API tạo giao dịch phí cũ
+
 ### Requirement: A new acquisition holds for no more than five minutes
 
 Phiên mua SHALL chỉ sẵn sàng sau được cấp claim/lease, với payBy không quá5 phút từ lúc cấp và không vượt hạn mua/giờ chơi. Chưa khai hợp lệ trước payBy SHALL release có điều kiện đúng attempt; retry/tab đóng không gia hạn.

@@ -14,6 +14,10 @@ A SHALL có tài khoản ngân hàng cá nhân đang dùng đã được kích h
 - **WHEN** A gọi API publish thiếu bank revision hoặc dùng revision của người khác
 - **THEN** không đăng tin; hướng dẫn A khai/chọn tài khoản của mình
 
+#### Scenario: Customer finds registration only when needed to sell
+- **WHEN** Customer mở menu tài khoản trên desktop/mobile hoặc chuẩn bị đăng chuyển nhượng
+- **THEN** có đường dẫn rõ tới form khai ngân hàng; chỉ seller phải khai trước publish, không buộc Customer khai để đặt sân hoặc buyer mua lại, vẫn cho khai lần đầu khi đang có lịch
+
 ### Requirement: Every acquisition has bound QR instructions
 
 QR SHALL chứa ngân hàng/STK A, P đã chấp nhận, VND và memo duy nhất của attempt. Instructions SHALL bind listing/acquisition/seller/buyer/terms version; frontend không được tự chọn recipient hoặc amount khác.

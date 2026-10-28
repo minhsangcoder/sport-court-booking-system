@@ -43,7 +43,12 @@ export function useOperationalDetail({ id }: { id: string }) {
 
   async function performCheckIn(raw: string) {
     const trimmed = raw.trim()
-    if (!trimmed || !b || checkingIn.current) return
+    if (
+      !b ||
+      checkingIn.current ||
+      (!trimmed && !(b.source === 'OFFLINE_COUNTER' && b.currentHolderId === null))
+    )
+      return
     checkingIn.current = true
     try {
       await checkInBooking(b, trimmed)

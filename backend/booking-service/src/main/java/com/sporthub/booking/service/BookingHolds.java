@@ -95,6 +95,7 @@ public class BookingHolds {
     var initial = dependencies.quote(input);
     UUID facility = UUID.fromString(initial.path("facilityId").asText());
     if (counter) dependencies.facilityPermission(facility, caller, token, "BOOKING_CREATE_COUNTER");
+    else dependencies.requireExternalCustomer(facility, caller.id());
     var receiver = money.receiver(facility);
     if (counter) repo.lock(input.courtId());
     else admission.lockCourts(caller.id(), input.courtId());
@@ -181,6 +182,7 @@ public class BookingHolds {
     var old = repo.hold(previous);
     if (counter)
       dependencies.facilityPermission(old.facilityId(), caller, token, "BOOKING_CREATE_COUNTER");
+    else dependencies.requireExternalCustomer(old.facilityId(), caller.id());
     return old;
   }
 

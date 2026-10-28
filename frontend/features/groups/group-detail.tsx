@@ -3,7 +3,6 @@
 import { Button } from '@/components/ui/button'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { Countdown } from '@/features/booking/countdown'
-import { ParticipantMoney } from '@/features/booking/finance-panels'
 import { RefundPolicyNotice } from '@/features/booking/refund-policy-notice'
 import type { Payment } from '@/features/booking/types'
 import type { Court, Facility } from '@/features/facility/types'
@@ -273,10 +272,7 @@ function Loaded({ id }: { id: string }) {
       </section>
 
       {/* Owner Pending Actions */}
-      {owner && pending && !locked && (
-        <GroupPaymentSetup group={g} reload={r.reload} />
-      )}
-      <ParticipantMoney bookingId={id} moneyClass={g.booking.priceSnapshot.moneyClass} />
+      {owner && pending && !locked && <GroupPaymentSetup group={g} reload={r.reload} />}
       {/* Errors */}
       {(error || r.error) && (
         <p

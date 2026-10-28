@@ -89,6 +89,7 @@
       "post": {
         "operationId": "createHold",
         "summary": "createHold",
+        "description": "Personal online holds reject the facility owner, including hold replay. Counter holds require facility-scoped operational access and are for guests or other Customers. Ownership lookup failure rejects the request without reserving capacity.",
         "parameters": [
           {
             "name": "counter",
@@ -729,7 +730,7 @@
             }
           }
         },
-        "description": "Release an unpaid live pending booking only. Confirmed paid bookings reject Customer self-cancellation, including no-refund requests, in REAL and DEMO. Operational refunds remain separate scoped commands; existing history is retained."
+        "description": "Release an unpaid booking hold by its own Customer or original counter creator. Facility operations do not grant authority to cancel another Customer booking. Paid bookings cannot be self-cancelled or cancelled under a facility refund policy."
       }
     },
     "/bookings/{id}/check-in": {
@@ -1911,7 +1912,8 @@
         "tags": [
           "Booking"
         ],
-        "summary": "Create counter booking using a reviewed refund policy",
+        "summary": "Create counter booking for a guest or another Customer",
+        "description": "Owner or authorized Staff can create bookings at their facility. The operator remains createdBy, not the guest holder. A linked Customer cannot be the facility owner. Existing quote snapshot compatibility does not grant policy cancellation rights.",
         "parameters": [
           {
             "in": "header",
@@ -2378,160 +2380,6 @@
                     },
                     "data": {
                       "$ref": "#/components/schemas/DemoRefund"
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": [
-                    "status",
-                    "message",
-                    "data",
-                    "timestamp"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "401": {
-            "description": "Invalid or revoked session"
-          },
-          "403": {
-            "description": "Wrong actor, facility or current grant"
-          },
-          "409": {
-            "description": "Stale terms, state or conflicting idempotency payload"
-          }
-        }
-      }
-    },
-    "/bookings/{id}/cancellation-quote": {
-      "post": {
-        "operationId": "demoCancellationQuote",
-        "description": "Eligible group organizers or facility Owner/Staff with BOOKING_REFUND may request a five-minute quote before play. Individual Customer self cancellation and every booking with a completed resale handoff are rejected (409), in REAL and DEMO; operator roles cannot restore buyer cancellation refunds. Other operational refunds use original verified facility payments/contributions and the accepted policy. No resale-price refund base.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Server-recorded application result. DEMO never requires a bank account or real funds.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/DemoCancellationQuote"
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": [
-                    "status",
-                    "message",
-                    "data",
-                    "timestamp"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "401": {
-            "description": "Invalid or revoked session"
-          },
-          "403": {
-            "description": "Wrong actor, facility or current grant"
-          },
-          "409": {
-            "description": "Stale terms, state or conflicting idempotency payload"
-          }
-        }
-      }
-    },
-    "/bookings/{id}/cancel-with-policy": {
-      "post": {
-        "operationId": "demoCancelWithPolicy",
-        "description": "Atomic court-lock validation of eligibility, booking/ownership/policy/version/expiry. Rejects new cancellation refunds after any resale handoff, including an old unconsumed quote and requests by Owner/Staff. Preserves recorded obligations and idempotent replays, unrelated group/counter refunds and technical returns. Does not change P2P handoff or paid check-in.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
-            },
-            "description": "Keep the same key when retrying an ambiguous response. A definitive FAILED outcome may be retried with a new key."
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DemoCancellationInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Server-recorded application result. DEMO never requires a bank account or real funds.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/DemoCancellationResult"
                     },
                     "timestamp": {
                       "type": "string",
@@ -3060,6 +2908,77 @@
           }
         }
       }
+    },
+    "/bookings/{id}/check-in-guest": {
+      "post": {
+        "operationId": "checkInCounterGuest",
+        "summary": "Confirm paid counter guest attendance without issuing a code",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Booking"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data",
+                    "timestamp"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid session"
+          },
+          "403": {
+            "description": "Not authorized"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Conflict, expired hold or blocked policy"
+          }
+        },
+        "description": "Requires BOOKING_CHECK_IN at the booking facility, OFFLINE_COUNTER with no Customer holder, confirmed status, fully verified original court payment, check-in time window and no frozen transfer. Rejects online or linked-Customer bookings. Returns CHECKED_IN with bookingCode omitted/null; Staff never becomes the holder."
+      }
     }
   },
   "components": {
@@ -3514,6 +3433,12 @@
               "DEMO",
               "UNKNOWN"
             ]
+          },
+          "bookingCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[0-9A-F]{10}$",
+            "description": "Manual check-in credential visible only to the current Customer holder when usage is not frozen. Omitted/null for Owner/Staff operational lists, search, details and mutation responses. Operators enter a code presented by the Customer."
           }
         },
         "required": [
@@ -5305,134 +5230,6 @@
           "mode",
           "settlements",
           "refunds"
-        ]
-      },
-      "DemoCancellationQuote": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "bookingId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "REAL",
-              "DEMO"
-            ]
-          },
-          "currency": {
-            "type": "string",
-            "enum": [
-              "VND"
-            ]
-          },
-          "baseAmount": {
-            "type": "string",
-            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
-            "readOnly": true,
-            "description": "Exact VND decimal string. DEMO application amount; no real transfer of funds."
-          },
-          "rateBps": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000,
-            "readOnly": true
-          },
-          "targetAmount": {
-            "type": "string",
-            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$",
-            "readOnly": true,
-            "description": "Exact VND decimal string. DEMO application amount; no real transfer of funds."
-          },
-          "policyVersion": {
-            "type": "integer",
-            "format": "int64",
-            "readOnly": true
-          },
-          "allocations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DemoRefundAllocation"
-            }
-          },
-          "expiresAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "bookingId",
-          "mode",
-          "currency",
-          "baseAmount",
-          "rateBps",
-          "targetAmount",
-          "policyVersion",
-          "allocations",
-          "expiresAt"
-        ]
-      },
-      "DemoCancellationInput": {
-        "type": "object",
-        "properties": {
-          "quoteId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
-          },
-          "bankDestinations": {
-            "type": "array",
-            "maxItems": 50,
-            "items": {
-              "$ref": "#/components/schemas/BankRefundBinding"
-            },
-            "description": "REAL: positive requester/Guest allocations need a revision belonging to the actual payee; other group payers supply theirs separately."
-          }
-        },
-        "required": [
-          "quoteId",
-          "reason"
-        ]
-      },
-      "DemoCancellationResult": {
-        "type": "object",
-        "properties": {
-          "bookingId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "CANCELLED"
-            ]
-          },
-          "refund": {
-            "$ref": "#/components/schemas/DemoRefund"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "REAL",
-              "DEMO"
-            ]
-          }
-        },
-        "required": [
-          "bookingId",
-          "status",
-          "refund",
-          "mode"
         ]
       },
       "DemoReportMoney": {

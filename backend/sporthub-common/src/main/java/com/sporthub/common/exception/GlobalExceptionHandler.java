@@ -145,6 +145,13 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.valueOf(ex.getStatusCode().value()), ErrorCode.INTERNAL_ERROR, ex.getReason(), request, null, null);
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRoute(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex, HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND,
+                "Không tìm thấy chức năng được yêu cầu.", request, null, null);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
         // Upstream exceptions can embed response bodies, credentials or SQL parameters.

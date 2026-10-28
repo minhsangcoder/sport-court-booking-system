@@ -69,9 +69,10 @@ public class BookingUsage {
     if (operator)
       dependencies.facilityPermission(b.facilityId(), caller, token, "BOOKING_CREATE_COUNTER");
     else if (!self)
-      dependencies.facilityPermission(b.facilityId(), caller, token, "BOOKING_CANCEL_PENDING");
+      throw new ForbiddenException("Chủ cơ sở và nhân viên không được hủy lượt đặt của khách.");
     else caller.requireRole("CUSTOMER");
-    if (b.status().equals("CANCELLED")) return reads.projectEffective(b);
+    if (b.status().equals("CANCELLED"))
+      return reads.personalView(reads.projectEffective(b), caller);
     if (b.status().equals("CONFIRMED"))
       throw new ConflictException(
           "Lượt đặt đã thanh toán không hỗ trợ tự hủy. Bạn có thể chuyển nhượng lượt đặt hợp lệ.");
@@ -89,23 +90,25 @@ public class BookingUsage {
       throw new ConflictException("Withdraw/reconcile the transfer listing before cancelling");
     if (!b.holdExpiresAt().isAfter(now) || !lifecycle.hasLiveHold(b, now))
       throw new ConflictException("Booking payment hold has expired or changed");
-    return reads.projectEffective(
-        lifecycle.transition(
-            b,
-            "CANCELLED",
-            caller.id(),
-            "CANCELLED",
-            Map.of(
-                "reason",
-                input.reason().trim(),
-                "cancellationPolicy",
-                "UNPAID_NO_REFUND",
-                "refundAmount",
-                BigDecimal.ZERO,
-                "cancellationActor",
-                self ? "CUSTOMER" : operator ? "COUNTER_OPERATOR" : "FACILITY"),
-            now,
-            null));
+    return reads.personalView(
+        reads.projectEffective(
+            lifecycle.transition(
+                b,
+                "CANCELLED",
+                caller.id(),
+                "CANCELLED",
+                Map.of(
+                    "reason",
+                    input.reason().trim(),
+                    "cancellationPolicy",
+                    "UNPAID_NO_REFUND",
+                    "refundAmount",
+                    BigDecimal.ZERO,
+                    "cancellationActor",
+                    self ? "CUSTOMER" : operator ? "COUNTER_OPERATOR" : "FACILITY"),
+                now,
+                null)),
+        caller);
   }
 
   @Transactional
@@ -129,6 +132,16 @@ public class BookingUsage {
       throw new ResourceNotFoundException("Booking code not found at this facility");
     return checkin(
         ids.getFirst(), input.bookingCode().toUpperCase(Locale.ROOT), caller, token, true);
+  }
+
+  @Transactional
+  public Booking checkinGuest(UUID id, Caller caller, String token) {
+    var b = repo.find(id);
+    repo.lock(b.courtId());
+    b = reads.projectEffective(repo.find(id));
+    if (!"OFFLINE_COUNTER".equals(b.source()) || b.currentHolderId() != null)
+      throw new ForbiddenException("Chỉ xác nhận trực tiếp cho khách vãng lai đặt tại quầy.");
+    return checkin(id, b.bookingCode(), caller, token, true);
   }
 
   public Booking checkin(UUID id, String checkinCode, Caller caller, String token, boolean manual) {
@@ -171,7 +184,11 @@ public class BookingUsage {
             "CHECKED_IN",
             caller.id(),
             "CHECKED_IN",
-            Map.of("checkinMethod", manual ? "BOOKING_CODE" : "SIGNED_QR"),
+            Map.of(
+                "checkinMethod",
+                manual
+                    ? (b.currentHolderId() == null ? "COUNTER_GUEST" : "BOOKING_CODE")
+                    : "SIGNED_QR"),
             now,
             null);
     var listings =
@@ -193,7 +210,7 @@ public class BookingUsage {
               listing,
               "CHECKIN_RELEASE",
               repo.write(Map.of("actorId", caller.id(), "bookingId", id)));
-    return reads.projectEffective(result);
+    return reads.personalView(reads.projectEffective(result), caller);
   }
 
   @Transactional
@@ -210,9 +227,11 @@ public class BookingUsage {
       throw new ConflictException("Booking must be checked in before completing");
     if (clock.instant().isBefore(b.endsAt()))
       throw new ConflictException("Booking may only complete after its scheduled end");
-    return reads.projectEffective(
-        lifecycle.transition(
-            b, "COMPLETED", caller.id(), "COMPLETED", Map.of(), clock.instant(), null));
+    return reads.personalView(
+        reads.projectEffective(
+            lifecycle.transition(
+                b, "COMPLETED", caller.id(), "COMPLETED", Map.of(), clock.instant(), null)),
+        caller);
   }
 
   public boolean validCheckin(Booking b, String token, Instant now) {

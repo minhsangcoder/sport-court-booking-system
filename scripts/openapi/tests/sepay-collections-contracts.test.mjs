@@ -12,6 +12,9 @@ test('SePay facility configuration has a write-only webhook secret and masked re
   assert.equal('accountNumber' in read.properties,false)
   assert.ok(read.required.includes('maskedAccountNumber'))
   assert.deepEqual(api.paths['/payments/facilities/{id}/sepay-channel'].put.security,[{bearerAuth:[]}])
+  const empty=api.paths['/payments/facilities/{id}/sepay-channel'].get.responses['204']
+  assert.ok(empty,'First-time Owner setup must have an explicit empty state')
+  assert.equal(empty.content,undefined)
 })
 test('SePay public webhook requires authentication and acknowledges only committed observations',()=>{
   const path=api.paths['/payments/providers/sepay/{channelId}/webhook'],post=path.post

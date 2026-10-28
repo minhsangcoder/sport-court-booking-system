@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/auth-context'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import type { Facility, Court } from '@/features/facility/types'
-import { refundBpsToPercent, type RefundPolicy } from '@/features/facility/refund-policy'
+import { OwnFacilityNotice } from '@/features/booking/own-facility-notice'
 import { type Preview, type Slot, money } from '@/features/schedule/types'
 import type { Hold } from '@/features/booking/types'
 import { useIntervalQuote } from './use-interval-quote'
@@ -40,9 +40,7 @@ export function AvailabilityPage({
   const { user } = useAuth()
   const facility = useApi<Facility>(`/facilities/${facilityId}`)
   const courts = useApi<Court[]>(`/facilities/${facilityId}/courts`)
-  const refundPolicy = useApi<RefundPolicy>(
-    counter ? `/facilities/${facilityId}/refund-policy` : null,
-  )
+  const ownFacility = !counter && Boolean(user && facility.data?.ownerId === user.id)
   const [date, setDate] = useState(initialDate ?? new Date().toLocaleDateString('en-CA'))
   const resource = useApi<Preview>(`/bookings/availability?courtId=${courtId}&date=${date}`)
   const [selection, setSelection] = useState<Slot[]>([])
@@ -66,7 +64,7 @@ export function AvailabilityPage({
     )
   }
   async function hold() {
-    if (busy || !pricing.interval || !pricing.quote) return
+    if (busy || ownFacility || !facility.data || !pricing.interval || !pricing.quote) return
     if (!user) {
       router.push(
         `/login?next=${encodeURIComponent(`/facilities/${facilityId}/courts/${courtId}`)}`,
@@ -127,7 +125,8 @@ export function AvailabilityPage({
         </Link>
       </div>
       <h1 className="mt-5 text-3xl font-black">Chọn giờ chơi</h1>
-      {!counter && (
+      {ownFacility && <OwnFacilityNotice facilityId={facilityId} />}
+      {!counter && !ownFacility && (
         <>
           <AdmissionNotice />
           <AdmissionErrorContext failure={policyFailure} />
@@ -146,7 +145,7 @@ export function AvailabilityPage({
           chọn và làm tròn một lần.
         </p>
       )}
-      {!counter && (
+      {!counter && !ownFacility && (
         <aside className="mt-4 space-y-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
           <p className="font-semibold">Lượt đặt trực tiếp không được hoàn tiền khi khách tự hủy.</p>
           <p>
@@ -155,27 +154,6 @@ export function AvailabilityPage({
             phí. Nếu không chuyển nhượng được và không sử dụng sân, bạn mất toàn bộ tiền đã trả.
           </p>
         </aside>
-      )}
-      {counter && refundPolicy.data?.configured && refundPolicy.data.rateBps != null && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 sm:p-5 text-sm text-emerald-950 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 font-bold text-white text-base">
-              %
-            </div>
-            <div>
-              <p className="text-base font-bold text-emerald-950">
-                Chính sách hoàn của cơ sở khi đủ điều kiện:{' '}
-                <span className="font-black text-emerald-700">
-                  {refundBpsToPercent(refundPolicy.data.rateBps)}%
-                </span>
-              </p>
-              <p className="mt-0.5 text-xs text-slate-600">
-                Tỷ lệ này không phải khoản người bán nhận khi chuyển nhượng trực tiếp. Nhân viên chỉ
-                thực hiện hoàn khi được cấp quyền và yêu cầu đủ điều kiện.
-              </p>
-            </div>
-          </div>
-        </div>
       )}
       <div className="my-6 flex flex-wrap items-end justify-between gap-4">
         <label className="grid gap-2 text-sm">
@@ -223,7 +201,7 @@ export function AvailabilityPage({
             <button
               key={s.startsAt}
               type="button"
-              disabled={busy || resource.loading || s.state !== 'AVAILABLE'}
+              disabled={busy || ownFacility || resource.loading || s.state !== 'AVAILABLE'}
               onClick={() => select(s)}
               aria-pressed={selected}
               className={`rounded-xl border p-4 text-left transition ${selected ? 'border-emerald-600 bg-emerald-600 text-white' : s.state === 'AVAILABLE' ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-500' : 'border-slate-200 bg-slate-100 text-slate-400'}`}
@@ -295,7 +273,14 @@ export function AvailabilityPage({
           </div>
           <Button
             onClick={hold}
-            disabled={busy || resource.loading || pricing.loading || !pricing.quote}
+            disabled={
+              busy ||
+              ownFacility ||
+              !facility.data ||
+              resource.loading ||
+              pricing.loading ||
+              !pricing.quote
+            }
             className="bg-emerald-600 px-6 text-white"
           >
             {busy ? 'Đang kiểm tra…' : user ? 'Xem tóm tắt và giữ chỗ' : 'Đăng nhập để đặt sân'}

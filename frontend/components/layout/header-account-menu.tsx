@@ -5,6 +5,7 @@ import {
   Calendar,
   CalendarCheck2,
   Heart,
+  Landmark,
   LogOut,
   Shield,
   User,
@@ -65,6 +66,15 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
             <User size={16} className="text-emerald-600" />
             <span>Hồ sơ cá nhân</span>
           </Link>
+          {user.roles.includes('CUSTOMER') && (
+            <Link
+              href="/customer/profile/bank"
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <Landmark size={16} className="text-emerald-600" />
+              <span>Ngân hàng nhận tiền chuyển nhượng</span>
+            </Link>
+          )}
         </div>
       )}
 
@@ -94,13 +104,29 @@ export function HeaderAccountMenu({ model }: { model: HeaderModel }) {
         (user.roles.includes('STAFF') && !isStaffOnly)) && (
         <div className="border-t border-slate-100 py-1 dark:border-slate-800">
           {user.roles.includes('OWNER') && (
-            <Link
-              href="/owner/facilities"
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-emerald-50 dark:text-slate-200 dark:hover:bg-emerald-950"
-            >
-              <Building2 size={16} className="text-emerald-600" />
-              <span>Cơ sở của tôi</span>
-            </Link>
+            <>
+              <Link
+                href="/owner/facilities"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-emerald-50 dark:text-slate-200 dark:hover:bg-emerald-950"
+              >
+                <Building2 size={16} className="text-emerald-600" />
+                <span>Cơ sở của tôi</span>
+              </Link>
+              <Link
+                href="/owner/bookings"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                <Briefcase size={16} />
+                <span>Lịch đặt & Check-in khách</span>
+              </Link>
+              <Link
+                href="/owner/counter-booking"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+              >
+                <CalendarCheck2 size={16} />
+                <span>Đặt tại quầy cho khách</span>
+              </Link>
+            </>
           )}
           {user.roles.includes('STAFF') && !isStaffOnly && (
             <Link

@@ -104,6 +104,11 @@ public class BookingService {
     return usage.complete(id, caller, token);
   }
 
+  @Transactional
+  public Booking checkinGuest(UUID id, Caller caller, String token) {
+    return usage.checkinGuest(id, caller, token);
+  }
+
   public JsonNode availability(UUID court, String date) {
     return availability.availability(court, date);
   }

@@ -115,6 +115,26 @@ export function FacilitySidebar({
 
       {/* Sidebar Nav Links */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-6">
+        {!applicationId && (
+          <div>
+            <p className="px-3 mb-1.5 text-[10px] font-bold tracking-widest text-slate-400">
+              VẬN HÀNH LƯỢT ĐẶT
+            </p>
+            {[
+              ['/owner/bookings', 'Lịch đặt & Check-in khách'],
+              ['/owner/counter-booking', 'Đặt tại quầy cho khách'],
+            ].map(([href, label]) => (
+              <Link
+                key={href}
+                href={`${href}?facilityId=${data.id}`}
+                onClick={() => setSidebarOpen(false)}
+                className="flex rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        )}
         {navGroups.map((group) => (
           <div key={group.group}>
             <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">

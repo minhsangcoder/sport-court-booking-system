@@ -171,7 +171,7 @@ export const labels: Record<string, string> = {
   BOOKING_CREATE_COUNTER: 'Tạo lượt đặt tại quầy',
   BOOKING_PAYMENT_COUNTER: 'Ghi nhận thanh toán tại quầy',
   BOOKING_CHECK_IN: 'Xác nhận khách vào sân',
-  BOOKING_REFUND: 'Hoàn tiền theo chính sách',
+  BOOKING_REFUND: 'Xử lý khoản hoàn đã ghi nhận',
   TRANSFER_PAYOUT: 'Trả tiền người chuyển nhượng',
   SCHEDULE_READ: 'Xem lịch sân',
   SCHEDULE_MANAGE: 'Quản lý lịch sân',

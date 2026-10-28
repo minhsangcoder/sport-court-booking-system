@@ -14,6 +14,17 @@ The current facility Owner SHALL configure bank BIN, account number, account nam
 - **WHEN** an authorized Owner reads the configured channel
 - **THEN** the response contains no webhook API key or full account number
 
+#### Scenario: Owner configures the first receiving account
+- **WHEN** the authorized Owner opens the channel page before any channel exists
+- **THEN** GET returns HTTP204, the UI shows an unconfigured state with an enabled entry form, and the first configuration can be saved without bypassing facility ownership checks
+
+### Requirement: Initial bookings do not require a Customer bank account
+Initial booking and group contribution eligibility SHALL depend on the facility's receiving channel, not a personal bank destination of the paying Customer. Missing-channel errors SHALL identify the facility account that its Owner must configure.
+
+#### Scenario: Customer pays without registering a personal bank
+- **WHEN** an eligible Customer without a personal bank destination books at a facility with a ready SePay channel
+- **THEN** the Customer can hold, book and pay the facility; full verified incoming money confirms the booking without registering a Customer bank
+
 ### Requirement: Incoming SePay notices commit validated bank evidence once
 The webhook SHALL authenticate the exact channel/receiver revision, match account/bank/memo/incoming direction, deduplicate SePay IDs and bank references, and commit bank evidence, canonical allocation and outbox atomically. Partial or unverified money SHALL NOT grant usage.
 

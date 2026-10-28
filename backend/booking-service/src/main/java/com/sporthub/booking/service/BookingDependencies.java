@@ -161,6 +161,28 @@ public class BookingDependencies {
     }
   }
 
+  public void requireExternalCustomer(UUID facilityId, UUID customerId) {
+    UUID owner;
+    try {
+      var response =
+          facility.get().uri("/api/v1/facilities/" + facilityId).retrieve().body(JsonNode.class);
+      var data = response == null ? null : response.get("data");
+      if (data == null || !facilityId.toString().equals(data.path("id").asText()))
+        throw new IllegalStateException("Invalid facility response");
+      owner = UUID.fromString(data.path("ownerId").asText());
+    } catch (org.springframework.web.client.RestClientException
+        | IllegalArgumentException
+        | IllegalStateException ex) {
+      throw new org.springframework.web.server.ResponseStatusException(
+          org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+          "Chưa xác minh được chủ cơ sở. Vui lòng thử lại.");
+    }
+    if (owner.equals(customerId))
+      throw new ForbiddenException(
+          "Chủ cơ sở không thể đặt sân của mình cho tài khoản cá nhân. Hãy dùng Đặt tại quầy cho"
+              + " khách.");
+  }
+
   public JsonNode ownerCourts(UUID facilityId, String token) {
     try {
       var body =

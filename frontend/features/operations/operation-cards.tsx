@@ -1,7 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PolicyCancellationPanel } from '@/features/booking/finance-panels'
 import { canPayBooking } from '@/features/booking/ownership'
 import { statusLabels } from '@/features/booking/types'
 import { QrUploadButton } from '@/features/operations/qr-checkin'
@@ -66,12 +65,6 @@ export function OperationCards({
                     {b.id.slice(0, 8).toUpperCase()}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">Người tạo: {b.createdBy}</p>
-                  {b.bookingCode && (
-                    <p className="mt-2 text-sm">
-                      Mã xác nhận vào sân vận hành:{' '}
-                      <strong data-testid="operational-booking-code">{b.bookingCode}</strong>
-                    </p>
-                  )}
                 </div>
                 <div>
                   <p className="font-bold">{money(b.amount, b.currency)}</p>
@@ -83,62 +76,67 @@ export function OperationCards({
                   </Link>
                 </div>
               </div>
-              {b.status === 'CONFIRMED' && can('BOOKING_CHECK_IN') && (
-                <form
-                  className="mt-5 flex flex-wrap items-center gap-3"
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    const val =
-                      cardTokens[b.id] ?? String(new FormData(e.currentTarget).get('token') || '')
-                    action(b, 'check-in', val)
-                  }}
-                >
-                  <div className="flex min-w-64 flex-1 items-center gap-2">
-                    <Input
-                      name="token"
-                      value={cardTokens[b.id] ?? ''}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setCardTokens((prev) => ({ ...prev, [b.id]: v }))
-                      }}
-                      aria-label={`Mã xác nhận vào sân ${b.id.slice(0, 8)}`}
-                      placeholder="Mã 10 ký tự hoặc mã QR…"
-                      className="flex-1"
-                      required
-                      disabled={busy}
-                    />
-                    <QrUploadButton
-                      onTokenDetected={(token, bookingId) => {
-                        if (bookingId && bookingId.toLowerCase() !== b.id.toLowerCase()) {
-                          if (
-                            window.confirm(
-                              `Ảnh QR này thuộc lượt đặt #${bookingId.slice(0, 8).toUpperCase()} (khác với lượt đặt hiện tại #${b.id.slice(0, 8).toUpperCase()}). Bạn có muốn xác nhận vào sân cho lượt đặt #${bookingId.slice(0, 8).toUpperCase()} không?`,
-                            )
-                          ) {
-                            action({ ...b, id: bookingId }, 'check-in', token)
-                            return
-                          }
-                        }
-                        setCardTokens((prev) => ({ ...prev, [b.id]: token }))
-                        action(b, 'check-in', token)
-                      }}
-                      disabled={busy}
-                    />
-                  </div>
-                  <Button type="submit" disabled={busy}>
-                    Xác nhận vào sân
-                  </Button>
-                </form>
-              )}
               {b.status === 'CONFIRMED' &&
-                b.customerId === b.currentHolderId &&
-                can('BOOKING_REFUND') && (
-                  <PolicyCancellationPanel
-                    bookingId={b.id}
-                    moneyClass={b.priceSnapshot.moneyClass}
-                    guestBookingId={b.currentHolderId === null ? b.id : undefined}
-                    onSuccess={bookings.reload}
-                  />
+                can('BOOKING_CHECK_IN') &&
+                b.source === 'OFFLINE_COUNTER' &&
+                b.currentHolderId === null && (
+                  <Button
+                    type="button"
+                    className="mt-5"
+                    disabled={busy}
+                    onClick={() => action(b, 'check-in')}
+                  >
+                    Xác nhận khách vãng lai đến sân
+                  </Button>
+                )}
+              {b.status === 'CONFIRMED' &&
+                can('BOOKING_CHECK_IN') &&
+                !(b.source === 'OFFLINE_COUNTER' && b.currentHolderId === null) && (
+                  <form
+                    className="mt-5 flex flex-wrap items-center gap-3"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      const val =
+                        cardTokens[b.id] ?? String(new FormData(e.currentTarget).get('token') || '')
+                      action(b, 'check-in', val)
+                    }}
+                  >
+                    <div className="flex min-w-64 flex-1 items-center gap-2">
+                      <Input
+                        name="token"
+                        value={cardTokens[b.id] ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setCardTokens((prev) => ({ ...prev, [b.id]: v }))
+                        }}
+                        aria-label={`Mã xác nhận vào sân ${b.id.slice(0, 8)}`}
+                        placeholder="Mã 10 ký tự hoặc mã QR…"
+                        className="flex-1"
+                        required
+                        disabled={busy}
+                      />
+                      <QrUploadButton
+                        onTokenDetected={(token, bookingId) => {
+                          if (bookingId && bookingId.toLowerCase() !== b.id.toLowerCase()) {
+                            if (
+                              window.confirm(
+                                `Ảnh QR này thuộc lượt đặt #${bookingId.slice(0, 8).toUpperCase()} (khác với lượt đặt hiện tại #${b.id.slice(0, 8).toUpperCase()}). Bạn có muốn xác nhận vào sân cho lượt đặt #${bookingId.slice(0, 8).toUpperCase()} không?`,
+                              )
+                            ) {
+                              action({ ...b, id: bookingId }, 'check-in', token)
+                              return
+                            }
+                          }
+                          setCardTokens((prev) => ({ ...prev, [b.id]: token }))
+                          action(b, 'check-in', token)
+                        }}
+                        disabled={busy}
+                      />
+                    </div>
+                    <Button type="submit" disabled={busy}>
+                      Xác nhận vào sân
+                    </Button>
+                  </form>
                 )}
               {b.status === 'PENDING' && canPay && (
                 <Button

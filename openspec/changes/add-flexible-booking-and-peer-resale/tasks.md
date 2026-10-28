@@ -1,5 +1,27 @@
 # Tasks
 
+## 25. Tách Owner đặt cá nhân khỏi đặt quầy/check-in (2026-10-28)
+
+- [x] 25.1 Chặn Owner đặt cá nhân ở cơ sở mình tại server: hold/replay, create từ hold, nhóm, linked Customer tại quầy; fail closed khi không xác minh được ownerId. Giữ đặt cá nhân tại cơ sở khác và dữ liệu/đối soát có sẵn.
+- [x] 25.2 Mở Owner counter bằng component chung, chọn đúng cơ sở thuộc quyền và đường dẫn rõ tại menu desktop/mobile/sidebar/toolbar. Giữ check-in từ mã/QR khách hoặc lệnh khách vãng lai, không lộ credential.
+- [x] 25.3 Gỡ thông báo tỷ lệ hoàn chính sách cũ còn sót tại màn chọn giờ quầy, thống nhất mục24.
+- [x] 25.4 Kiểm thử guard/API/UI và hồi quy; typecheck/lint/build, chạy lại bản local và ghi kết quả.
+
+Nghiệm thu mục25: 42 backend tests lượt cuối (Owner paths, guard HTTP và RealBookingIntegrationTest), 128 frontend tests, 21 contract checks đạt; typecheck, lint các file sửa, strict OpenSpec, module budget và production build đạt. Bộ BookingIntegrationTest đầy đủ trước đó chạy199 ca,198 đạt; một assertion mới dùng sai tên cột fixture được sửa thành principal_id và đã chạy lại các ca Owner thành công. Dữ liệu kiểm thử ở PostgreSQL tách biệt. Bằng chứng: `tmp/owner-operations-backend-final-tests.log`, `tmp/owner-operations-frontend-tests.log`, `tmp/owner-operations-contracts.log`, `tmp/owner-operations-typecheck.log`, `tmp/owner-operations-lint.log`, `tmp/owner-operations-backend-build.log`, `tmp/owner-operations-frontend-build.log`. Local3001 trả200 cho các route Owner mới;7 services18080–18086 báoUP và public facility projection có ownerId (`tmp/owner-operations-runtime-smoke.json`). Chưa chạy E2E đăng nhập trên browser hoặc chuyển khoản thật; Cloudflare Tunnel không chạy lúc nghiệm thu, cần khôi phục riêng trước test webhook ngân hàng. Không tạo migration hoặc tự hủy/sửa booking, khoản thanh toán cũ.
+
+## 24. Bỏ hủy theo chính sách và bảo vệ mã check-in (quyết định 2026-10-28)
+
+- [x] 24.1 Chỉ current Customer holder đọc mã10 ký tự/QR; che credential khỏi list/search/detail/operations và mutation/replay vận hành. Giữ nhập mã/quét QR khách cung cấp, CHECKED_IN và luồng nhóm.
+- [x] 24.2 Gỡ panel hủy theo chính sách REAL/DEMO và creator/calculator không dùng; endpoint cũ trả409 cho mọi vai trò, không tạo khoản hoàn hoặc hủy booking. Chặn quyền vận hành hủy nháp của Customer khác; giữ nháp của chính người đặt/người tạo quầy và nghĩa vụ lịch sử/thu lỗi.
+- [x] 24.3 Khách vãng lai có lệnh check-in không xuất mã, vẫn kiểm đúng quyền cơ sở/khách/đủ tiền/giờ/freeze. Không đổi chủ booking sang Staff.
+- [x] 24.4 Kiểm thử API/UI, hồi quy lịch sử cần thiết, contract/typecheck/lint/build; chạy lại local và ghi kết quả thực tế.
+
+Mục 24 thay mọi tác vụ đã hoàn tất bên dưới cho phép Owner/Staff tạo hủy theo chính sách. Test lịch sử SHALL seed dữ liệu, không bật lại chức năng production đã bỏ chỉ để làm fixture.
+
+Nghiệm thu local: frontend production3001 trả200; cả7 dịch vụ18080–18086 báo UP sau khi thay Booking18084. JAR mới không chứa ba class creator/calculator đã xóa; các POST cũ và check-in-guest từ phiên chưa xác thực đều trả401. Bằng chứng: `tmp/owner-checkin-runtime-smoke.json`. Không tự xoay mã check-in đã cấp trước thay đổi; mã đã từng bị xem/chụp vẫn cần được coi là đã lộ.
+
+Kết quả mục 24 (28/10/2026): 230 backend integration tests liên quan trên PostgreSQL tách biệt, 121 frontend tests và 21 OpenAPI contract checks đều đạt; typecheck/lint và production build đạt. Cụ thể Backend: BookingIntegrationTest 194, RealBookingIntegrationTest 33, LegacyCounterBankProfileTest 2 và BankProfileIntegrationTest 1. Test cũ của creator đã bỏ được thay bằng kiểm từ chối/no-write hoặc fixture lịch sử riêng; reader/executor, phân quyền, tiền và báo cáo lịch sử vẫn được kiểm. Search chỉ khớp chính xác mã check-in, không cho dò tiền tố; mọi kết quả search che mã. Customer lấy mã/QR từ trang cá nhân theo holder/freeze guard. Không migration, không đổi giao dịch, khóa SePay hoặc tunnel. Bằng chứng local: `tmp/owner-checkin-final-backend-tests.log`, `tmp/owner-checkin-surefire/`, `tmp/owner-checkin-final-frontend-tests.log`, `tmp/owner-checkin-contract-tests.log`, `tmp/owner-checkin-typecheck.log`, `tmp/owner-checkin-lint.log`, `tmp/owner-checkin-backend-build.log`, `tmp/owner-checkin-frontend-build.log`. Chưa chạy lại chuyển khoản ngân hàng thật hoặc toàn bộ E2E các microservice cho thay đổi này.
+
 Chỉ thực hiện khi người dùng yêu cầu apply change này. Căn cứ proposal, design D1–D13 và9 specs; trạng thái thực hiện được ghi ở các checkbox dưới đây. Không dùng implementation của change cũ làm bằng chứng đã đạt protocol mới. Ghi baseline tại1.6 trước tối ưu; phần code tối ưu ở nhóm14, nghiệm thu tích hợp ở nhóm15.
 
 ## 1. Contracts, schema và protocol compatibility
@@ -177,3 +199,25 @@ Kết quả mục audit 3–5: xóa 56 file cũ/không dùng (12.803 dòng vật
 - [x] 21.5 Dựng lại và smoke bản local REAL/SePay; kiểm Chrome với fixture, xác nhận không tự tạo kênh/ngân hàng giả hoặc chuyển tiền thật. Nghiệm thu ngân hàng thật chỉ sau khi Owner cấu hình SePay Live và URL HTTPS công khai.
 
 Kết quả mục 21: 117 frontend tests, 40 backend tests chọn lọc (27 Payment, 6 Booking, 3 Gateway, 4 Transfer), 20 OpenAPI checks và 17 kịch bản tích hợp P2P/SePay qua BFF/Gateway/services đều đạt. Webhook fixture kiểm nhận thiếu/đủ và gửi lặp; QR đúng tài khoản cơ sở/A, bàn giao một lần, tranh chấp chỉ phân xử quyền sân, không tạo phí/payout/hoàn mới sau chuyển nhượng. Typecheck, lint, format, module budget, OpenSpec strict và production build đạt; 7 health endpoints UP, frontend3001 trả200. Bằng chứng: `tmp/sepay-transition-frontend-final.log`, `tmp/sepay-transition-qr-final-tests.log`, `tmp/sepay-transition-system/result.json`, `tmp/sepay-transition-health-final.json`. JAR production không chứa clock fixture. Booking trong ảnh vẫn có payment DEMO và cơ sở chưa cấu hình kênh SePay; không chuyển dữ liệu cũ thành REAL hoặc tự tạo ngân hàng giả. Chưa chạy toàn bộ backend suite hoặc nghiệm thu chuyển tiền ngân hàng thật; Owner cần cấu hình SePay Live và URL HTTPS công khai theo `docs/sepay-payments.md`.
+
+## 22. Cấu hình ngân hàng lần đầu và điều kiện Customer (27/10/2026)
+
+- [x] 22.1 Sửa GET kênh SePay chưa cấu hình trả HTTP204 và nút lưu có type submit; Owner được nhập/lưu lần đầu, vẫn kiểm quyền cơ sở và không lộ khóa. Đồng bộ OpenAPI, regression MVC và API adapter/frontend.
+- [x] 22.2 Thông báo lỗi đặt sân chỉ rõ tài khoản cơ sở do Owner cấu hình; không bắt Customer khai ngân hàng để đặt sân/mua lại, chỉ seller cần khai trước khi đăng chuyển nhượng. Thêm lối vào rõ trên cả menu desktop/mobile và hướng dẫn trang ngân hàng.
+- [x] 22.3 Chạy kiểm thử liên quan, kiểm luồng REAL không có ngân hàng cá nhân, dựng lại frontend/backend và smoke local; không cấu hình ngân hàng giả trên dữ liệu người dùng hoặc chuyển tiền thật.
+
+Kết quả mục 22: 121 frontend tests, 6 regression backend (3 MVC và 3 client nhận tiền), 20 OpenAPI checks và 19 kịch bản tích hợp qua BFF/Gateway/services đều đạt. Chrome production kiểm Owner mở/lưu kênh đầu tiên từ HTTP204, Customer chưa có ngân hàng vẫn đặt/trả đủ tiền, sau đó khai ngân hàng lần đầu qua form khi đã có lịch; B mua và nhận bàn giao khi chưa khai ngân hàng. Kiểm trình duyệt phát hiện và sửa thêm nút SePay thiếu type submit. Typecheck/lint, production build, module budget và OpenSpec strict đạt; 7 health endpoints UP, frontend3001 trả200. Bằng chứng: `tmp/bank-setup-backend-unit.log`, `tmp/bank-setup-frontend-all-final.log`, `tmp/bank-setup-system-final/result.json`, `owner-first-sepay-setup.png`, `customer-first-resale-bank.png` trong cùng thư mục và `tmp/bank-setup-health-final.json`. JAR production không chứa clock fixture; không tạo kênh/tài khoản giả trên dữ liệu người dùng, không chuyển tiền ngân hàng thật hoặc chạy toàn bộ backend suite.
+
+## 23. Gỡ khối cơ sở trả/hoàn khỏi trang Customer (28/10/2026)
+
+- [x] 23.1 Gỡ ParticipantMoney trên booking, nhóm, danh sách/chi tiết chuyển nhượng; xóa component REAL, nhánh DEMO và dynamic wrapper không còn dùng. Giữ API/backend, dữ liệu và màn hình vận hành của cơ sở.
+- [x] 23.2 Chạy kiểm thử hiện có, typecheck/lint, dựng frontend production và smoke bản local; cập nhật bằng chứng kiểm tra.
+
+Kết quả mục 23: 121 frontend tests, typecheck/lint, module budget và OpenSpec strict đều đạt; frontend production đã dựng/chạy lại ở3001, trang Customer trả200 và không còn tham chiếu ParticipantMoney/ParticipantDemoMoney hoặc API mine chỉ phục vụ khối này trong app/features. Bằng chứng: `tmp/remove-participant-money-tests.log`, `tmp/remove-participant-money-typecheck.log`, `tmp/remove-participant-money-lint.log`, `tmp/remove-participant-money-build.log`, `tmp/remove-participant-money-smoke.json`. Không sửa backend hoặc dữ liệu giao dịch; payment-service vẫn UP. Không chạy lại backend suite hoặc thực hiện giao dịch ngân hàng cho thay đổi giao diện này.
+
+## 26. Ẩn token dài và xóa code nghiệp vụ đã bỏ (28/10/2026)
+
+- [x] 26.1 Gỡ text/details token dưới QR booking/điểm danh nhóm, giữ mã10 ký tự/ảnh QR/refresh và quyền chỉ Customer hiện tại; regression render không chứa raw token.
+- [x] 26.2 Xóa stub service/controller hủy theo chính sách, OpenAPI/DTO không còn dùng; endpoint đã bỏ trả404 không ghi dữ liệu.
+- [x] 26.3 Xóa legacy create/quote/edit/acquire, calculator phí/client/config không còn caller; chuyển coverage lịch sử sang fixture test, kiểm tài khoản chưa xác thực trên PeerTransferAcquisitions đang chạy. Gỡ E2E tái tạo nghiệp vụ phí/hoàn cũ; giữ các reader/executor và guard còn dùng.
+- [ ] 26.4 Chạy regression Booking/Transfer/P2P, frontend, hợp đồng/typecheck/lint, OpenSpec/module check; clean build lại và khởi động local. Không sửa dữ liệu thật, migration, cấu hình ngân hàng hoặc Tunnel.

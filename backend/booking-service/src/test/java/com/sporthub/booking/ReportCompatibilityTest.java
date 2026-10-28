@@ -92,8 +92,7 @@ class ReportCompatibilityTest extends BookingIntegrationTest {
 
   private void nextCourt(){court=UUID.randomUUID();((ObjectNode)quote).put("courtId",court.toString());}
   private Map<String,Object> cancelForCapture(Booking booking,Caller actor,String reason){
-    var quote=policyCancellation.quote(booking.id(),actor,"token");
-    return policyCancellation.cancel(booking.id(),new BookingPolicyCancellation.Input((UUID)quote.get("id"),reason),key(),actor,"token");
+    return Map.of("refund",Map.of("id",seedHistoricalDemoRefund(booking,actor)));
   }
   private void record(String name,LocalDate from,LocalDate to,Caller owner){
     var report=demoReports.dashboard(facility,from,to,0,2,owner,"token");

@@ -36,8 +36,6 @@ export const financeMessages: Record<string, string> = {
     'Cần đối soát bằng chứng thanh toán trước khi hoàn tiền.',
   'Facility refund policy does not support the quoted currency':
     'Chính sách hoàn của cơ sở không hỗ trợ loại tiền trong báo giá.',
-  'Review a cancellation quote and use cancel-with-policy for this booking':
-    'Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.',
   'Booking already has an immutable refund policy':
     'Lượt đặt đã có chính sách hoàn được chốt và không thể thay đổi.',
   'Review the current policy before proposing adoption':

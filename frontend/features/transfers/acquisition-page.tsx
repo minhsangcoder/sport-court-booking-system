@@ -14,7 +14,6 @@ import type { Payment } from '@/features/booking/types'
 import { TransferSynchronization } from './transfer-synchronization'
 import { type Acquisition, transferStates } from './types'
 import { TransferFinanceNotice } from './finance-notice'
-import { ParticipantMoney } from '@/features/booking/finance-panels'
 import { useAuth } from '@/lib/auth-context'
 const PeerAcquisitionPage = dynamic(() => import('./peer-acquisition'), {
   loading: () => (
@@ -180,7 +179,6 @@ function Loaded({ id }: { id: string }) {
       {['PENDING_HANDOFF', 'PENDING_AUDIT', 'SUCCESS'].includes(a.state) && (
         <TransferSynchronization id={a.listingId} />
       )}
-      <ParticipantMoney bookingId={a.bookingId} moneyClass={a.financeTerms?.mode} />
       {a.state === 'PENDING_AUDIT' && (
         <p className="mt-6 rounded-xl bg-amber-50 p-5 text-sm text-amber-900">
           Giao dịch đang đối soát. Quyền sử dụng chỉ được cấp sau khi bàn giao thành công.

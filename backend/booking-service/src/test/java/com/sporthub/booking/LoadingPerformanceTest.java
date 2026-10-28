@@ -62,7 +62,7 @@ class LoadingPerformanceTest extends BookingIntegrationTest {
     var deal = demoDeal(b, user, customer(), demoOwner(), 500, true);
     demoReportAccess(deal.owner());
     demoFinance.paySeller(deal.command().acquisitionId(), new BookingDemoFinance.Outcome("FAILED"), key(), deal.owner(), "token");
-    cancelPolicy(repo.find(b.id()), deal.buyer(), "Synthetic performance cancellation");
+    seedHistoricalCancellation(repo.find(b.id()), deal.buyer(), "Synthetic performance cancellation");
     output.put("moneyScenario", demoReports.dashboard(facility, LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 5), 0, 25, deal.owner(), "token"));
     var destination = Path.of(System.getProperty("sporthub.performance.output", "target/loading-performance.json"));
     Files.createDirectories(destination.toAbsolutePath().getParent());

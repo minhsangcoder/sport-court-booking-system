@@ -37,13 +37,12 @@ if not 128 <= JAVA_HEAP_MB <= 512:
     raise ValueError('Isolated service heap must be between 128 and 512 MiB')
 NODE = os.environ['SPORTHUB_E2E_NODE']
 TEST_SCRIPT = os.environ.get('SPORTHUB_E2E_TEST_SCRIPT', 'system-e2e.mjs')
-if TEST_SCRIPT not in ['system-e2e.mjs', 'counter-booking-ownership-e2e.mjs', 'demo-finance-e2e.mjs', 'real-payments-e2e.mjs', 'peer-resale-system-e2e.mjs']:
+if TEST_SCRIPT not in ['system-e2e.mjs', 'counter-booking-ownership-e2e.mjs', 'real-payments-e2e.mjs', 'peer-resale-system-e2e.mjs']:
     raise RuntimeError('Choose a checked-in system test harness')
 if TEST_SCRIPT == 'real-payments-e2e.mjs':
     TEST_SCRIPT = 'peer-resale-system-e2e.mjs'
     os.environ['SPORTHUB_E2E_TEST_SCRIPT'] = TEST_SCRIPT
 OWNERSHIP_TEST = TEST_SCRIPT == 'counter-booking-ownership-e2e.mjs'
-DEMO_FINANCE_TEST = TEST_SCRIPT == 'demo-finance-e2e.mjs'
 PEER_RESALE_TEST = TEST_SCRIPT == 'peer-resale-system-e2e.mjs'
 REAL_PAYMENTS_TEST = TEST_SCRIPT == 'real-payments-e2e.mjs' or PEER_RESALE_TEST
 ARTIFACT_ROOT = Path(os.environ.get('SPORTHUB_E2E_ARTIFACT_ROOT', str(ROOT / 'backend'))).resolve()
@@ -123,7 +122,7 @@ class SMTP(socketserver.StreamRequestHandler):
             text = line.decode().strip()
             if text.upper().startswith('RCPT TO'):
                 recipient = re.search(r'<([^>]+)>', text).group(1)
-                synthetic_sms = (OWNERSHIP_TEST or DEMO_FINANCE_TEST or REAL_PAYMENTS_TEST) and re.fullmatch(r'849[0-9]{8}@sms\.sporthub\.local', recipient)
+                synthetic_sms = (OWNERSHIP_TEST or REAL_PAYMENTS_TEST) and re.fullmatch(r'849[0-9]{8}@sms\.sporthub\.local', recipient)
                 if not recipient.endswith('@phase12.invalid') and not synthetic_sms:
                     self.wfile.write(b'550 Test recipients only\r\n')
                     continue
@@ -202,7 +201,7 @@ def main():
                     'SPRING_RABBITMQ_USERNAME':'phase12_test', 'SPRING_RABBITMQ_PASSWORD':'phase12_synthetic_only',
                     'SPRING_RABBITMQ_VIRTUAL_HOST':'phase12', 'DEMO_SEED_ENABLED':'false',
                     'JWT_SECRET':'phase12-synthetic-jwt-secret-over-thirty-two-characters',
-                    'JWT_ACCESS_TOKEN_EXPIRATION':'600000' if DEMO_FINANCE_TEST else '45000', 'SERVICE_CALL_SECRET':'phase12-synthetic-service-secret-over-thirty-two-characters',
+                    'JWT_ACCESS_TOKEN_EXPIRATION':'45000', 'SERVICE_CALL_SECRET':'phase12-synthetic-service-secret-over-thirty-two-characters',
                     'OWNER_APPLICATION_DATA_KEY':base64.b64encode(os.urandom(32)).decode(),
                     'REDIS_HOST':'127.0.0.1', 'REDIS_PORT':REDIS_PORT, 'REDIS_PASSWORD':'', 'SPRING_DATA_REDIS_PASSWORD':'',
                     'SPORTHUB_MEDIA_ACCESS_KEY':'phase12_test', 'SPORTHUB_MEDIA_SECRET_KEY':'phase12_synthetic_only',
@@ -211,20 +210,17 @@ def main():
                     'SPRING_MAIL_HOST':'127.0.0.1', 'SPRING_MAIL_PORT':str(smtp.server_address[1]),
                     'SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH':'false', 'SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE':'false',
                     'FRONTEND_BASE_URL':f'http://127.0.0.1:{ports["frontend"]}', 'APP_PUBLIC_URL':f'http://127.0.0.1:{ports["frontend"]}',
-                    'SECURE_COOKIE':'false', 'DEMO_SMS_ENABLED':'true' if OWNERSHIP_TEST or DEMO_FINANCE_TEST or REAL_PAYMENTS_TEST else 'false', 'GROUP_MIN_LEAD_SECONDS':'180',
+                    'SECURE_COOKIE':'false', 'DEMO_SMS_ENABLED':'true' if OWNERSHIP_TEST or REAL_PAYMENTS_TEST else 'false', 'GROUP_MIN_LEAD_SECONDS':'180',
                     'GROUP_PAYMENT_DEADLINE_SECONDS':'180', 'SPORTHUB_EVENTS_OUTBOX_DELAY_MS':'300',
                     'DEMO_PAYMENT_CALLBACK_SECRET':'phase12-demo-callback-secret-over-thirty-two-characters',
                     'CORS_ALLOWED_ORIGIN':f'http://127.0.0.1:{ports["frontend"]}',
                     'GATEWAY_RATE_LIMIT_REPLENISH_RATE':'200', 'GATEWAY_RATE_LIMIT_BURST_CAPACITY':'400'})
-        if DEMO_FINANCE_TEST:
-            env['TRANSFER_ACQUISITION_SECONDS'] = '45'
-            env['TRANSFER_FINANCE_ENABLED'] = 'true'
         if REAL_PAYMENTS_TEST:
             env.update({'SPORTHUB_MONEY_MODE':'REAL', 'SPORTHUB_COLLECTION_PROVIDER':'SEPAY', 'SEPAY_COLLECTION_CREATE_ENABLED':'true', 'PAYOS_COLLECTION_CREATE_ENABLED':'false',
                         'PAYMENT_TEST_PROVIDER_ALLOWED':'true',
                         'PAYMENT_SECRET_KEYS':'synthetic:'+base64.b64encode(os.urandom(32)).decode(),
                         'PAYMENT_WEBHOOK_ORIGIN':f'http://127.0.0.1:{ports["gateway"]}',
-                        'JWT_ACCESS_TOKEN_EXPIRATION':'600000', 'TRANSFER_ACQUISITION_SECONDS':'90'})
+                        'JWT_ACCESS_TOKEN_EXPIRATION':'600000'})
         if PEER_RESALE_TEST:
             control_token = uuid.uuid4().hex
             if not (ARTIFACT_ROOT/'.peer-fixture-clock').is_file():
@@ -267,7 +263,6 @@ def main():
         config = {'run':RUN, 'ports':ports, 'databases':dbs, 'pg':PG, 'pgUser':PG_USER, 'output':str(OUT), 'baseURL':f'http://127.0.0.1:{ports["frontend"]}', 'pids':[p.pid for p in processes], 'containers':containers, 'payosMockURL':env.get('PAYOS_API_URL') if REAL_PAYMENTS_TEST else None}
         config['performanceOnly'] = os.environ.get('SPORTHUB_E2E_PERFORMANCE_ONLY') == 'true'
         config['javaHeapMb'] = JAVA_HEAP_MB
-        config['demoCompatibility'] = DEMO_FINANCE_TEST and os.environ.get('SPORTHUB_E2E_DEMO_COMPATIBILITY') == 'true'
         comparison_root = os.environ.get('SPORTHUB_E2E_COMPARISON_FRONTEND_ROOT')
         if PEER_RESALE_TEST and comparison_root:
             comparison = Path(comparison_root).resolve()

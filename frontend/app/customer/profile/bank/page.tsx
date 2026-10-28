@@ -12,10 +12,16 @@ function Settings() {
       <Link href="/customer/profile" className="text-emerald-700 underline">
         Hồ sơ cá nhân
       </Link>
-      <h1 className="text-2xl font-bold">Tài khoản nhận tiền</h1>
+      <h1 className="text-2xl font-bold">Ngân hàng nhận tiền chuyển nhượng</h1>
       <p>
-        Tài khoản của bạn dùng nhận tiền chuyển nhượng trực tiếp và khoản hoàn hợp lệ. Thông tin đã
-        chốt trong giao dịch cũ được giữ nguyên.
+        Bạn không cần khai tài khoản ngân hàng để đặt sân hoặc mua lại lượt đặt. Chỉ khi muốn đăng
+        chuyển nhượng, bạn mới cần khai tài khoản để người mua chuyển 100% giá đã chốt trực tiếp cho
+        bạn qua QR SePay.
+      </p>
+      <p className="text-sm text-slate-600">
+        Bạn có thể khai trước tại đây hoặc ngay khi đăng chuyển nhượng. Thông tin đã chốt trong giao
+        dịch cũ được giữ nguyên; quy tắc khóa thay đổi tài khoản vẫn áp dụng khi còn lịch sân hoặc
+        nghĩa vụ đang xử lý.
       </p>
       <BankDestinationForm value={revision} onChange={setRevision} />
     </main>

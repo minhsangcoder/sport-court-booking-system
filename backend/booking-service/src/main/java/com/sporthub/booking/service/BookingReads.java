@@ -60,7 +60,10 @@ public class BookingReads {
 
   public List<Booking> facility(UUID id, Caller caller, String token) {
     dependencies.facilityPermission(id, caller, token, "BOOKING_READ");
-    return repo.facility(id).stream().map(this::projectEffective).toList();
+    return repo.facility(id).stream()
+        .map(this::projectEffective)
+        .map(b -> b.withBookingCode(null))
+        .toList();
   }
 
   public Detail detail(UUID id, Caller caller, String token) {
@@ -166,6 +169,7 @@ WHERE g.booking_id=? AND g.operator_id=? AND g.linked_customer_id IS NULL
   private Booking personalView(Booking b, Caller caller, boolean frozen) {
     boolean historical = historicalHolder(b, caller);
     boolean isCurrentHolder = Objects.equals(b.currentHolderId(), caller.id());
+    boolean showCode = isCurrentHolder && caller.hasRole("CUSTOMER") && !frozen;
     boolean isCustomer = Objects.equals(b.customerId(), caller.id());
     boolean hideGuest =
         b.source().equals("OFFLINE_COUNTER")
@@ -198,8 +202,8 @@ WHERE g.booking_id=? AND g.operator_id=? AND g.linked_customer_id IS NULL
           b.completedAt(),
           b.version(),
           b.checkinTokenVersion(),
-          oldCreator || frozen ? null : b.bookingCode());
-    return frozen ? b.withBookingCode(null) : b;
+          showCode ? b.bookingCode() : null);
+    return showCode ? b : b.withBookingCode(null);
   }
 
   private boolean usageFrozen(UUID booking) {
