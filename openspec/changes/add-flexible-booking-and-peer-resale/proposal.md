@@ -63,3 +63,7 @@ Không có main spec đã sync (`openspec list --specs --json` hiện rỗng). C
 - Bổ sung hợp đồng trạng thái khóa ngân hàng/tài khoản đang dùng, điều phối kích hoạt revision và kiểm thử race; frontend hiển thị lý do khóa thay vì chỉ vô hiệu hóa nút. Mở rộng benchmark/refactor đã có cho REAL và peer mới; không mở lại hoặc ghi đè change refactor cũ.
 - Tích hợp dịch vụ tạo ảnh QR theo [tài liệu SePay](https://docs.sepay.vn/tao-qr-code-vietqr-dong.html); tạo QR và nhận webhook là hai chức năng khác nhau. Proposal chỉ chọn tạo QR, không tích hợp webhook để xác thực tiền A nhận.
 - Toàn bộ artifact này là kế hoạch. Không sửa backend/frontend, tạo migration, chạy test tác động dữ liệu, triển khai hoặc bắt đầu apply trong bước propose.
+
+## 28. Thu tiền mặt tại quầy (2026-10-29)
+
+Theo yêu cầu mới, lượt OFFLINE_COUNTER có thêm nút “Thanh toán bằng tiền mặt” trên trang thanh toán và popup “Thanh toán tại quầy”. Người tạo có quyền thu tiền hiện tại xác nhận đã nhận đủ tiền. Ghi phiếu CASH/REAL bất biến, actor/time/amount và event; không giả lập chứng từ ngân hàng. Dùng chung khóa nghĩa vụ với webhook, chặn hết hạn/đã thu/đã chuyển một phần; QR cũ hết hạn, chuyển muộn được đối soát không áp dụng. Retry trả phiếu đã tạo. Booking nhận CASH_RECEIVED chỉ cho lượt tại quầy và đúng người tạo; xác nhận qua outbox/inbox hiện hành. Dữ liệu DEMO cũ vẫn ghi rõ mô phỏng.

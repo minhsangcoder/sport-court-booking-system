@@ -259,3 +259,7 @@ Tái sử dụng GET /groups/{id}/invite và PUT /groups/{id}/allocations. Mã m
 Giữ một cây frontend tại `app`, `components`, `features`, `lib`; xóa `frontend/src`, fixture mock cũ và module không có đường import từ entry points Next sau khi chuyển test hữu ích sang code hiện hành. SDK tùy chọn sinh vào `lib/api/generated`, nằm ngoài phạm vi kiểm tra source viết tay. Không xóa baseline đo lịch sử để che thay đổi.
 
 Cơ sở tính hoàn mới chỉ chứa khoản thu đã áp dụng và người trả thực tế; không truyền acquisition/funding-payer rỗng hoặc tạo beneficiary P2P mới. Fingerprint vẫn giữ đoạn `|null|` để quote đã cấp không bị đổi nghĩa. Schema, reader khoản hoàn/beneficiary cũ và hoàn vận hành hợp lệ được giữ; dữ liệu lịch sử phục vụ test được seed riêng, không giữ API production có thể tạo lại quyền hoàn đã bỏ.
+
+## 28. Thu tiền mặt tại quầy (2026-10-29)
+
+Theo yêu cầu mới, lượt OFFLINE_COUNTER có thêm nút “Thanh toán bằng tiền mặt” trên trang thanh toán và popup “Thanh toán tại quầy”. Người tạo có quyền thu tiền hiện tại xác nhận đã nhận đủ tiền. Ghi phiếu CASH/REAL bất biến, actor/time/amount và event; không giả lập chứng từ ngân hàng. Dùng chung khóa nghĩa vụ với webhook, chặn hết hạn/đã thu/đã chuyển một phần; QR cũ hết hạn, chuyển muộn được đối soát không áp dụng. Retry trả phiếu đã tạo. Booking nhận CASH_RECEIVED chỉ cho lượt tại quầy và đúng người tạo; xác nhận qua outbox/inbox hiện hành. Dữ liệu DEMO cũ vẫn ghi rõ mô phỏng.

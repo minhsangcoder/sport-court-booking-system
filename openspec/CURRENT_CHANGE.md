@@ -4,7 +4,12 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: section 27 (2026-10-28): explicit start/end selection,
+Latest business revision: section 28 (2026-10-29): counter bookings support explicit
+cash receipts by the original operator with current facility permissions. Cash
+is REAL but never bank-verified; QR payments remain available. Reject cash after
+partial bank funding or expiry; late transfers cannot settle the obligation twice.
+
+Earlier business revision: section 27 (2026-10-28): explicit start/end selection,
 live free ranges, proportional pricing from the existing slot duration for new
 quotes (user confirmed), and group creation at least 15 minutes before play.
 Group payment closes at min(created + 30 minutes, startsAt - 5 minutes).

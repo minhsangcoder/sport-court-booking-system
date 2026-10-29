@@ -224,8 +224,18 @@ Kết quả mục 23: 121 frontend tests, typecheck/lint, module budget và Open
 
 ## 27. Giờ tự chọn, lịch trống và nhóm sát giờ (28/10/2026)
 
-- [ ] 27.1 Cho chọn giờ bắt đầu/kết thúc, hiển thị khoảng trống liên tục, polling5 giây và chặn lựa chọn bị chiếm; giữ quote/hold phía server.
-- [ ] 27.2 Báo giá mới theo tỷ lệ thời lượng từ giá/slot gốc, phân đoạn qua biên giá/lịch, làm tròn một lần; giữ tiền booking cũ và kiểm hồi quy.
-- [ ] 27.3 Hạ mốc tạo nhóm xuống15 phút; hạn góp tiền tối đa30 phút và kết thúc trước giờ chơi5 phút; kiểm biên và rollback.
-- [ ] 27.4 Hiện tổng tiền thiếu và trả thay; xử lý QR thành viên chưa trả, kiểm quyền, chuyển trùng và không đụng chứng từ đã có tiền.
-- [ ] 27.5 Chạy kiểm thử liên quan, typecheck/lint, build và khởi động local; kiểm giao diện và API thực tế không chuyển tiền thật.
+- [x] 27.1 Cho chọn giờ bắt đầu/kết thúc, hiển thị khoảng trống liên tục, polling5 giây và chặn lựa chọn bị chiếm; giữ quote/hold phía server.
+- [x] 27.2 Báo giá mới theo tỷ lệ thời lượng từ giá/slot gốc, phân đoạn qua biên giá/lịch, làm tròn một lần; giữ tiền booking cũ và kiểm hồi quy.
+- [x] 27.3 Hạ mốc tạo nhóm xuống15 phút; hạn góp tiền tối đa30 phút và kết thúc trước giờ chơi5 phút; kiểm biên và rollback.
+- [x] 27.4 Hiện tổng tiền thiếu và trả thay; xử lý QR thành viên chưa trả, kiểm quyền, chuyển trùng và không đụng chứng từ đã có tiền.
+- [x] 27.5 Chạy kiểm thử liên quan, typecheck/lint, build và khởi động local; kiểm giao diện và API thực tế không chuyển tiền thật.
+
+Kết quả mục 27: 131 frontend tests, 66 backend tests chọn lọc (pricing/schedule, booking và SePay), 21 OpenAPI checks đạt; typecheck/lint, module budget, OpenSpec strict và production build đạt. Đã khởi động bản mới, kiểm API quote 14:30–15:30 và chọn giờ trên giao diện; API báo giá theo tỷ lệ, groupMinimumLeadSeconds=900. Bằng chứng: tmp/near-time-frontend-final-tests.log, tmp/near-time-backend-tests.log, tmp/flexible-final-backend-tests.log, tmp/near-time-contract-tests.log và các build log near-time. Theo yêu cầu bổ sung, đã mở API gateway 18080 qua Cloudflare; public facilities trả200, API groups không đăng nhập trả401. Không chuyển tiền ngân hàng thật hoặc chạy toàn bộ backend suite.
+
+## 28. Thanh toán tiền mặt tại quầy (2026-10-29)
+
+- [x] 28.1 Bổ sung phiếu thu CASH, kiểm quyền hiện tại, khóa nghĩa vụ, retry và đối soát chuyển muộn.
+- [x] 28.2 Đổi nhãn Thanh toán tại quầy; thêm nút tiền mặt và xác nhận số tiền trên trang thanh toán/popup.
+- [x] 28.3 Kiểm hồi quy quyền, hết hạn, chuyển một phần/trùng, receipt Booking; build và khởi động bản mới.
+
+Kết quả mục 28: 132 frontend tests, 16 Payment tests và 2 Booking integration tests đạt; 21 OpenAPI checks, typecheck/lint, module budget và OpenSpec strict đạt. Backend/frontend production build thành công; migration V19 thêm phiếu thu tiền mặt, không chuyển đổi dữ liệu ngân hàng cũ. Bằng chứng trong tmp/counter-cash-*.log. Chưa thực hiện thao tác ghi nhận tiền mặt trên dữ liệu giao dịch thật.
