@@ -90,6 +90,7 @@ export type PeerReport = {
   availability: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE' | 'NOT_APPLICABLE'
   reasons: string[]
   dateBasis: string
+  completedUsageCount?: number
   openUsageCases: number
   openMoneyCases: number
   buyerDeclaredAmount: string

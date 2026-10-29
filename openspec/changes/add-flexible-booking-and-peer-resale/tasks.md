@@ -239,3 +239,29 @@ Kết quả mục 27: 131 frontend tests, 66 backend tests chọn lọc (pricing
 - [x] 28.3 Kiểm hồi quy quyền, hết hạn, chuyển một phần/trùng, receipt Booking; build và khởi động bản mới.
 
 Kết quả mục 28: 132 frontend tests, 16 Payment tests và 2 Booking integration tests đạt; 21 OpenAPI checks, typecheck/lint, module budget và OpenSpec strict đạt. Backend/frontend production build thành công; migration V19 thêm phiếu thu tiền mặt, không chuyển đổi dữ liệu ngân hàng cũ. Bằng chứng trong tmp/counter-cash-*.log. Chưa thực hiện thao tác ghi nhận tiền mặt trên dữ liệu giao dịch thật.
+
+## 29. Bỏ chính sách hoàn tiền Owner và đồng bộ trang chọn giờ (2026-10-29)
+
+- [x] 29.1 Gỡ trang/menu/API cấu hình và migration xóa bảng cấu hình chính sách Owner.
+- [x] 29.2 Bỏ điều kiện chính sách khi giữ chỗ, tạo booking và đăng chuyển nhượng; giữ chứng từ đã chấp nhận.
+- [x] 29.3 Bỏ banner và các KPI/biểu đồ hoàn theo chính sách trên báo cáo.
+- [x] 29.4 Dùng PageBanner, token và hiệu ứng Home cho trang chọn giờ; giữ quyền, kiểm tra giá và lịch.
+- [x] 29.5 Kiểm thử hồi quy migration, booking/P2P, frontend và bản production.
+
+Kết quả mục 29: 130 frontend tests, 52 Facility integration tests, 39 Booking/PeerMarket tests và 4 PeerResaleTerms tests đạt. OpenAPI 21 checks, ESLint, production build (thư mục riêng), OpenSpec strict và kiểm tra trình duyệt desktop/mobile đạt. Migration chỉ chạy trên PostgreSQL thử nghiệm; chưa triển khai lên hệ thống đang chạy. Chứng từ và nghĩa vụ tài chính lịch sử được giữ lại.
+
+
+## 30. Thu gọn báo cáo Owner (2026-10-29)
+Chỉ giữ Ngân hàng đã nhận trong kỳ trong khối công nợ; khối B → A chỉ hiển thị trạng thái và hồ sơ quyền sân, bỏ tiền cá nhân và đối soát. Không cộng số liệu từ trang phân trang thành tổng toàn kỳ.
+
+Hoàn tất mục 30: hai kiểm thử biên đạt; production frontend và backend build đạt; frontend localhost:3001 và 7 dịch vụ backend healthy. Migration Facility V17/Booking V20 đã áp dụng trên DB local. Không chạy bộ regression rộng.
+
+
+## 31. Báo cáo chỉ tính tiền sân (2026-10-29)
+Doanh thu hiển thị chỉ lấy courtCollected; bỏ phí chuyển nhượng khỏi KPI, biểu đồ và bảng sân. Chuyển nhượng chỉ hiển thị tổng bàn giao thành công theo decided_at trong kỳ và hồ sơ quyền sân đang mở; tổng do backend đếm độc lập phân trang. Giữ nguyên chứng từ lịch sử.
+
+
+## 32. Nguồn tiền thực thu (2026-10-29)
+Bỏ liên kết xử lý trả/hoàn; nguồn tiền gồm ALL (mặc định), CASH, BANK. Giao diện luôn dùng REAL, bỏ lựa chọn DEMO. Phân loại tiền mặt từ chứng từ Payment CASH/CASH_RECEIVED đã áp dụng thành công; không chuyển dữ liệu DEMO thành tiền mặt. Lọc khoản thu trước khi tổng hợp theo ngày/sân và phân trang. Tổng ALL bằng CASH + BANK. Chỉ số hoạt động sân và quyền chuyển nhượng vẫn theo toàn cơ sở, không theo phương thức thanh toán.
+
+Hoàn tất mục 32: kiểm thử tích hợp mixed CASH/BANK, chống cộng trùng replay, tổng ALL và nguồn không hợp lệ đạt; 7 kiểm thử frontend liên quan đạt. Frontend production build, backend package, ESLint và OpenSpec strict đạt. Đã chạy frontend localhost:3001 và Booking health UP.

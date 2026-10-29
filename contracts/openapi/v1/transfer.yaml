@@ -4429,7 +4429,8 @@
                 "type": "string",
                 "pattern": "^[a-f0-9]{64}$"
               }
-            }
+            },
+            "nullable": true
           }
         }
       },
@@ -4528,7 +4529,8 @@
                 "type": "string",
                 "pattern": "^[a-f0-9]{64}$"
               }
-            }
+            },
+            "nullable": true
           },
           "moneyClass": {
             "type": "string",
@@ -4680,7 +4682,8 @@
                 "type": "string",
                 "pattern": "^[a-f0-9]{64}$"
               }
-            }
+            },
+            "nullable": true
           },
           "moneyClass": {
             "type": "string",

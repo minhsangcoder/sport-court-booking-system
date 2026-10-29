@@ -20,7 +20,6 @@ public class BookingCreation {
   private final BookingDependencies dependencies;
   private final Clock clock;
   private final ConfigurationGuardService configuration;
-  private final BookingRefundPolicies refundPolicies;
   private final BookingIdempotency keys;
   private final BookingReads reads;
   private final BookingHolds holds;
@@ -31,7 +30,6 @@ public class BookingCreation {
       BookingDependencies dependencies,
       Clock clock,
       ConfigurationGuardService configuration,
-      BookingRefundPolicies refundPolicies,
       BookingIdempotency keys,
       BookingReads reads,
       BookingHolds holds,
@@ -40,7 +38,6 @@ public class BookingCreation {
     this.dependencies = dependencies;
     this.clock = clock;
     this.configuration = configuration;
-    this.refundPolicies = refundPolicies;
     this.keys = keys;
     this.reads = reads;
     this.holds = holds;
@@ -124,7 +121,6 @@ public class BookingCreation {
         throw new IllegalArgumentException("Guest name and phone are required");
     } else caller.requireRole("CUSTOMER");
     configuration.requireAccepting(h.facilityId());
-    var refundPolicy = refundPolicies.fromAcceptedQuote(h.quote(), h.facilityId());
     var live =
         dependencies.quote(
             new HoldInput(
@@ -160,7 +156,6 @@ public class BookingCreation {
       throw new ConflictException("Hold expired during customer validation");
     UUID holder = counter ? linkedCustomer : caller.id();
     live = live.deepCopy();
-    ((ObjectNode) live).set("refundPolicy", refundPolicy.deepCopy());
     money.copyAccepted((ObjectNode) live, h.quote());
     UUID id = UUID.randomUUID();
     repo.auditContext(caller.id(), counter ? "COUNTER_API" : "BOOKING_API");
@@ -199,7 +194,6 @@ public class BookingCreation {
               money.live() ? "BANK_QR" : "DEMO_ONLY");
       repo.jdbc().update("UPDATE slot_reservations SET holder_id=? WHERE id=?", holder, h.id());
     }
-    refundPolicies.store(repo.find(id), refundPolicy, caller.id());
     money.store(repo.find(id));
     repo.jdbc()
         .update(
@@ -276,7 +270,6 @@ public class BookingCreation {
             caller,
             token,
             true);
-    refundPolicies.requireExpectedPolicy(hold.quote(), hold.facilityId(), input.refundPolicyHash());
     var createInput = new CreateInput(hold.id(), input.guestName().trim(), input.guestPhone());
     var booking =
         createLocked(

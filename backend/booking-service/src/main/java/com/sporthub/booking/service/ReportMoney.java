@@ -12,6 +12,16 @@ import org.springframework.transaction.*;
 final class ReportMoney {
   static void add(
       ReportSnapshotReader.Snapshot s, ReportState t, ReportPaymentModes.Modes assessed) {
+    add(s, t, assessed, "ALL");
+  }
+
+  static boolean isCash(com.sporthub.common.money.PaymentProofFacts.Fact fact) {
+    return fact != null && "CASH".equals(fact.provider()) && fact.realEvidence() != null
+        && "CASH_RECEIVED".equals(fact.realEvidence().confirmationMethod());
+  }
+
+  static void add(ReportSnapshotReader.Snapshot s, ReportState t,
+      ReportPaymentModes.Modes assessed, String moneySource) {
     var byId = t.byId;
     var names = t.names;
     var counters = t.counters;
@@ -24,7 +34,8 @@ final class ReportMoney {
     var needed = assessed.needed();
     var modes = assessed.values();
     for (var f : needed)
-      if (Boolean.TRUE.equals(modes.get(f.paymentId())) && in(f.paidAt(), window)) {
+      if (Boolean.TRUE.equals(modes.get(f.paymentId())) && in(f.paidAt(), window)
+          && (moneySource.equals("ALL") || (moneySource.equals("CASH") == isCash(assessed.remote().get(f.paymentId()))))) {
         var b = byId.get(f.bookingId());
         var c = counters.get(b.courtId());
         summary.r = summary.r.add(f.amount());
@@ -41,10 +52,11 @@ final class ReportMoney {
                 b,
                 names,
                 f.purpose(),
-                "SUCCESS",
+                isCash(assessed.remote().get(f.paymentId())) ? "CASH_RECEIVED" : "SUCCESS",
                 f.amount(),
                 f.paidAt()));
       }
+    if (moneySource.equals("CASH")) return;
     var purchaseIds = new HashSet<UUID>();
     for (var row : s.collections())
       if (!s.mode().equals("REAL") && row.get("purpose").equals("TRANSFER")) {
@@ -156,6 +168,7 @@ final class ReportMoney {
           c.technicalRefunded = c.technicalRefunded.add(amount);
         }
       }
+      if (kind.equals("POLICY_REFUND")) continue;
       transactions.add(
           transaction(
               "EXECUTION:" + row.get("id"),

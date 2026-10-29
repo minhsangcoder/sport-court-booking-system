@@ -28,8 +28,7 @@ export function ReportCourts({
                 'Giờ đặt',
                 'Giờ sử dụng',
                 'Tiền sân',
-                'Phí cơ sở',
-                'Sau hoàn',
+                'Khoản thu',
               ].map((label) => (
                 <th key={label} className="p-3 font-medium">
                   {label}
@@ -48,8 +47,7 @@ export function ReportCourts({
                 <td className="p-3">{hours(court.bookedMinutes)}</td>
                 <td className="p-3">{hours(court.usedMinutes)}</td>
                 <td className="p-3 whitespace-nowrap">{amount(court.money.courtCollected)}</td>
-                <td className="p-3 whitespace-nowrap">{amount(court.money.transferFees)}</td>
-                <td className="p-3 whitespace-nowrap">{amount(court.money.afterRefund)}</td>
+                <td className="p-3 whitespace-nowrap">{amount(court.money.courtCollected)}</td>
               </tr>
             ))}
           </tbody>

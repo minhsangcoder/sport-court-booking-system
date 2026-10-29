@@ -8,40 +8,24 @@ import { ReportObligations } from '@/features/facility/report/report-obligations
 import { ReportTransactions } from '@/features/facility/report/report-transactions'
 import { ReportPeer } from '@/features/facility/report/report-peer'
 import { useFacilityReport } from '@/features/facility/report/use-facility-report'
-import Link from 'next/link'
 export function FacilityReport() {
   const model = useFacilityReport()
-  const { facility, resource, report, stats, money, available, timestamp } = model
+  const { resource, report, stats, money, available, timestamp } = model
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold">Báo cáo &amp; Doanh thu</h2>
           <p className="mt-2 text-sm text-slate-500">
-            Khoản thu, hoạt động sân và nghĩa vụ trả/hoàn của cơ sở.
+            Khoản thu và hoạt động sân của cơ sở.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={`/owner/bookings?facilityId=${facility.id}`}
-            className="text-sm text-emerald-700 underline"
-          >
-            Xử lý khoản trả / hoàn
-          </Link>
           <Button variant="outline" onClick={resource.reload} disabled={resource.loading}>
             Làm mới báo cáo
           </Button>
         </div>
       </div>
-      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        {!model.mode
-          ? 'Đang xác định nguồn tiền báo cáo…'
-          : model.mode === 'REAL'
-            ? 'Thu ngân hàng đã xác minh; khoản chi do cơ sở xác nhận thủ công.'
-            : 'Dữ liệu mô phỏng — không phát sinh giao dịch tiền thật.'}{' '}
-        Phí chuyển nhượng của giao dịch cũ thuộc cơ sở. Với chuyển nhượng trực tiếp mới, B trả A; cơ
-        sở và SportHub không thu phí hoặc trả thay A.
-      </p>
       <ReportFilters model={model} />
       {resource.loading && (
         <div role="status" className="rounded-2xl border p-8 text-slate-500">
@@ -72,7 +56,7 @@ export function FacilityReport() {
           <ReportObligations model={model} />
           <ReportPeer model={model} />
           <section className="rounded-2xl border bg-white p-5">
-            <h3 className="mb-4 text-lg font-bold">Khoản thu và hoàn theo ngày</h3>
+            <h3 className="mb-4 text-lg font-bold">Khoản thu theo ngày</h3>
             {available ? (
               <DailyChart days={report.daily} />
             ) : (

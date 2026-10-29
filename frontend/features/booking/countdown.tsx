@@ -1,11 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
-export function Countdown({ expiresAt }: { expiresAt: string }) {
+export function Countdown({ expiresAt, className }: { expiresAt: string; className?: string }) {
   const remaining = useRemaining(expiresAt)
+  const defaultClass = remaining === 0 ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'
   return (
     <p
       role="timer"
-      className={`rounded-lg px-4 py-3 text-sm font-semibold ${remaining === 0 ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}
+      className={className ? `${defaultClass} ${className}` : `rounded-lg px-4 py-3 text-sm font-semibold ${defaultClass}`}
     >
       {remaining === null
         ? 'Đang kiểm tra thời hạn…'

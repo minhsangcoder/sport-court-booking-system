@@ -78,7 +78,6 @@ class BookingIntegrationTest {
   @MockBean com.sporthub.common.security.RemoteIdentity identity;
   @MockBean ReliableOutbox outbox;
   @Autowired GroupService groups;
-  @Autowired LegacyRefundPolicyAdoption adoptions;
   @Autowired LocalAppliedCollections appliedCollections;
   @Autowired org.springframework.test.web.servlet.MockMvc http;
   @Autowired org.springframework.transaction.PlatformTransactionManager txManager;
@@ -124,7 +123,7 @@ class BookingIntegrationTest {
     when(dependencies.quote(any())).thenReturn(quote);
     ((com.fasterxml.jackson.databind.node.ObjectNode) quote)
         .set("refundPolicy", policy(facility, 8000, 1));
-    when(dependencies.refundPolicy(any())).thenAnswer(a -> policy(a.getArgument(0), 8000, 1));
+
   }
 
   JsonNode policy(UUID id, int rate, long version) {
@@ -155,6 +154,19 @@ class BookingIntegrationTest {
 
   HoldInput input() {
     return new HoldInput(court, start, end, new BigDecimal("150000"));
+  }
+
+  @Test
+  void newBookingsAndGroupsNeedNoOwnerRefundPolicy() {
+    ((com.fasterxml.jackson.databind.node.ObjectNode) quote).remove("refundPolicy");
+    var h = service.hold(input(), key(), user, "token", false);
+    assertThat(h.quote().has("refundPolicy")).isFalse();
+    var booking = service.create(new CreateInput(h.id(), null, null), key(), user, "token", false);
+    assertThat(booking.status()).isEqualTo("PENDING");
+    assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM booking_refund_policy_snapshots WHERE booking_id=?",Integer.class,booking.id())).isZero();
+    var organizer = customer();
+    var group=groups.create(groupInput(organizer),key(),organizer,"token");
+    assertThat(group.booking().priceSnapshot().has("refundPolicy")).isFalse();
   }
 
   @Test
@@ -554,357 +566,6 @@ class BookingIntegrationTest {
 
   Caller refundOwner() {
     return new Caller(UUID.randomUUID(), "Owner", Set.of("OWNER"), Map.of());
-  }
-
-  @Test
-  void legacyRefundAdoptionRequiresOwnerOfferAndCustomerConsentWithoutRewritingOldFacts() {
-    var b = legacyRefundBooking(new BigDecimal("150000"));
-    var original = repo.write(b.priceSnapshot());
-    var owner = refundOwner();
-    assertThat(adoptions.preflight(facility, owner, "token"))
-        .extracting(LegacyRefundPolicyAdoption.Candidate::bookingId)
-        .contains(b.id());
-    var input =
-        new LegacyRefundPolicyAdoption.Input(
-            b.version(),
-            policy(facility, 8000, 1).path("termsHash").asText(),
-            "Agreed explicit legacy terms",
-            null);
-    assertThatThrownBy(
-            () -> adoptions.propose(b.id(), input, counterStaff("BOOKING_REFUND"), "token"))
-        .isInstanceOf(ForbiddenException.class);
-    var offer = adoptions.propose(b.id(), input, owner, "token");
-    assertThat(offer.adopted()).isFalse();
-    assertThatThrownBy(() -> adoptions.consent(offer.id(), customer()))
-        .isInstanceOf(ForbiddenException.class);
-    assertThat(adoptions.consent(offer.id(), user).adopted()).isTrue();
-    assertThat(adoptions.consent(offer.id(), user).adopted()).isTrue();
-    assertThat(repo.write(repo.find(b.id()).priceSnapshot())).isEqualTo(original);
-    assertThat(repo.find(b.id()).paymentId()).isNull();
-    assertThat(repo.find(b.id()).version()).isEqualTo(b.version());
-    assertThat(repo.history(b.id()))
-        .extracting(History::action)
-        .containsExactly("REFUND_POLICY_LEGACY_ADOPTED");
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT origin FROM booking_refund_policy_snapshots WHERE booking_id=?",
-                    String.class,
-                    b.id()))
-        .isEqualTo("LEGACY_ADOPTION");
-  }
-
-  @Test
-  void legacyRefundPreflightIsReadOnlyAndFractionalMoneyCannotBeSilentlyRounded() {
-    var b = legacyRefundBooking(new BigDecimal("150000.25"));
-    var owner = refundOwner();
-    var candidates = adoptions.preflight(facility, owner, "token");
-    assertThat(candidates).hasSize(1);
-    assertThat(candidates.getFirst().reasons()).contains("UNSUPPORTED_MONEY_PRECISION_REVIEW");
-    assertThatThrownBy(
-            () ->
-                adoptions.propose(
-                    b.id(),
-                    new LegacyRefundPolicyAdoption.Input(
-                        b.version(),
-                        policy(facility, 8000, 1).path("termsHash").asText(),
-                        "No rounding allowed",
-                        null),
-                    owner,
-                    "token"))
-        .isInstanceOf(ConflictException.class);
-    assertThat(repo.find(b.id()).amount()).isEqualByComparingTo("150000.25");
-    assertThat(repo.history(b.id())).isEmpty();
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM booking_refund_policy_snapshots WHERE booking_id=?",
-                    Integer.class,
-                    b.id()))
-        .isZero();
-  }
-
-  @Test
-  void legacyRefundAdoptionCannotUseStalePolicyExpiredOfferOrForeignOwner() {
-    var b = legacyRefundBooking(new BigDecimal("150000"));
-    var owner = refundOwner();
-    assertThatThrownBy(
-            () ->
-                adoptions.propose(
-                    b.id(),
-                    new LegacyRefundPolicyAdoption.Input(
-                        b.version(), "0".repeat(64), "Stale rate", null),
-                    owner,
-                    "token"))
-        .isInstanceOf(ConflictException.class);
-    var offer =
-        adoptions.propose(
-            b.id(),
-            new LegacyRefundPolicyAdoption.Input(
-                b.version(),
-                policy(facility, 8000, 1).path("termsHash").asText(),
-                "Reviewed rate",
-                null),
-            owner,
-            "token");
-    when(clock.instant()).thenReturn(now.plusSeconds(901));
-    assertThatThrownBy(() -> adoptions.consent(offer.id(), user))
-        .isInstanceOf(ConflictException.class);
-    doThrow(new ForbiddenException("Outside ownership"))
-        .when(dependencies)
-        .ownerFacility(facility, owner, "token");
-    assertThatThrownBy(() -> adoptions.preflight(facility, owner, "token"))
-        .isInstanceOf(ForbiddenException.class);
-  }
-
-  @Test
-  void legacyRefundGroupAdoptionWaitsForAllAffectedMembers() {
-    var b = legacyRefundBooking(new BigDecimal("150000"));
-    var member = customer();
-    new org.springframework.transaction.support.TransactionTemplate(txManager)
-        .executeWithoutResult(
-            tx -> {
-              repo.jdbc()
-                  .update(
-                      "INSERT INTO booking_groups(id,owner_id,name,state,deadline,max_members)"
-                          + " VALUES(?,?,?,'GROUP_PENDING',?,2)",
-                      b.id(),
-                      user.id(),
-                      "Legacy group",
-                      java.sql.Timestamp.from(b.holdExpiresAt()));
-              for (var person : List.of(user, member))
-                repo.jdbc()
-                    .update(
-                        "INSERT INTO group_members(id,group_id,user_id,display_name)"
-                            + " VALUES(?,?,?,?)",
-                        UUID.randomUUID(),
-                        b.id(),
-                        person.id(),
-                        person.fullName());
-            });
-    var offer =
-        adoptions.propose(
-            b.id(),
-            new LegacyRefundPolicyAdoption.Input(
-                b.version(),
-                policy(facility, 8000, 1).path("termsHash").asText(),
-                "All members must accept",
-                null),
-            refundOwner(),
-            "token");
-    assertThat(offer.requiredUsers()).containsExactlyInAnyOrder(user.id(), member.id());
-    assertThat(adoptions.consent(offer.id(), user).adopted()).isFalse();
-    assertThat(adoptions.consent(offer.id(), member).adopted()).isTrue();
-  }
-
-  @Test
-  void legacyRefundWalkInAdoptionRecordsExplicitGuestConsentFromActualOwner() {
-    var staff = counterStaff("BOOKING_CREATE_COUNTER");
-    UUID booking = UUID.randomUUID(), reservation = UUID.randomUUID();
-    new org.springframework.transaction.support.TransactionTemplate(txManager)
-        .executeWithoutResult(
-            tx -> {
-              repo.jdbc()
-                  .update(
-                      "INSERT INTO"
-                          + " slot_reservations(id,court_id,facility_id,holder_id,starts_at,ends_at,expires_at,state,quote)"
-                          + " VALUES(?,?,?,NULL,?,?,?,'HOLD','{}')",
-                      reservation,
-                      court,
-                      facility,
-                      java.sql.Timestamp.from(start),
-                      java.sql.Timestamp.from(end),
-                      java.sql.Timestamp.from(now.plusSeconds(600)));
-              repo.jdbc()
-                  .update(
-                      "INSERT INTO"
-                          + " bookings(id,reservation_id,facility_id,court_id,created_by,customer_id,current_holder_id,starts_at,ends_at,status,source,guest_name,guest_phone,amount,currency,price_snapshot,hold_expires_at)"
-                          + " VALUES(?,?,?,?,?,NULL,NULL,?,?,'PENDING','OFFLINE_COUNTER','Guest','0901234567',150000,'VND','{}',?)",
-                      booking,
-                      reservation,
-                      facility,
-                      court,
-                      staff.id(),
-                      java.sql.Timestamp.from(start),
-                      java.sql.Timestamp.from(end),
-                      java.sql.Timestamp.from(now.plusSeconds(600)));
-              repo.jdbc()
-                  .update(
-                      "INSERT INTO"
-                          + " counter_booking_guests(booking_id,operator_id,guest_name,guest_phone)"
-                          + " VALUES(?,?,'Guest','0901234567')",
-                      booking,
-                      staff.id());
-            });
-    var b = repo.find(booking);
-    var owner = refundOwner();
-    String hash = policy(facility, 8000, 1).path("termsHash").asText();
-    assertThatThrownBy(
-            () ->
-                adoptions.propose(
-                    booking,
-                    new LegacyRefundPolicyAdoption.Input(b.version(), hash, "Review", null),
-                    owner,
-                    "token"))
-        .isInstanceOf(IllegalArgumentException.class);
-    var offer =
-        adoptions.propose(
-            booking,
-            new LegacyRefundPolicyAdoption.Input(
-                b.version(), hash, "Guest agreed after review", "Signed guest receipt fixture-1"),
-            owner,
-            "token");
-    assertThat(offer.adopted()).isTrue();
-    assertThat(offer.requiredUsers()).isEmpty();
-    assertThat(repo.find(booking).currentHolderId()).isNull();
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT accepted_by FROM booking_refund_policy_snapshots WHERE booking_id=?",
-                    UUID.class,
-                    booking))
-        .isEqualTo(owner.id());
-  }
-
-  @Test
-  void refundPolicyUnconfiguredBlocksEveryNewBookingWithoutWritingHolds() {
-    when(dependencies.refundPolicy(any()))
-        .thenReturn(json.valueToTree(Map.of("configured", false)));
-    assertThatThrownBy(() -> service.hold(input(), key(), user, "token", false))
-        .isInstanceOf(ConflictException.class)
-        .hasMessageContaining("Owner");
-    scopedPermissions();
-    var staff = counterStaff("BOOKING_CREATE_COUNTER");
-    assertThatThrownBy(() -> service.counter(counterInput(), key(), staff, "token"))
-        .isInstanceOf(ConflictException.class);
-    assertThatThrownBy(this::groupInput).isInstanceOf(ConflictException.class);
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM slot_reservations WHERE court_id=?",
-                    Integer.class,
-                    court))
-        .isZero();
-  }
-
-  @Test
-  void refundPolicyZeroIsExplicitAndHoldTermsSurviveOwnerChanges() {
-    when(dependencies.refundPolicy(any())).thenReturn(policy(facility, 0, 1));
-    var h = service.hold(input(), key(), user, "token", false);
-    when(dependencies.refundPolicy(any())).thenReturn(policy(facility, 10000, 2));
-    var b = service.create(new CreateInput(h.id(), null, null), key(), user, "token", false);
-    assertThat(b.priceSnapshot().path("refundPolicy").path("rateBps").asInt()).isZero();
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT refund_rate_bps FROM booking_refund_policy_snapshots WHERE"
-                        + " booking_id=?",
-                    Integer.class,
-                    b.id()))
-        .isZero();
-    assertThatThrownBy(
-            () ->
-                repo.jdbc()
-                    .update(
-                        "UPDATE booking_refund_policy_snapshots SET refund_rate_bps=10000 WHERE"
-                            + " booking_id=?",
-                        b.id()))
-        .isInstanceOf(org.springframework.dao.DataAccessException.class);
-    assertThatThrownBy(
-            () ->
-                repo.jdbc()
-                    .update(
-                        "DELETE FROM booking_refund_policy_snapshots WHERE booking_id=?", b.id()))
-        .isInstanceOf(org.springframework.dao.DataAccessException.class);
-  }
-
-  @Test
-  void refundPolicyGroupAcceptsTheFrozenHoldAndStoresItsOwnSnapshot() {
-    var input = groupInput();
-    when(dependencies.refundPolicy(any())).thenReturn(policy(facility, 5000, 2));
-    var g = groups.create(input, key(), user, "token");
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT refund_rate_bps FROM booking_refund_policy_snapshots WHERE"
-                        + " booking_id=?",
-                    Integer.class,
-                    g.id()))
-        .isEqualTo(8000);
-  }
-
-  @Test
-  void refundPolicyLegacyHoldCannotBecomeNewBookingOrChangeExistingBookings() {
-    var b = pendingBooking();
-    UUID legacy = UUID.randomUUID();
-    var oldQuote = quote.deepCopy();
-    ((com.fasterxml.jackson.databind.node.ObjectNode) oldQuote).remove("refundPolicy");
-    // Insert a pre-cutover fixture without weakening the reservation immutability trigger.
-    repo.jdbc()
-        .update(
-            "INSERT INTO"
-                + " slot_reservations(id,court_id,facility_id,holder_id,starts_at,ends_at,expires_at,state,quote)"
-                + " VALUES(?,?,?,?,?,?,?,'HOLD',?::jsonb)",
-            legacy,
-            UUID.randomUUID(),
-            facility,
-            user.id(),
-            java.sql.Timestamp.from(start),
-            java.sql.Timestamp.from(end),
-            java.sql.Timestamp.from(now.plusSeconds(600)),
-            repo.write(oldQuote));
-    assertThatThrownBy(
-            () -> service.create(new CreateInput(legacy, null, null), key(), user, "token", false))
-        .isInstanceOf(ConflictException.class)
-        .hasMessageContaining("new hold");
-    assertThat(repo.find(b.id()).status()).isEqualTo("PENDING");
-  }
-
-  @Test
-  void refundPolicyCounterRequiresReviewedHashAndRollsBackOnMismatch() {
-    scopedPermissions();
-    var staff = counterStaff("BOOKING_CREATE_COUNTER");
-    var i = counterInput();
-    for (String hash : Arrays.asList(null, "0".repeat(64))) {
-      var invalid =
-          new CounterInput(
-              i.courtId(),
-              i.startsAt(),
-              i.endsAt(),
-              i.expectedAmount(),
-              i.guestName(),
-              i.guestPhone(),
-              i.paymentMethod(),
-              hash);
-      assertThatThrownBy(() -> service.counter(invalid, key(), staff, "token"))
-          .isInstanceOf(ConflictException.class)
-          .hasMessageContaining("Refund policy changed");
-    }
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM slot_reservations WHERE court_id=?",
-                    Integer.class,
-                    court))
-        .isZero();
-    String request = key();
-    var b = service.counter(i, request, staff, "token");
-    when(dependencies.refundPolicy(any()))
-        .thenReturn(json.valueToTree(Map.of("configured", false)));
-    assertThat(service.counter(i, request, staff, "token").id()).isEqualTo(b.id());
-    assertThat(b.customerId()).isNull();
-    assertThat(b.currentHolderId()).isNull();
-  }
-
-  @Test
-  void refundPolicyUnavailableOrWrongFacilityHashFailsClosed() {
-    when(dependencies.refundPolicy(any())).thenReturn(null);
-    assertThatThrownBy(() -> service.hold(input(), key(), user, "token", false))
-        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
-        .hasMessageContaining("503");
-    when(dependencies.refundPolicy(any())).thenReturn(policy(UUID.randomUUID(), 8000, 1));
-    assertThatThrownBy(() -> service.hold(input(), key(), user, "token", false))
-        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
   }
 
   @Test
@@ -7501,7 +7162,7 @@ class BookingIntegrationTest {
 
   @Test
   void historicalDemoFacilityZeroRefundPolicyRecordsCancellationWithoutAMoneyEvent() {
-    when(dependencies.refundPolicy(any())).thenAnswer(a -> policy(a.getArgument(0), 0, 1));
+
     var b = demoConfirmed();
     var owner = demoOwner();
     demoAcl(owner);

@@ -9,10 +9,10 @@ export function ReportFilters({
 }: {
   model: Pick<
     ReturnType<typeof useFacilityReport>,
-    'apply' | 'draft' | 'setDraft' | 'facility' | 'range' | 'error' | 'mode' | 'setMode'
+    'apply' | 'draft' | 'setDraft' | 'facility' | 'range' | 'error' | 'moneySource' | 'setMoneySource'
   >
 }) {
-  const { apply, draft, setDraft, facility, range, error, mode, setMode } = model
+  const { apply, draft, setDraft, facility, range, error, moneySource, setMoneySource } = model
   return (
     <form
       onSubmit={(event) => {
@@ -24,15 +24,13 @@ export function ReportFilters({
       <label className="grid gap-2 text-sm">
         Nguồn tiền
         <select
-          value={mode ?? ''}
-          onChange={(event) => setMode(event.target.value as 'REAL' | 'DEMO')}
+          value={moneySource}
+          onChange={(event) => setMoneySource(event.target.value as 'ALL' | 'CASH' | 'BANK')}
           className="h-10 rounded-lg border px-3"
         >
-          <option value="" disabled>
-            Chọn nguồn tiền
-          </option>
-          <option value="REAL">Giao dịch ngân hàng thật</option>
-          <option value="DEMO">Lịch sử mô phỏng</option>
+          <option value="ALL">Tất cả</option>
+          <option value="CASH">Tiền mặt</option>
+          <option value="BANK">Chuyển khoản ngân hàng</option>
         </select>
       </label>
       <label className="grid gap-2 text-sm">

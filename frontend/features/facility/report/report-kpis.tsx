@@ -5,33 +5,16 @@ export function ReportKpis({
 }: {
   model: Pick<ReturnType<typeof useFacilityReport>, 'amount' | 'money' | 'stats' | 'mode'>
 }) {
-  const { amount, money, stats, mode } = model
+  const { amount, money, stats } = model
   if (!money || !stats) return null
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {[
         ['Tiền sân đã thu', amount(money.courtCollected), 'Theo ngày thanh toán đã áp dụng'],
         [
-          'Phí chuyển nhượng cơ sở hưởng',
-          amount(money.transferFees),
-          'Theo ngày bàn giao quyền thành công',
-        ],
-        [
           'Tổng khoản thu kinh doanh',
-          amount(money.operatingRevenue),
-          'Tiền sân + phí chuyển nhượng',
-        ],
-        [
-          'Đã hoàn theo chính sách',
-          amount(money.policyRefunded),
-          mode === 'REAL'
-            ? 'Theo xác nhận chuyển khoản của cơ sở trong kỳ'
-            : 'Chỉ khoản hoàn mô phỏng thành công trong kỳ',
-        ],
-        [
-          'Khoản thu sau hoàn',
-          amount(money.afterRefund),
-          'Tổng khoản thu kinh doanh − hoàn theo chính sách',
+          amount(money.courtCollected),
+          'Tiền sân đã thu',
         ],
         [
           'Lượt đặt bắt đầu trong kỳ',

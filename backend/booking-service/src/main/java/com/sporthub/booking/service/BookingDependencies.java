@@ -102,22 +102,6 @@ public class BookingDependencies {
     }
   }
 
-  public JsonNode refundPolicy(UUID facilityId) {
-    try {
-      var response =
-          facility
-              .get()
-              .uri("/api/v1/facilities/" + facilityId + "/refund-policy")
-              .retrieve()
-              .body(JsonNode.class);
-      return response == null ? null : response.get("data");
-    } catch (org.springframework.web.client.RestClientException ex) {
-      throw new org.springframework.web.server.ResponseStatusException(
-          org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
-          "Facility refund policy could not be verified");
-    }
-  }
-
   public JsonNode transferPolicy(UUID facilityId) {
     try {
       var response =

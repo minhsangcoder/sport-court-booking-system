@@ -60,7 +60,8 @@ test('facility policy and Staff refund contracts keep configuration and executio
   assert.equal(input.properties.rateBps.maximum, 10000)
   assert.equal(input.properties.rateBps.type, 'integer')
   assert.equal(Object.hasOwn(input.properties.rateBps, 'default'), false)
-  assert.deepEqual(facility.paths['/owner/facilities/{id}/refund-policy'].put.security, [{ bearerAuth: [] }])
+  assert.equal(facility.paths['/owner/facilities/{id}/refund-policy'], undefined)
+  assert.equal(facility.paths['/facilities/{id}/refund-policy'], undefined)
   const permissions = identity.components.schemas.AssignedPermission.enum
   assert.ok(permissions.includes('BOOKING_REFUND'))
   assert.equal(permissions.includes('BOOKING_COMPLETE'), false)

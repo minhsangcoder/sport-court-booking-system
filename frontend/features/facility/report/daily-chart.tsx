@@ -18,7 +18,7 @@ export function DailyChart({ days }: { days: ReportDay[] }) {
       <div className="overflow-x-auto">
         <svg
           role="img"
-          aria-label="Tiền sân, phí cơ sở và hoàn tiền theo ngày"
+          aria-label="Tiền sân và phí cơ sở theo ngày"
           viewBox="0 0 720 216"
           className="min-w-[500px] w-full"
         >

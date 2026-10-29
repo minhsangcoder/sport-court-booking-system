@@ -29,6 +29,7 @@ final class ReportTransactions {
         direction,
         revenue,
         BookingMoneyCohorts.isReal(b)
+                && !state.equals("CASH_RECEIVED")
                 && Set.of("COURT_COLLECTION", "TRANSFER_COLLECTION").contains(kind)
             ? false
             : cashflow,
@@ -44,7 +45,7 @@ final class ReportTransactions {
         at,
         BookingMoneyCohorts.isReal(b) ? "REAL" : "DEMO",
         BookingMoneyCohorts.isReal(b)
-            ? direction.equals("OUT")
+            ? state.equals("CASH_RECEIVED") ? "CASH_RECEIVED" : direction.equals("OUT")
                 ? "MANUALLY_RECORDED"
                 : kind.equals("FACILITY_TRANSFER_FEE") ? "HANDOFF_COMMITTED" : "BANK_VERIFIED"
             : "SIMULATED",

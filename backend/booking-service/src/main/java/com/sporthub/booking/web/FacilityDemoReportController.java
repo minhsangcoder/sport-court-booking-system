@@ -31,6 +31,7 @@ public class FacilityDemoReportController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "25") int size,
       @RequestParam(defaultValue = "0") int peerPage,
+      @RequestParam(defaultValue = "ALL") String moneySource,
       @RequestParam(required = false) String mode,
       HttpServletRequest r) {
     return ApiResponse.success(
@@ -43,7 +44,7 @@ public class FacilityDemoReportController {
             identity.current(r),
             r.getHeader("Authorization"),
             mode,
-            peerPage));
+            peerPage, moneySource));
   }
 
   @GetMapping("/{id}/transactions")

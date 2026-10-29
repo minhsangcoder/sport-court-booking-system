@@ -9,6 +9,7 @@ import { operationsWorkspace } from './ownership'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Banknote, QrCode } from 'lucide-react'
 import type { Facility, Court } from '@/features/facility/types'
 import { money } from '@/features/schedule/types'
 import type { Hold, Booking, Payment } from './types'
@@ -41,6 +42,7 @@ function Loaded({ id }: { id: string }) {
   const [paymentKey] = useState(() => crypto.randomUUID())
   const [booking, setBooking] = useState<Booking | null>(null)
   const [mode, setMode] = useState('INDIVIDUAL')
+  const [paymentMethod, setPaymentMethod] = useState<'BANK_TRANSFER' | 'CASH'>('BANK_TRANSFER')
   const remaining = useRemaining(resource.data?.expiresAt)
   const facility = useApi<Facility>(
     resource.data ? `/facilities/${resource.data.facilityId}` : null,
@@ -86,6 +88,13 @@ function Loaded({ id }: { id: string }) {
         headers: { 'Idempotency-Key': paymentKey },
         body: JSON.stringify({ bookingId: b.id }),
       })
+      if (counter && paymentMethod === 'CASH') {
+        const cash = await api<Payment>(`/payments/${p.id}/counter-cash`, {
+          method: 'POST',
+        })
+        router.push(`/customer/payments/${cash.id}`)
+        return
+      }
       router.push(`/customer/payments/${p.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tạo lượt đặt.')
@@ -169,14 +178,10 @@ function Loaded({ id }: { id: string }) {
             {money(h.quote.amount, h.quote.currency)}
           </strong>
         </div>
-        <p className="text-xs text-slate-500">
-          {h.quote.moneyClass === 'REAL'
-            ? 'Thanh toán bằng QR SePay vào tài khoản cơ sở. Hệ thống xác nhận khi nhận đủ tiền qua webhook.'
-            : 'Đây là lượt giữ chỗ mô phỏng cũ.'}{' '}
-          Hủy trước thanh toán sẽ giải phóng giữ chỗ. Lượt đặt trực tiếp không áp dụng hoàn tiền khi
-          khách tự hủy sau khi thanh toán.
-        </p>
-        <RefundPolicyNotice policy={h.quote.refundPolicy} />
+        {h.quote.moneyClass !== 'REAL' && (
+          <p className="text-xs text-slate-500">Đây là lượt giữ chỗ mô phỏng cũ.</p>
+        )}
+        <RefundPolicyNotice />
       </section>
       {ownFacility && <OwnFacilityNotice facilityId={h.facilityId} />}
       <form onSubmit={confirm} className="mt-6 space-y-4">
@@ -249,6 +254,100 @@ function Loaded({ id }: { id: string }) {
             </label>
           </div>
         )}
+        {mode !== 'GROUP' && (
+          <div className="space-y-2.5">
+            <label className="text-sm font-semibold text-slate-800">Hình thức thanh toán</label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('BANK_TRANSFER')}
+                disabled={busy}
+                className={`relative flex items-start gap-3.5 rounded-xl border p-4 text-left transition-all ${
+                  paymentMethod === 'BANK_TRANSFER'
+                    ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-600/20 shadow-xs'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                }`}
+              >
+                <div
+                  className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ${
+                    paymentMethod === 'BANK_TRANSFER'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  <QrCode className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-900">Chuyển khoản ngân hàng</span>
+                    <span
+                      className={`flex size-4 items-center justify-center rounded-full border ${
+                        paymentMethod === 'BANK_TRANSFER'
+                          ? 'border-emerald-600 bg-emerald-600'
+                          : 'border-slate-300'
+                      }`}
+                    >
+                      {paymentMethod === 'BANK_TRANSFER' && (
+                        <span className="size-1.5 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Quét mã VietQR chuyển khoản nhanh 24/7 qua app ngân hàng
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={busy || !counter}
+                onClick={() => setPaymentMethod('CASH')}
+                className={`relative flex items-start gap-3.5 rounded-xl border p-4 text-left transition-all ${
+                  !counter
+                    ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-60'
+                    : paymentMethod === 'CASH'
+                      ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-600/20 shadow-xs'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                }`}
+              >
+                <div
+                  className={`mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ${
+                    paymentMethod === 'CASH' && counter
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  <Banknote className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-900">Tiền mặt</span>
+                    {counter ? (
+                      <span
+                        className={`flex size-4 items-center justify-center rounded-full border ${
+                          paymentMethod === 'CASH'
+                            ? 'border-emerald-600 bg-emerald-600'
+                            : 'border-slate-300'
+                        }`}
+                      >
+                        {paymentMethod === 'CASH' && (
+                          <span className="size-1.5 rounded-full bg-white" />
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium text-slate-400">Chỉ tại quầy</span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {counter
+                      ? 'Thu tiền mặt trực tiếp từ khách tại quầy cơ sở'
+                      : 'Chỉ áp dụng khi nhân viên đặt trực tiếp tại quầy'}
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
         {error && (
           <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
             {error}
@@ -257,9 +356,7 @@ function Loaded({ id }: { id: string }) {
         <Button
           className="h-12 w-full bg-emerald-600 text-white"
           type="submit"
-          disabled={
-            busy || expired || ownFacility || !facility.data || !h.quote.refundPolicy?.configured
-          }
+          disabled={busy || expired || ownFacility || !facility.data}
         >
           {busy
             ? 'Đang xác nhận…'

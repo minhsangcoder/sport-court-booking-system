@@ -27,7 +27,6 @@ public class BookingHolds {
   private final ConfigurationGuardService configuration;
   private final BookingLifecycle lifecycle;
   private final int maxSlots;
-  private final BookingRefundPolicies refundPolicies;
   private final BookingIdempotency keys;
   private final BookingReads reads;
   private final BookingMoneyCohorts money;
@@ -45,7 +44,6 @@ public class BookingHolds {
       ConfigurationGuardService configuration,
       BookingLifecycle lifecycle,
       @Value("${booking.slot-hold.max-slots-per-hold:10}") int maxSlots,
-      BookingRefundPolicies refundPolicies,
       BookingIdempotency keys,
       BookingReads reads,
       BookingMoneyCohorts money,
@@ -63,7 +61,6 @@ public class BookingHolds {
     this.configuration = configuration;
     this.lifecycle = lifecycle;
     this.maxSlots = maxSlots;
-    this.refundPolicies = refundPolicies;
     this.keys = keys;
     this.reads = reads;
     this.money = money;
@@ -130,7 +127,6 @@ public class BookingHolds {
             : 0L;
     if (counter && count >= maxPending) throw new ConflictException("Pending hold limit reached");
     quote = quotes.advise(quote);
-    quote = refundPolicies.attachToQuote(quote, facility);
     quote = money.attach(quote, facility, receiver);
     UUID id = UUID.randomUUID();
     Instant expires = now.plusSeconds(holdSeconds);

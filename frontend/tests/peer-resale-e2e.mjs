@@ -51,7 +51,6 @@ try {
       calls.push({role,userId,uri,method,input,key:request.headers()['idempotency-key']})
       const reply=(data,status=200,message='Dữ liệu thử')=>route.fulfill({status,contentType:'application/json',body:JSON.stringify({data,message})})
       if(uri==='/payments/runtime')return reply({mode:'REAL',realEnabled:true,demoEnabled:false})
-      if(uri==='/bookings/facility-finance/mine')return reply({obligations:[],settlements:[]})
       if(uri===`/bookings/reports/facility/${facility.id}/dashboard`) {
         const cash={courtCollected:'120000',transferFees:'0',operatingRevenue:'120000',policyRefunded:'0',afterRefund:'120000',transferCollected:'0',sellerPaid:'0',sellerDue:'0',refundDue:'0',technicalRefunded:'0',bankCollected:'120000',unappliedCollected:'0'}
         const summary={bookingCount:1,fullyPaidBookingCount:1,bookedMinutes:'60',usedMinutes:'0',cancelledCount:0,expiredCount:0,money:cash}

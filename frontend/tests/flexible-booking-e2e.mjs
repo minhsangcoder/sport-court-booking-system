@@ -36,7 +36,6 @@ try {
   const court = f.courts[0], rules = [], policyRequests = [], quoteRequests = [], holds = [], drafts = []
   const day = new Date(Date.now() + 86400000).toLocaleDateString('en-CA', { timeZone: facility.timezone })
   const at = time => new Date(`${day}T${time}:00+07:00`).toISOString()
-  const refundPolicy = { configured: true, id: id(51), version: 1, rateBps: 8000, currency: 'VND', rounding: 'HALF_UP', termsHash: 'b'.repeat(64) }
   let policy = { enabled: false, version: 0, selectionStepMinutes: 30, minimumMinutes: 60, maximumMinutes: 240 }
   let lostPublishReply = false
   const cells = [ ['15:00', '15:30', 50000], ['15:30', '16:00', 50000], ['16:00', '16:30', 100000], ['16:30', '17:00', 100000] ]
@@ -77,7 +76,7 @@ try {
       assert.equal(input.startsAt, at('15:30')); assert.equal(input.endsAt, at('16:30'))
       quote = { ...input, facilityId: facility.id, amount: 150000, currency: 'VND', timezone: facility.timezone,
         quoteVersion: 2, pricingMode: 'HOURLY_INTERVAL_V1', policyVersion: 1, quoteHash: 'a'.repeat(64), durationMinutes: 60,
-        segments: cells.slice(1, 3), refundPolicy,
+        segments: cells.slice(1, 3),
         warnings: [{ code: 'SHORT_GAP_BEFORE', startsAt: at('15:00'), endsAt: at('15:30') }],
         suggestions: [{ courtId: court.id, startsAt: at('15:00'), endsAt: at('17:00') }] }
       return reply(quote)
@@ -119,6 +118,7 @@ try {
   await page.getByRole('button', { name: 'Tắt đặt giờ tự chọn', exact: true }).waitFor()
   assert.equal(policyRequests.length, 2)
   await page.screenshot({ path: path.join(output, 'owner-hourly-pricing.png'), fullPage: true })
+  f.user.id = id(99); f.user.roles = ['CUSTOMER']
   await page.goto(`${base}/facilities/${facility.id}/courts/${court.id}?date=${day}`)
   await page.getByRole('button', { name: /15:30–16:00/ }).click()
   assert.equal(await page.getByRole('button', { name: 'Xem tóm tắt và giữ chỗ', exact: true }).isDisabled(), true)
@@ -127,6 +127,9 @@ try {
   await page.getByText(/Khoảng chọn để lại giờ trống dưới 60 phút/).waitFor()
   assert.equal(holds.length, 0)
   await page.screenshot({ path: path.join(output, 'customer-hourly-quote.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false)
+  await page.screenshot({ path: path.join(output, 'customer-hourly-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: 'Xem tóm tắt và giữ chỗ', exact: true }).click()
   await page.waitForURL(`**/customer/booking/holds/${id(70)}`)
   assert.equal(holds.length, 1); assert.equal(quoteRequests.length, 1)

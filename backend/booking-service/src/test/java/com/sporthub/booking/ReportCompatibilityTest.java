@@ -78,7 +78,7 @@ class ReportCompatibilityTest extends BookingIntegrationTest {
     record("guest-and-group",first,first.plusDays(1),owner);
     record("payment-before-play-period",first.plusDays(1),first.plusDays(1),owner);
 
-    nextCourt();when(dependencies.refundPolicy(any())).thenAnswer(a->policy(a.getArgument(0),0,1));
+    nextCourt();
     var zero=demoConfirmed();cancelForCapture(zero,user,"Compatibility zero refund");
     nextCourt();legacyConfirmedProof(false,false,false);
     nextCourt();legacyConfirmedProof(true,true,false);

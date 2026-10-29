@@ -57,7 +57,9 @@ export function ReportTransactions({
                 <td className="p-3">
                   <span className={item.countsTowardTotals ? 'text-emerald-700' : 'text-red-700'}>
                     {report.mode === 'REAL'
-                      ? item.confirmationMethod === 'MANUALLY_RECORDED'
+                      ? item.confirmationMethod === 'CASH_RECEIVED'
+                        ? 'Đã thu tiền mặt'
+                        : item.confirmationMethod === 'MANUALLY_RECORDED'
                         ? 'Cơ sở xác nhận đã chuyển'
                         : item.confirmationMethod === 'HANDOFF_COMMITTED'
                           ? 'Bàn giao đã hoàn tất'

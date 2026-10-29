@@ -142,7 +142,8 @@ public final class PeerResaleTerms {
         || Instant.parse(terms.path("deadline").asText()).isAfter(starts)
         || !terms.path("destinationHash").asText().matches("[a-f0-9]{64}"))
       throw new IllegalArgumentException("Lịch hoặc tài khoản nhận tiền P2P chưa hợp lệ.");
-    validateRefundPolicy(terms.path("refundPolicy"), terms.path("facilityId").asText());
+    if (terms.hasNonNull("refundPolicy"))
+      validateRefundPolicy(terms.path("refundPolicy"), terms.path("facilityId").asText());
     String expected =
         terms.has("sellerTermsHash")
             ? terms.path("sellerTermsHash").asText()

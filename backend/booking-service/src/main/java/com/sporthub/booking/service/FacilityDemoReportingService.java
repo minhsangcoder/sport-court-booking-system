@@ -66,6 +66,13 @@ public class FacilityDemoReportingService {
       String token,
       String requestedMode,
       int peerPage) {
+    return dashboard(facility, from, to, page, size, actor, token, requestedMode, peerPage, "ALL");
+  }
+
+  public Dashboard dashboard(UUID facility, LocalDate from, LocalDate to, int page, int size,
+      Caller actor, String token, String requestedMode, int peerPage, String moneySource) {
+    if (!Set.of("ALL", "CASH", "BANK").contains(moneySource))
+      throw new IllegalArgumentException("Nguồn tiền không hợp lệ");
     String mode = requestedMode == null ? (runtime.live() ? "REAL" : "DEMO") : requestedMode;
     if (!Set.of("REAL", "DEMO").contains(mode))
       throw new IllegalArgumentException(
@@ -101,7 +108,7 @@ public class FacilityDemoReportingService {
     // Remote Payment enrichment runs only after the repeatable-read snapshot has committed.
     var modes = paymentModes.assess(snapshot, totals);
     ReportUsage.add(snapshot, totals);
-    ReportMoney.add(snapshot, totals, modes);
+    ReportMoney.add(snapshot, totals, modes, moneySource);
     return ReportAssembler.assemble(facility, totals, modes, page, size);
   }
 }

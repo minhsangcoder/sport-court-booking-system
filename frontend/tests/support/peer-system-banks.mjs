@@ -11,10 +11,9 @@ export async function peerSystemBanks({config,call,actors,bank,quote,key,slot,co
   const code=await poll(async()=>JSON.parse(fs.readFileSync(path.join(config.output,'smtp-codes.json'),'utf8'))[phone.slice(1)+'@sms.sporthub.local'],Boolean)
   await call('counterCustomer','POST','/auth/verify',{challengeId:challenge.id,code})
   await bank('staff','000111222333')
-  const policy=await call('owner','GET',`/owner/facilities/${facility}/refund-policy`)
   async function counter(court,guestPhone) {
     const priced=await quote('staff',court,range)
-    return call('staff','POST','/bookings/counter',{courtId:courts[court].id,...range,expectedAmount:Number(priced.amount),quoteHash:priced.quoteHash,guestName:'Synthetic counter customer',guestPhone,paymentMethod:'BANK_QR',refundPolicyHash:policy.termsHash},201,key())
+    return call('staff','POST','/bookings/counter',{courtId:courts[court].id,...range,expectedAmount:Number(priced.amount),quoteHash:priced.quoteHash,guestName:'Synthetic counter customer',guestPhone,paymentMethod:'BANK_QR'},201,key())
   }
   const guest=await counter('guest','+84977777123'),linked=await counter('linked',phone)
   assert.equal(guest.currentHolderId,null)

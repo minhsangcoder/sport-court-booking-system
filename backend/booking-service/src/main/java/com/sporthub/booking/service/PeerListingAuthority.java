@@ -291,30 +291,6 @@ public class PeerListingAuthority {
         || input.deadline().isAfter(booking.startsAt()))
       throw new IllegalArgumentException(
           "Giá phải là số VND dương không vượt giá sân gốc; hạn bán phải trước giờ chơi.");
-    var rows =
-        repo.jdbc()
-            .queryForList(
-                "SELECT * FROM booking_refund_policy_snapshots WHERE booking_id=?", booking.id());
-    if (rows.isEmpty())
-      throw new ConflictException("Lượt đặt chưa có chính sách hoàn đã chấp nhận.");
-    var p = rows.getFirst();
-    var policy =
-        json.valueToTree(
-            Map.of(
-                "configured",
-                true,
-                "id",
-                p.get("policy_id"),
-                "version",
-                p.get("policy_version"),
-                "rateBps",
-                p.get("refund_rate_bps"),
-                "currency",
-                p.get("currency"),
-                "rounding",
-                p.get("rounding"),
-                "termsHash",
-                p.get("terms_hash")));
     var deadline = input.deadline().isAfter(cutoff) ? cutoff : input.deadline();
     return PeerResaleTerms.seller(
         json,
@@ -323,6 +299,6 @@ public class PeerListingAuthority {
         input.price(),
         deadline,
         banks.active(actor.id(), input.bankRevisionId()),
-        policy);
+        null);
   }
 }

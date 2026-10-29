@@ -135,26 +135,53 @@ function Loaded({ id }: { id: string }) {
   )
   if (p.provider === 'CASH')
     return (
-      <div className="mx-auto max-w-xl px-5 py-10">
-        <CashPaymentResult id={p.id} resultHref={resultPath} />
+      <div className="relative isolate min-h-[85vh] py-8 sm:py-12">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute -left-32 top-0 size-[420px] rounded-full bg-emerald-500/10 blur-3xl" />
+        </div>
+        <div className="mx-auto max-w-xl px-4 sm:px-6">
+          <CashPaymentResult id={p.id} resultHref={resultPath} />
+        </div>
       </div>
     )
   if (['SEPAY', 'PAYOS'].includes(p.provider))
     return (
-      <div className="mx-auto max-w-xl space-y-5 px-5 py-10">
-        <h1 className="text-3xl font-black">Thanh toán lượt đặt</h1>
-        <BankPaymentInstructions payment={p} resultHref={resultPath} />
-        {bookingResource.data && (
-          <RefundPolicyNotice policy={bookingResource.data.booking.priceSnapshot.refundPolicy} />
-        )}
-        {acquisitionResource.data?.financeTerms && (
-          <TransferFinanceNotice terms={acquisitionResource.data.financeTerms} />
-        )}
-        {resultPath && (
-          <Link href={resultPath} className="text-emerald-700 underline">
-            Quay lại lượt đặt
-          </Link>
-        )}
+      <div className="relative isolate min-h-[85vh] py-8 sm:py-12">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute -left-32 top-0 size-[420px] rounded-full bg-emerald-500/10 blur-3xl" />
+          <div className="absolute -right-24 bottom-1/4 size-[380px] rounded-full bg-amber-400/10 blur-3xl" />
+        </div>
+        <div className="mx-auto max-w-xl space-y-5 px-4 sm:px-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+              <span className="text-slate-400">Chọn sân</span>
+              <span className="text-slate-300">→</span>
+              <span className="text-slate-400">Tóm tắt</span>
+              <span className="text-slate-300">→</span>
+              <span className="text-emerald-700">Thanh toán</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
+              Thanh toán lượt đặt
+            </h1>
+          </div>
+          <BankPaymentInstructions payment={p} resultHref={resultPath} />
+          {bookingResource.data && (
+            <RefundPolicyNotice />
+          )}
+          {acquisitionResource.data?.financeTerms && (
+            <TransferFinanceNotice terms={acquisitionResource.data.financeTerms} />
+          )}
+          {resultPath && (
+            <div className="text-center pt-1">
+              <Link
+                href={resultPath}
+                className="text-xs font-semibold text-slate-500 hover:text-emerald-700 underline"
+              >
+                Quay lại lượt đặt
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     )
   return (
@@ -175,7 +202,7 @@ function Loaded({ id }: { id: string }) {
         {p.status === 'PENDING' && <Countdown expiresAt={p.expiresAt} />}
       </section>
       {bookingResource.data && (
-        <RefundPolicyNotice policy={bookingResource.data.booking.priceSnapshot.refundPolicy} />
+        <RefundPolicyNotice />
       )}
       {acquisitionResource.data?.financeTerms && (
         <TransferFinanceNotice terms={acquisitionResource.data.financeTerms} />

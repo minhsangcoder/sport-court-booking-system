@@ -147,7 +147,6 @@ try {
   const flexible=await quote('a','fault',{startsAt:tomorrow+'T15:30:00+07:00',endsAt:tomorrow+'T16:30:00+07:00'})
   assert.equal(Number(flexible.amount),150000)
   pass('Schedule and Booking HTTP quote integrates 30 minutes at 100k/h plus 30 at 200k/h to 150k')
-  await call('owner','PUT',`/owner/facilities/${facility}/refund-policy`,{rateBps:8000,version:0})
   assert.equal(await call('owner','GET',`/payments/facilities/${facility}/sepay-channel`,undefined,204),null)
   const browserChannel=process.env.SPORTHUB_E2E_BROWSER_CHANNEL||process.env.SPORTHUB_E2E_BROWSER
   browser=await chromium.launch({headless:true,...(browserChannel?{channel:browserChannel}:{})})

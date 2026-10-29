@@ -9,6 +9,24 @@ import { money } from '@/features/schedule/types'
 import type { Payment } from '@/features/booking/types'
 import { PaymentSynchronization } from '@/features/booking/payment-synchronization'
 
+function CheckCircleIcon() {
+  return (
+    <svg className="size-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  )
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  )
+}
+
 export function CounterCashPayment({
   payment,
   onReceived,
@@ -106,12 +124,26 @@ export function CashPaymentResult({
     },
   )
   return (
-    <section className="space-y-4 rounded-xl border p-4">
-      <h2 className="font-bold">Đã ghi nhận thanh toán bằng tiền mặt</h2>
-      <PaymentSynchronization key={state.data?.state} id={id} />
+    <section className="relative isolate overflow-hidden rounded-3xl border border-emerald-200/90 bg-white p-6 sm:p-7 shadow-xl shadow-slate-900/5 backdrop-blur-xs space-y-5 text-slate-900 home-rise">
+      <div className="flex items-center gap-3.5">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-2xs">
+          <CheckCircleIcon />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Đã ghi nhận thanh toán bằng tiền mặt</h2>
+          <p className="text-xs text-slate-500">Giao dịch thu tiền mặt tại quầy đã được tạo thành công</p>
+        </div>
+      </div>
+      <div className="rounded-2xl bg-slate-50/80 p-4 border border-slate-100">
+        <PaymentSynchronization key={state.data?.state} id={id} />
+      </div>
       {!onApplied && resultHref && (
-        <Link className="text-emerald-700 underline" href={resultHref}>
-          Xem trạng thái lượt đặt
+        <Link
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-xs hover:shadow-md transition-all active:scale-[0.99]"
+          href={resultHref}
+        >
+          <span>Xem trạng thái lượt đặt</span>
+          <ArrowRightIcon />
         </Link>
       )}
     </section>

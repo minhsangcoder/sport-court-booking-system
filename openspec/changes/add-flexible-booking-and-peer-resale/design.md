@@ -263,3 +263,19 @@ Cơ sở tính hoàn mới chỉ chứa khoản thu đã áp dụng và người
 ## 28. Thu tiền mặt tại quầy (2026-10-29)
 
 Theo yêu cầu mới, lượt OFFLINE_COUNTER có thêm nút “Thanh toán bằng tiền mặt” trên trang thanh toán và popup “Thanh toán tại quầy”. Người tạo có quyền thu tiền hiện tại xác nhận đã nhận đủ tiền. Ghi phiếu CASH/REAL bất biến, actor/time/amount và event; không giả lập chứng từ ngân hàng. Dùng chung khóa nghĩa vụ với webhook, chặn hết hạn/đã thu/đã chuyển một phần; QR cũ hết hạn, chuyển muộn được đối soát không áp dụng. Retry trả phiếu đã tạo. Booking nhận CASH_RECEIVED chỉ cho lượt tại quầy và đúng người tạo; xác nhận qua outbox/inbox hiện hành. Dữ liệu DEMO cũ vẫn ghi rõ mô phỏng.
+
+## 29. Bỏ cấu hình hoàn tiền và đồng bộ giao diện (2026-10-29)
+
+Theo yêu cầu mới: xóa trang, menu, API cấu hình chính sách hoàn tiền Owner và bảng cấu hình qua migration mới. Giữ chỗ, tạo booking và đăng chuyển nhượng mới không phụ thuộc chính sách. Bảo toàn snapshot/chứng từ đã chấp nhận và nghĩa vụ đối soát kỹ thuật. Báo cáo bỏ banner giải thích và các KPI/chuỗi biểu đồ hoàn theo chính sách. Trang chọn giờ dùng PageBanner, hiệu ứng Home, token giao diện và điều khiển có focus rõ ràng; giữ kiểm tra giờ, giá, quyền và polling.
+
+
+## 30. Thu gọn báo cáo Owner (2026-10-29)
+Chỉ giữ Ngân hàng đã nhận trong kỳ trong khối công nợ; khối B → A chỉ hiển thị trạng thái và hồ sơ quyền sân, bỏ tiền cá nhân và đối soát. Không cộng số liệu từ trang phân trang thành tổng toàn kỳ.
+
+
+## 31. Báo cáo chỉ tính tiền sân (2026-10-29)
+Doanh thu hiển thị chỉ lấy courtCollected; bỏ phí chuyển nhượng khỏi KPI, biểu đồ và bảng sân. Chuyển nhượng chỉ hiển thị tổng bàn giao thành công theo decided_at trong kỳ và hồ sơ quyền sân đang mở; tổng do backend đếm độc lập phân trang. Giữ nguyên chứng từ lịch sử.
+
+
+## 32. Nguồn tiền thực thu (2026-10-29)
+Bỏ liên kết xử lý trả/hoàn; nguồn tiền gồm ALL (mặc định), CASH, BANK. Giao diện luôn dùng REAL, bỏ lựa chọn DEMO. Phân loại tiền mặt từ chứng từ Payment CASH/CASH_RECEIVED đã áp dụng thành công; không chuyển dữ liệu DEMO thành tiền mặt. Lọc khoản thu trước khi tổng hợp theo ngày/sân và phân trang. Tổng ALL bằng CASH + BANK. Chỉ số hoạt động sân và quyền chuyển nhượng vẫn theo toàn cơ sở, không theo phương thức thanh toán.

@@ -34,6 +34,7 @@ WITH bounds AS (SELECT ?::uuid facility,?::timestamptz cutoff,?::timestamptz sta
  WHERE a.facility_id=w.facility AND a.created_at<w.cutoff AND (
  a.created_at>=w.start OR (a.payment_declared_at>=w.start AND a.payment_declared_at<w.cutoff)
  OR (d.decided_at>=w.start AND d.decided_at<w.cutoff)
+ OR (a.phase IN('PAYMENT_DECLARED','DISPUTED','HANDOFF_PENDING') AND d.decision IS NULL)
  OR c.state IN('OPEN','RETURN_REQUIRED','RETURN_RECORDED')
  OR EXISTS(SELECT 1 FROM peer_return_obligations r WHERE r.acquisition_id=a.acquisition_id AND r.created_at<w.cutoff AND
   (r.state='AWAITING_BUYER' OR r.created_at>=w.start OR (r.finalized_at>=w.start AND r.finalized_at<w.cutoff))))
@@ -102,11 +103,15 @@ SELECT * FROM relevant ORDER BY created_at DESC,acquisition_id DESC LIMIT ? OFFS
         ((Number) summary.get("invalid")).longValue() > 0
             ? List.of("PEER_TERMS_BINDING_UNAVAILABLE")
             : List.<String>of();
+    long completed = repo.jdbc().queryForObject(
+        "SELECT count(*) FROM peer_usage_decisions d JOIN peer_usage_attempts a ON a.acquisition_id=d.acquisition_id WHERE a.facility_id=? AND d.decision='COMPLETED' AND d.decided_at>=? AND d.decided_at<?",
+        Long.class, facility, from, at);
     return new PeerReport(
         reasons.isEmpty() ? "COMPLETE" : "PARTIAL",
         reasons,
         "createdAt/declaredAt/acknowledgedAt/decidedAt within window; current open cases before"
             + " cutoff; no bank verification",
+        completed,
         ((Number) summary.get("open_usage")).longValue(),
         ((Number) summary.get("open_money")).longValue(),
         money(summary, "declared"),

@@ -141,7 +141,14 @@ class RealMoneyMigrationTest {
                 .load();
         latest.migrate();
         latest.validate();
-        assertThat(latest.info().current().getVersion().toString()).isEqualTo("19");
+        assertThat(latest.info().current().getVersion().toString()).isEqualTo("21");
+        try (var rows =
+            s.executeQuery(
+                "SELECT count(*) FROM information_schema.tables WHERE table_name IN"
+                    + " ('facility_disbursement_operations','facility_finance_commands','facility_finance_audit')")) {
+          rows.next();
+          assertThat(rows.getInt(1)).isZero();
+        }
         try (var rows =
             s.executeQuery(
                 "SELECT (SELECT to_jsonb(b) FROM bookings b LIMIT 1)=p.booking AND (SELECT"

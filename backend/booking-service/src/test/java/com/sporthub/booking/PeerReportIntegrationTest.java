@@ -52,6 +52,8 @@ class PeerReportIntegrationTest extends PeerUsageIntegrationTest {
         sale.acquisition(), new PeerResaleContract.Command(1, sale.hash()), key(), customer.id());
     when(clock.instant()).thenReturn(now.plusSeconds(11));
     var first = report(LocalDate.parse("2026-10-23"), 0);
+    assertThat(first.peer().completedUsageCount()).isEqualTo(1);
+    assertThat(report(LocalDate.parse("2026-10-23"), 99).peer().completedUsageCount()).isEqualTo(1);
     assertThat(first.peer().availability()).isEqualTo("COMPLETE");
     assertThat(first.peer().buyerDeclaredAmount()).isEqualTo("100000");
     assertThat(first.peer().sellerAcknowledgedAmount()).isEqualTo("100000");
@@ -86,25 +88,8 @@ class PeerReportIntegrationTest extends PeerUsageIntegrationTest {
                 sale.original().id());
     assertThat(report(LocalDate.parse("2026-10-23"), 0).summary().money().policyRefunded())
         .isEqualTo("0");
-    outgoingBank(
-        repo.jdbc()
-            .queryForObject(
-                "SELECT destination_revision_id FROM facility_disbursement_obligations WHERE id=?",
-                UUID.class,
-                obligation),
-        sale.buyer().id(),
-        null,
-        "b".repeat(64));
-    var prepared =
-        manual.prepare(
-            obligation, new FacilityManualDisbursements.Prepare(1), key(), venueOwner(), "token");
     when(clock.instant()).thenReturn(now.plusSeconds(20));
-    manual.complete(
-        (UUID) prepared.get("operationId"),
-        new FacilityManualDisbursements.Complete(1, "PEER-NATIVE-H80"),
-        key(),
-        venueOwner(),
-        "token");
+    recordHistoricalReceipt(obligation, "PEER-NATIVE-H80");
     when(clock.instant()).thenReturn(now.plusSeconds(21));
     var finalReport = report(LocalDate.parse("2026-10-23"), 0);
     assertThat(finalReport.summary().money().afterRefund()).isEqualTo("40000");

@@ -259,7 +259,7 @@ export const businessApi = {
       guestName: string
       guestPhone: string
       paymentMethod: 'DEMO' | 'BANK_QR'
-      refundPolicyHash: string
+      refundPolicyHash?: string
     },
     key: string,
   ) => write<Booking>('/bookings/counter', body, key),

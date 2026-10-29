@@ -284,7 +284,7 @@ function Loaded({ id }: { id: string }) {
       )}
 
       {/* Payment Tracking */}
-      <RefundPolicyNotice policy={g.booking.priceSnapshot.refundPolicy} />
+      <RefundPolicyNotice />
       <GroupPaymentTracking group={g} userId={user?.id} busy={busy} pay={pay} reload={r.reload} />
 
       {/* Member leave button */}

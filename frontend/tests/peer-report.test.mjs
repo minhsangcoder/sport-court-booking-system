@@ -69,17 +69,11 @@ test('peer report labels declarations and usage decisions separately and paginat
   }
   const tree = Report({ model }),
     rendered = text(tree)
-  assert.match(rendered, /B tự khai chuyển trong kỳ/)
-  assert.match(rendered, /100\.000 ₫/)
-  assert.match(rendered, /không phải khoản thu, phí hay công nợ/)
-  assert.match(rendered, /B tự khai đã chuyển/)
-  assert.match(rendered, /A\/B còn cần đối chiếu/)
-  const next = nodes(tree).find((node) => node.type === 'button' && text(node) === 'Phiên sau')
-  next.props.onClick()
-  assert.deepEqual(pages, [1])
+  assert.match(rendered, /Số lượt chuyển nhượng thành công trong kỳ/)
+  assert.match(rendered, /Hồ sơ đang tranh chấp \/ chờ xác nhận quyền sân/)
   assert.equal(Report({ model: { ...model, report: { mode: 'DEMO' } } }), null)
   assert.match(
-    text(Report({ model: { ...model, report: { mode: 'REAL' } } })),
+    text(Report({ model: { ...model, report: { mode: 'REAL', peer: null } } })),
     /không coi là bằng 0/,
   )
 })

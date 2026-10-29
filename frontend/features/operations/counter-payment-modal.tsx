@@ -96,10 +96,6 @@ function RealCounterPayment({
             Đóng
           </Button>
         </div>
-        <p className="mb-4 text-sm">
-          {booking.guestName || 'Khách có tài khoản'} · Quyền sử dụng thuộc khách; nhân viên chỉ
-          thực hiện thu tiền.
-        </p>
         {error && (
           <p role="alert" className="mb-3 text-red-700">
             {error}{' '}
@@ -124,7 +120,7 @@ function RealCounterPayment({
             }}
           />
         )}
-        <RefundPolicyNotice policy={booking.priceSnapshot.refundPolicy} />
+        <RefundPolicyNotice />
       </div>
     </dialog>
   )
@@ -215,7 +211,7 @@ function PaymentForm({
             Số tiền mô phỏng: <strong>{money(booking.amount, booking.currency)}</strong>
           </p>
         </div>
-        <RefundPolicyNotice policy={booking.priceSnapshot.refundPolicy} />
+        <RefundPolicyNotice />
         {error && (
           <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
             {error}

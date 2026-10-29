@@ -1,10 +1,8 @@
 package com.sporthub.booking.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.sporthub.booking.repository.BookingRepository;
 import com.sporthub.booking.web.BookingDtos.Booking;
 import com.sporthub.common.exception.ConflictException;
-import com.sporthub.common.money.DemoRefundMath;
 import java.math.BigDecimal;
 import java.util.*;
 import org.springframework.stereotype.Service;
@@ -21,88 +19,6 @@ public class FacilityRefundEntitlements {
   public FacilityRefundEntitlements(BookingRepository repo, java.time.Clock clock) {
     this.repo = repo;
     this.clock = clock;
-  }
-
-  @Transactional(propagation = Propagation.MANDATORY)
-  public UUID policy(
-      Booking booking,
-      UUID quote,
-      BigDecimal base,
-      int rate,
-      BigDecimal target,
-      Map<String, Object> policy,
-      List<DemoRefundMath.Allocation> allocations,
-      Map<UUID, JsonNode> destinations,
-      UUID actor) {
-    UUID id = UUID.randomUUID();
-    repo.jdbc()
-        .update(
-            "INSERT INTO"
-                + " facility_refund_entitlements(id,source_key,booking_id,facility_id,quote_id,acquisition_id,reason,base_amount,rate_bps,target_amount,policy_version,policy_hash,requested_by,created_at)"
-                + " VALUES(?,?,?,?,?,NULL,'POLICY_CANCELLATION',?,?,?,?,?,?,?)",
-            id,
-            "POLICY:" + booking.id(),
-            booking.id(),
-            booking.facilityId(),
-            quote,
-            base,
-            rate,
-            target,
-            policy.get("policy_version"),
-            policy.get("terms_hash"),
-            actor,
-            java.sql.Timestamp.from(clock.instant()));
-    for (var allocation : allocations) {
-      boolean guest = isGuest(booking, null);
-      UUID payee = guest ? null : allocation.payerId(),
-          guestBooking = guest ? booking.id() : null,
-          obligation = null;
-      if (allocation.refundAmount().signum() > 0) {
-        obligation = UUID.randomUUID();
-        var destination = destinations.get(allocation.paymentId());
-        UUID revision =
-            destination == null ? null : UUID.fromString(destination.path("id").asText());
-        String hash = destination == null ? null : destination.path("destinationHash").asText();
-        UUID owner =
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT receiver_owner_id FROM booking_real_collections WHERE payment_id=?",
-                    UUID.class,
-                    allocation.paymentId());
-        repo.jdbc()
-            .update(
-                "INSERT INTO"
-                    + " facility_disbursement_obligations(id,source_key,booking_id,facility_id,receiver_owner_id,payment_id,kind,payee_id,guest_booking_id,amount,destination_revision_id,destination_hash,state,created_at)"
-                    + " VALUES(?,?,?,?,?,?,'POLICY_REFUND',?,?,?,?,?,?,?)",
-                obligation,
-                "REFUND:" + id + ":" + allocation.paymentId(),
-                booking.id(),
-                booking.facilityId(),
-                owner,
-                allocation.paymentId(),
-                payee,
-                guestBooking,
-                allocation.refundAmount(),
-                revision,
-                hash,
-                revision == null ? "AWAITING_BANK_DETAILS" : "UNPAID",
-                java.sql.Timestamp.from(clock.instant()));
-      }
-      repo.jdbc()
-          .update(
-              "INSERT INTO"
-                  + " facility_refund_allocations(id,entitlement_id,payment_id,base_amount,amount,payer_id,guest_booking_id,obligation_id)"
-                  + " VALUES(?,?,?,?,?,?,?,?)",
-              UUID.randomUUID(),
-              id,
-              allocation.paymentId(),
-              allocation.baseAmount(),
-              allocation.refundAmount(),
-              payee,
-              guestBooking,
-              obligation);
-    }
-    return id;
   }
 
   public Map<String, Object> view(UUID id) {

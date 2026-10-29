@@ -59,6 +59,15 @@ class PeerResaleTermsTest {
   }
 
   @Test
+  void newPeerTermsNeedNoRefundPolicyAndStillBindAcceptedMoney() {
+    var terms=PeerResaleTerms.seller(json,booking(),seller,new BigDecimal("100000"),deadline,destination(),null);
+    assertThat(terms.path("refundPolicy").isNull()).isTrue();
+    assertThatCode(()->PeerResaleTerms.validateSeller(terms)).doesNotThrowAnyException();
+    var changed=terms.deepCopy().put("amount","90000");
+    assertThatThrownBy(()->PeerResaleTerms.validateSeller(changed)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void
       directSellerTermsBindFullIntervalPriceBankAndCancellationPolicyWithoutAnyFeeOrOwnerPayable() {
     var accepted = terms();

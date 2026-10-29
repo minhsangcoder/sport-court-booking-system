@@ -164,7 +164,7 @@ VALUES(?,?,?,?,?,?,?,?,'VND',?,?,?,?,?,?,?,'WAITING_PAYMENT',?,?)
             Timestamp.from(booking.endsAt()),
             UUID.fromString(terms.path("bankDestinationRevisionId").asText()),
             terms.path("destinationHash").asText(),
-            terms.path("refundPolicy").path("termsHash").asText(),
+            terms.path("refundPolicy").path("termsHash").asText(null),
             terms.path("termsHash").asText(),
             Timestamp.from(payBy),
             Timestamp.from(now),

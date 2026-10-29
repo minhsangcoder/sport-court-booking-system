@@ -142,7 +142,7 @@ public class ReportPaymentModes {
               && fact.amount().compareTo((BigDecimal) receipt.get("amount")) == 0;
       if (!valid) reasons.add("REAL_APPLIED_RECEIPT_NEEDS_REVIEW");
       var source = remote == null ? null : remote.facts().get(fact.paymentId());
-      if (source == null) reasons.add("REAL_PAYMENT_FACTS_UNAVAILABLE");
+      if (source == null) { valid = false; reasons.add("REAL_PAYMENT_FACTS_UNAVAILABLE"); }
       else if (!source.verified()
           || !source.moneyClass().equals("REAL")
           || source.realEvidence() == null

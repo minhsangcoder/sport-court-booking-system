@@ -1225,7 +1225,7 @@
             "description": "Dependency unavailable; no simulation fallback"
           }
         },
-        "description": "ADMIN read only. Facility settlement, entitlements, active claims and manually recorded outgoing confirmations; no bank details or payout/refund mutation."
+        "description": "ADMIN read only. Facility settlement, entitlements and historical manually recorded outgoing confirmations; no bank details or payout/refund mutation."
       }
     },
     "/admin/payments/real-collections": {

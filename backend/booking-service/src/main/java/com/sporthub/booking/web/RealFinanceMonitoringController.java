@@ -1,11 +1,11 @@
 package com.sporthub.booking.web;
 
 import com.sporthub.booking.repository.BookingRepository;
-import com.sporthub.booking.service.FacilityFinanceReads;
 import com.sporthub.common.dto.ApiResponse;
 import com.sporthub.common.security.RemoteIdentity;
 import com.sporthub.common.time.ReportWindow;
 import jakarta.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
@@ -48,11 +48,10 @@ public class RealFinanceMonitoringController {
     var obligations =
         repo.jdbc()
             .queryForList(
-                "SELECT o.id,o.booking_id,o.facility_id,o.kind,o.amount,o.state,o.created_at,p.id"
-                    + " operation_id,p.state operation_state,r.confirmation_method,r.confirmed_at"
+                "SELECT o.id,o.booking_id,o.facility_id,o.kind,o.amount,o.state,o.created_at,"
+                    + "r.confirmation_method,r.confirmed_at"
                     + " FROM facility_disbursement_obligations o LEFT JOIN"
-                    + " facility_disbursement_operations p ON p.obligation_id=o.id AND"
-                    + " p.state<>'RELEASED' LEFT JOIN facility_disbursement_receipts r ON"
+                    + " facility_disbursement_receipts r ON"
                     + " r.obligation_id=o.id WHERE o.created_at<? AND (o.created_at>=? OR"
                     + " o.state<>'MANUALLY_RECORDED' OR r.confirmed_at>=?) ORDER BY o.created_at"
                     + " DESC,o.id LIMIT 200",
@@ -79,15 +78,35 @@ public class RealFinanceMonitoringController {
             "readOnly",
             true,
             "settlements",
-            settlements.stream().map(FacilityFinanceReads::project).toList(),
+            settlements.stream().map(RealFinanceMonitoringController::project).toList(),
             "obligations",
-            obligations.stream().map(FacilityFinanceReads::project).toList(),
+            obligations.stream().map(RealFinanceMonitoringController::project).toList(),
             "refunds",
-            refunds.stream().map(FacilityFinanceReads::project).toList(),
+            refunds.stream().map(RealFinanceMonitoringController::project).toList(),
             "limit",
             200,
             "dateBasis",
             "handoffAt; obligation createdAt/current state; outgoing confirmedAt;"
                 + " MANUALLY_RECORDED"));
+  }
+
+  private static Map<String, Object> project(Map<String, Object> row) {
+    var result = new LinkedHashMap<String, Object>();
+    row.forEach(
+        (key, value) -> {
+          String[] parts = key.split("_");
+          var name = new StringBuilder(parts[0]);
+          for (int index = 1; index < parts.length; index++)
+            name.append(Character.toUpperCase(parts[index].charAt(0)))
+                .append(parts[index].substring(1));
+          result.put(
+              name.toString(),
+              value instanceof BigDecimal amount
+                  ? amount.toPlainString()
+                  : value instanceof Timestamp time ? time.toInstant() : value);
+        });
+    if ("MANUALLY_RECORDED".equals(row.get("confirmation_method")))
+      result.put("confirmationLabel", "Cơ sở xác nhận đã chuyển");
+    return result;
   }
 }

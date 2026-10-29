@@ -4,7 +4,15 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: section 28 (2026-10-29): counter bookings support explicit
+Latest business revision: section 32 (2026-10-29): report source ALL/CASH/BANK uses verified REAL receipts; remove DEMO selector and disbursement link.
+
+Earlier business revision: section 31 (2026-10-29): Owner revenue displays court collections only; peer section displays completed handoffs and open usage cases only.
+
+Earlier business revision: section 30 (2026-10-29): simplify Owner bank and peer reporting to bank collections and usage-right status only.
+
+Earlier business revision: section 29 (2026-10-29): remove Owner refund-policy configuration across frontend, backend and database; new holds, bookings and peer listings require no refund policy. Remove policy-refund report widgets. Restyle court availability with Home components and tokens. Preserve accepted historical financial evidence and technical reconciliation.
+
+Earlier business revision: section 28 (2026-10-29): counter bookings support explicit
 cash receipts by the original operator with current facility permissions. Cash
 is REAL but never bank-verified; QR payments remain available. Reject cash after
 partial bank funding or expiry; late transfers cannot settle the obligation twice.

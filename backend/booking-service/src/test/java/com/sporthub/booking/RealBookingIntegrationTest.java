@@ -67,10 +67,7 @@ class RealBookingIntegrationTest {
   @Autowired BookingDemoFinance demoFinance;
   @Autowired TransferLeaseService transfers;
   @Autowired BookingRealFunds realFunds;
-  @Autowired FacilityManualDisbursements manual;
   @Autowired BookingLifecycle lifecycle;
-  @Autowired FacilityDisbursementChanges moneyChanges;
-  @Autowired FacilityFinanceReads financeReads;
   @Autowired FacilityDemoReportingService reports;
   @Autowired OperationalBookingService operations;
   @Autowired org.springframework.test.web.servlet.MockMvc http;
@@ -130,7 +127,7 @@ class RealBookingIntegrationTest {
                 "HALF_UP",
                 "termsHash",
                 Signatures.sha256(facility + "|1|8000|VND|HALF_UP|FACILITY_POLICY_CANCELLATION")));
-    when(dependencies.refundPolicy(eq(facility))).thenReturn(policy);
+
     when(payments.receiver(facility))
         .thenReturn(
             json.createObjectNode()
@@ -399,6 +396,42 @@ class RealBookingIntegrationTest {
   }
 
   @Test
+  void reportSourcesSeparateCashAndBankWithoutCountingReplayTwice() {
+    scopePermissions();
+    var operator = ownerActor();
+    var cash = service.counter(new CounterInput(court,start,end,courtAmount,"Cash Guest","0900000000",
+        "BANK_QR",null),key(),operator,"token");
+    var cashId = UUID.randomUUID();
+    var proof = event(cash,cashId,owner,"BOOKING",null,cash.amount());
+    ((com.fasterxml.jackson.databind.node.ObjectNode) proof.path("payload"))
+        .put("provider","CASH").put("confirmationMethod","CASH_RECEIVED");
+    consumer.apply(proof); consumer.apply(proof);
+    cashReportPayments.add(cashId);
+    court = UUID.randomUUID();
+    ((com.fasterxml.jackson.databind.node.ObjectNode) dependencies.quote(input())).put("courtId",court.toString());
+    var bank = pending();
+    var bankId = UUID.randomUUID();
+    consumer.apply(event(bank,bankId,customer.id(),"BOOKING",null,bank.amount()));
+    credit(bank,bankId,customer.id(),bank.amount().intValueExact());
+    reportSources();
+    when(clock.instant()).thenReturn(now.plusSeconds(30));
+    var day = LocalDate.ofInstant(now, ZoneId.of("Asia/Ho_Chi_Minh"));
+    var all = reports.dashboard(facility,day,day,0,1,operator,"token","REAL",0,"ALL");
+    var cashReport = reports.dashboard(facility,day,day,0,1,operator,"token","REAL",0,"CASH");
+    var bankReport = reports.dashboard(facility,day,day,0,1,operator,"token","REAL",0,"BANK");
+    assertThat(new BigDecimal(cashReport.summary().money().courtCollected())).isEqualByComparingTo(cash.amount());
+    assertThat(new BigDecimal(bankReport.summary().money().courtCollected())).isEqualByComparingTo(bank.amount());
+    assertThat(new BigDecimal(all.summary().money().courtCollected())).isEqualByComparingTo(cash.amount().add(bank.amount()));
+    assertThat(cashReport.summary().money().bankCollected()).isEqualTo("0");
+    assertThat(cashReport.transactions().items()).singleElement().satisfies(t -> {
+      assertThat(t.confirmationMethod()).isEqualTo("CASH_RECEIVED");
+      assertThat(t.cashflow()).isTrue();
+    });
+    assertThatThrownBy(() -> reports.dashboard(facility,day,day,0,1,operator,"token","REAL",0,"DEMO"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void cashProofCannotConfirmAnOnlineBooking() {
     var b=pending();
     var proof=event(b,UUID.randomUUID(),customer.id(),"BOOKING",null,b.amount());
@@ -469,21 +502,6 @@ class RealBookingIntegrationTest {
     doThrow(new com.sporthub.common.exception.ConflictException("missing channel"))
         .when(payments)
         .receiver(facility);
-    assertThatThrownBy(() -> service.hold(input(), key(), customer, "token", false))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM slot_reservations WHERE court_id=?",
-                    Integer.class,
-                    court))
-        .isZero();
-  }
-
-  @Test
-  void missingRefundPolicyCannotUseReadyChannelAsAFallback() {
-    when(dependencies.refundPolicy(facility))
-        .thenReturn(json.createObjectNode().put("configured", false));
     assertThatThrownBy(() -> service.hold(input(), key(), customer, "token", false))
         .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
     assertThat(
@@ -887,10 +905,13 @@ class RealBookingIntegrationTest {
             .put("destinationHash", "a".repeat(64));
     var expiry = now.plusSeconds(300);
     var deadline = start.minusSeconds(3600);
+    // Historical fee-based settlement fixture supplies its already accepted policy explicitly.
+    var historicalBooking = (com.fasterxml.jackson.databind.node.ObjectNode) transfers.inspect(original.id());
+    historicalBooking.set("refundPolicy", policy.deepCopy());
     var quote =
         com.sporthub.common.money.FacilityTransferTerms.seller(
             json,
-            transfers.inspect(original.id()),
+            historicalBooking,
             venue,
             fee,
             payments.receiver(facility),
@@ -966,13 +987,6 @@ class RealBookingIntegrationTest {
             "Staff",
             Set.of("STAFF"),
             Map.of(facility, Set.of("BOOKING_CHECK_IN")));
-    var instruction = prepareSeller(deal, ownerActor());
-    moneyChanges.review(
-        (UUID) instruction.get("operationId"),
-        new FacilityDisbursementChanges.Review(1, "REVIEW", "Chưa rõ kết quả chuyển tiền", false),
-        key(),
-        ownerActor(),
-        "token");
     assertThat(
             service
                 .checkinByCode(facility, new CodeInput(moved.bookingCode()), staff, "token")
@@ -1204,273 +1218,25 @@ class RealBookingIntegrationTest {
     return new Caller(owner, "Owner", Set.of("OWNER"), Map.of());
   }
 
-  UUID sellerObligation(Deal deal) {
-    return repo.jdbc()
-        .queryForObject(
-            "SELECT payout_obligation_id FROM facility_transfer_settlements WHERE acquisition_id=?",
-            UUID.class,
-            deal.command().acquisitionId());
-  }
-
-  void outgoingBank(UUID revision, UUID payee, UUID guest, String hash) {
-    var destination =
-        json.createObjectNode()
-            .put("id", revision.toString())
-            .put("bankBin", "970468")
-            .put("bankName", "Synthetic Bank")
-            .put("accountName", "SELF DECLARED")
-            .put("destinationHash", hash);
-    var privateData = json.createObjectNode().put("accountNumber", "0011009950446");
-    privateData.set("destination", destination);
-    when(payments.destination(revision, payee, guest, true))
-        .thenAnswer(
-            call -> {
-              assertThat(
-                      org.springframework.transaction.support.TransactionSynchronizationManager
-                          .isActualTransactionActive())
-                  .isFalse();
-              return privateData;
-            });
-  }
-
-  Map<String, Object> prepareSeller(Deal deal, Caller actor) {
-    UUID destination =
-        UUID.fromString(deal.command().financeTerms().path("sellerDestinationRevisionId").asText());
-    outgoingBank(destination, customer.id(), null, "a".repeat(64));
-    return manual.prepare(
-        sellerObligation(deal), new FacilityManualDisbursements.Prepare(1), key(), actor, "token");
-  }
-
-  @Test
-  void manualClaimRendersPrivateQrAndCompletesOnceWithMandatoryReference() throws Exception {
-    var deal = deal(700, true);
-    transfers.command("complete", deal.command());
-    scopePermissions();
-    var actor = ownerActor();
-    var prepared = prepareSeller(deal, actor);
-    UUID operation = (UUID) prepared.get("operationId");
-    assertThat(prepared.get("amount")).isEqualTo("74400");
-    assertThat(prepared.get("qrPayload").toString()).contains("0011009950446");
-    assertThat(prepared.get("qrImageDataUrl").toString()).startsWith("data:image/png;base64,");
-    assertThat(manual.read(operation, actor, "token").get("description"))
-        .isEqualTo(prepared.get("description"));
-    assertThatThrownBy(
-            () ->
-                manual.complete(
-                    operation,
-                    new FacilityManualDisbursements.Complete(1, " "),
-                    key(),
-                    actor,
-                    "token"))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () ->
-                json.readValue(
-                    "{\"version\":1,\"bankTransactionReference\":\"TX1\",\"amount\":1,\"outcome\":\"SUCCESS\"}",
-                    FacilityManualDisbursements.Complete.class))
-        .isInstanceOf(Exception.class);
-    String request = key();
-    var input = new FacilityManualDisbursements.Complete(1, "TX-20261023-001");
-    var completed = manual.complete(operation, input, request, actor, "token");
-    manual.complete(operation, input, request, actor, "token");
-    assertThat(completed.get("state")).isEqualTo("MANUALLY_RECORDED");
-    assertThat(completed.get("confirmationMethod")).isEqualTo("MANUALLY_RECORDED");
-    assertThat(completed.get("confirmationLabel")).isEqualTo("Cơ sở xác nhận đã chuyển");
-    assertThat(manual.read(operation, actor, "token"))
-        .doesNotContainKeys("qrPayload", "accountNumber");
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM facility_disbursement_receipts WHERE operation_id=?",
-                    Integer.class,
-                    operation))
-        .isEqualTo(1);
-    assertThat(financeReads.mine(customer).toString())
-        .contains("MANUALLY_RECORDED")
-        .doesNotContain("0011009950446");
-    assertThatThrownBy(() -> manual.read(operation, deal.buyer(), "token"))
-        .isInstanceOf(com.sporthub.common.exception.ForbiddenException.class);
-  }
-
-  @Test
-  void twoOperatorsGetOneClaimAndRevocationNeedsOwnerTakeoverWithoutAnotherTransfer() {
-    var deal = deal(700, true);
-    transfers.command("complete", deal.command());
-    scopePermissions();
-    var staff =
-        new Caller(
-            UUID.randomUUID(),
-            "Staff",
-            Set.of("STAFF"),
-            Map.of(facility, Set.of("TRANSFER_PAYOUT")));
-    var prepared = prepareSeller(deal, staff);
-    UUID operation = (UUID) prepared.get("operationId");
-    assertThatThrownBy(
-            () ->
-                manual.prepare(
-                    sellerObligation(deal),
-                    new FacilityManualDisbursements.Prepare(2),
-                    key(),
-                    ownerActor(),
-                    "token"))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-    var revoked = new Caller(staff.id(), "Staff", Set.of("STAFF"), Map.of());
-    assertThatThrownBy(
-            () ->
-                manual.complete(
-                    operation,
-                    new FacilityManualDisbursements.Complete(1, "TX-A"),
-                    key(),
-                    revoked,
-                    "token"))
-        .isInstanceOf(com.sporthub.common.exception.ForbiddenException.class);
-    when(clock.instant()).thenReturn(now.plusSeconds(86400));
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT state FROM facility_disbursement_operations WHERE id=?",
-                    String.class,
-                    operation))
-        .isEqualTo("PREPARED");
-    moneyChanges.review(
-        operation,
-        new FacilityDisbursementChanges.Review(
-            1, "TAKE_OVER", "Owner kiểm tra giao dịch đã chuyển", false),
-        key(),
-        ownerActor(),
-        "token");
-    assertThat(manual.read(operation, ownerActor(), "token")).doesNotContainKey("qrPayload");
-    manual.complete(
-        operation,
-        new FacilityManualDisbursements.Complete(2, "TX-ALREADY-SENT"),
-        key(),
-        ownerActor(),
-        "token");
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM facility_disbursement_operations WHERE obligation_id=?",
-                    Integer.class,
-                    sellerObligation(deal)))
-        .isEqualTo(1);
-  }
-
-  @Test
-  void sameBankReferenceAcrossPayoutAndRefundGoesToReviewAndNeverCountsTwice() {
-    var deal = deal(700, true);
-    transfers.command("complete", deal.command());
-    scopePermissions();
-    var prepared = prepareSeller(deal, ownerActor());
-    manual.complete(
-        (UUID) prepared.get("operationId"),
-        new FacilityManualDisbursements.Complete(1, "TX-SAME"),
-        key(),
-        ownerActor(),
-        "token");
-    var binding = bank(deal.command().paymentId(), deal.buyer().id(), null);
-    seedHistoricalRefund(
-        deal.original().id(),
-        deal.command().acquisitionId(),
-        deal.command().paymentId(),
-        deal.buyer().id(),
-        deal.command().price(),
-        binding.destinationRevisionId(),
-        null);
-    UUID refund =
-        repo.jdbc()
-            .queryForObject(
-                "SELECT id FROM facility_disbursement_obligations WHERE booking_id=? AND"
-                    + " kind='POLICY_REFUND'",
-                UUID.class,
-                deal.original().id());
-    outgoingBank(binding.destinationRevisionId(), deal.buyer().id(), null, "b".repeat(64));
-    var instruction =
-        manual.prepare(
-            refund, new FacilityManualDisbursements.Prepare(1), key(), ownerActor(), "token");
-    var result =
-        manual.complete(
-            (UUID) instruction.get("operationId"),
-            new FacilityManualDisbursements.Complete(1, "tx same"),
-            key(),
-            ownerActor(),
-            "token");
-    assertThat(result.get("state")).isEqualTo("REVIEW");
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM facility_disbursement_receipts WHERE source_scope=?",
-                    Integer.class,
-                    owner))
-        .isEqualTo(1);
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT sum(amount) FROM facility_refund_allocations WHERE payment_id=?",
-                    BigDecimal.class,
-                    deal.command().paymentId()))
-        .isEqualByComparingTo("64000");
-  }
-
-  @Test
-  void technicalRecipientCanSupplyBankLaterAndCannotChangePreparedOrPaidDestination() {
-    var deal = deal(700, false);
-    transfers.abort(deal.command(), "No handoff");
-    consumer.apply(deal.outcome());
-    scopePermissions();
-    UUID obligation =
-        repo.jdbc()
-            .queryForObject(
-                "SELECT id FROM facility_disbursement_obligations WHERE booking_id=?",
-                UUID.class,
-                deal.original().id());
-    var binding = bank(deal.command().paymentId(), deal.buyer().id(), null);
-    moneyChanges.destination(
-        obligation,
-        new FacilityDisbursementChanges.Destination(
-            1, binding.destinationRevisionId(), "Buyer consents", "Thêm ngân hàng nhận hoàn"),
-        key(),
-        deal.buyer(),
-        "token");
-    outgoingBank(binding.destinationRevisionId(), deal.buyer().id(), null, "b".repeat(64));
-    var prepared =
-        manual.prepare(
-            obligation, new FacilityManualDisbursements.Prepare(2), key(), ownerActor(), "token");
-    assertThatThrownBy(
-            () ->
-                moneyChanges.destination(
-                    obligation,
-                    new FacilityDisbursementChanges.Destination(
-                        3, binding.destinationRevisionId(), "Consent", "Thay khi đã chuẩn bị"),
-                    key(),
-                    deal.buyer(),
-                    "token"))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-    assertThatThrownBy(
-            () ->
-                moneyChanges.review(
-                    (UUID) prepared.get("operationId"),
-                    new FacilityDisbursementChanges.Review(
-                        1, "RELEASE", "Chưa kiểm ngân hàng", false),
-                    key(),
-                    ownerActor(),
-                    "token"))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
-    manual.complete(
-        (UUID) prepared.get("operationId"),
-        new FacilityManualDisbursements.Complete(1, "TX-TECHNICAL"),
-        key(),
-        ownerActor(),
-        "token");
-    assertThatThrownBy(
-            () ->
-                moneyChanges.destination(
-                    obligation,
-                    new FacilityDisbursementChanges.Destination(
-                        4, binding.destinationRevisionId(), "Consent", "Thay sau khi đã trả"),
-                    key(),
-                    deal.buyer(),
-                    "token"))
-        .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
+  /** Seeds a receipt recorded by the removed manual payout workflow. */
+  void recordHistoricalReceipt(UUID obligation, String reference) {
+    repo.jdbc()
+        .update(
+            """
+INSERT INTO facility_disbursement_receipts(id,operation_id,obligation_id,source_scope,bank_reference,normalized_reference,
+ amount,destination_revision_id,destination_hash,confirmation_method,confirmed_at,performed_by)
+SELECT gen_random_uuid(),gen_random_uuid(),id,receiver_owner_id,?,?,amount,destination_revision_id,destination_hash,
+ 'MANUALLY_RECORDED',?,receiver_owner_id FROM facility_disbursement_obligations WHERE id=?
+""",
+            reference,
+            reference,
+            java.sql.Timestamp.from(clock.instant()),
+            obligation);
+    repo.jdbc()
+        .update(
+            "UPDATE facility_disbursement_obligations SET state='MANUALLY_RECORDED',version=version+1"
+                + " WHERE id=?",
+            obligation);
   }
 
   List<com.sporthub.common.money.PaymentProofFacts.BankCredit> reportCredits() {
@@ -1501,6 +1267,8 @@ class RealBookingIntegrationTest {
                     row.get("proof_hash").toString()))
         .toList();
   }
+
+  final Set<UUID> cashReportPayments = new HashSet<>();
 
   void reportSources() {
     when(dependencies.ownerFacility(eq(facility), any(), any()))
@@ -1573,7 +1341,7 @@ class RealBookingIntegrationTest {
                         row == null ? null : "c".repeat(64),
                         row == null ? "0" : amount,
                         total.toPlainString(),
-                        "BANK_VERIFIED",
+                        cashReportPayments.contains(binding.paymentId()) ? "CASH_RECEIVED" : "BANK_VERIFIED",
                         credits);
                 facts.put(
                     binding.paymentId(),
@@ -1588,7 +1356,7 @@ class RealBookingIntegrationTest {
                         amount,
                         "VND",
                         row == null ? null : ((java.sql.Timestamp) row.get("paid_at")).toInstant(),
-                        "PAYOS",
+                        cashReportPayments.contains(binding.paymentId()) ? "CASH" : "PAYOS",
                         "REAL",
                         row != null,
                         row != null,
@@ -1637,17 +1405,8 @@ class RealBookingIntegrationTest {
                     + " kind='POLICY_REFUND'",
                 UUID.class,
                 deal.original().id());
-    outgoingBank(bank.destinationRevisionId(), deal.buyer().id(), null, "b".repeat(64));
-    var prepared =
-        manual.prepare(
-            refund, new FacilityManualDisbursements.Prepare(1), key(), ownerActor(), "token");
     when(clock.instant()).thenReturn(now.plusSeconds(60));
-    manual.complete(
-        (UUID) prepared.get("operationId"),
-        new FacilityManualDisbursements.Complete(1, "REPORT-H-80000"),
-        key(),
-        ownerActor(),
-        "token");
+    recordHistoricalReceipt(refund, "REPORT-H-80000");
     when(clock.instant()).thenReturn(now.plusSeconds(120));
     reportSources();
     var report =
@@ -1675,7 +1434,7 @@ class RealBookingIntegrationTest {
             report.transactions().items().stream()
                 .filter(t -> t.direction().equals("OUT"))
                 .map(t -> t.confirmationMethod()))
-        .containsExactly("MANUALLY_RECORDED");
+        .isEmpty();
     assertThat(
             report.transactions().items().stream()
                 .filter(t -> t.cashflow() && t.direction().equals("IN"))
@@ -1702,26 +1461,8 @@ class RealBookingIntegrationTest {
                 "SELECT * FROM facility_disbursement_obligations WHERE booking_id=? AND"
                     + " kind='SELLER_PAYOUT'",
                 deal.original().id());
-    outgoingBank(
-        (UUID) sellerDebt.get("destination_revision_id"),
-        customer.id(),
-        null,
-        sellerDebt.get("destination_hash").toString());
-    var sellerOperation =
-        manual.prepare(
-            (UUID) sellerDebt.get("id"),
-            new FacilityManualDisbursements.Prepare(
-                ((Number) sellerDebt.get("version")).intValue()),
-            key(),
-            ownerActor(),
-            "token");
     when(clock.instant()).thenReturn(now.plusSeconds(86400));
-    manual.complete(
-        (UUID) sellerOperation.get("operationId"),
-        new FacilityManualDisbursements.Complete(1, "REPORT-N-NEXT-DAY"),
-        key(),
-        ownerActor(),
-        "token");
+    recordHistoricalReceipt((UUID) sellerDebt.get("id"), "REPORT-N-NEXT-DAY");
     when(clock.instant()).thenReturn(now.plusSeconds(86401));
     var historical =
         reports
@@ -1787,12 +1528,11 @@ class RealBookingIntegrationTest {
             status -> {
               var booking = repo.find(bookingId);
               repo.lock(booking.courtId());
-              var policy =
-                  repo.jdbc()
-                      .queryForMap(
-                          "SELECT * FROM booking_refund_policy_snapshots WHERE booking_id=?",
-                          bookingId);
-              int rate = ((Number) policy.get("refund_rate_bps")).intValue();
+              var historicalPolicy = Map.<String, Object>of(
+                  "refund_rate_bps", policy.path("rateBps").asInt(),
+                  "policy_version", policy.path("version").asInt(),
+                  "terms_hash", policy.path("termsHash").asText());
+              int rate = ((Number) historicalPolicy.get("refund_rate_bps")).intValue();
               var allocations =
                   com.sporthub.common.money.DemoRefundMath.allocate(
                       List.of(
@@ -1812,8 +1552,8 @@ VALUES(?,?,?,?,?,?,?,?,?,'VND','HALF_UP',?,?::jsonb,?,?,?,?)
                       bookingId,
                       booking.version(),
                       booking.checkinTokenVersion(),
-                      policy.get("policy_version"),
-                      policy.get("terms_hash"),
+                      historicalPolicy.get("policy_version"),
+                      historicalPolicy.get("terms_hash"),
                       base,
                       rate,
                       target,
@@ -1850,8 +1590,8 @@ VALUES(?,?,?,?,?,?,'POLICY_CANCELLATION',?,?,?,?,?,?,?)
                       base,
                       rate,
                       target,
-                      policy.get("policy_version"),
-                      policy.get("terms_hash"),
+                      historicalPolicy.get("policy_version"),
+                      historicalPolicy.get("terms_hash"),
                       buyer,
                       java.sql.Timestamp.from(clock.instant()));
               repo.jdbc()

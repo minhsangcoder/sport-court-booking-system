@@ -16,12 +16,13 @@ export function useFacilityReport() {
   const [page, setPage] = useState(0)
   const [peerPage, setPeerPage] = useState(0)
   const [error, setError] = useState('')
-  const [selectedMode, setSelectedMode] = useState<'REAL' | 'DEMO' | null>(null)
+  const [moneySource, setMoneySource] = useState<'ALL' | 'CASH' | 'BANK'>('ALL')
   const params = new URLSearchParams({
     ...range,
     page: String(page),
     size: '25',
-    ...(selectedMode ? { mode: selectedMode } : {}),
+    mode: 'REAL',
+    moneySource,
     peerPage: String(peerPage),
   })
   const resource = useApi<FacilityDemoReport>(
@@ -63,7 +64,7 @@ export function useFacilityReport() {
     }
   }
   const report = !resource.loading && !resource.error ? resource.data : null
-  const mode = selectedMode ?? report?.mode
+  const mode = report?.mode
   const available = report?.moneyAvailability !== 'UNAVAILABLE'
   const amount = (value: string) => (available ? demoVnd(value) : 'Chưa có dữ liệu')
   const stats = report?.summary
@@ -97,8 +98,9 @@ export function useFacilityReport() {
     money,
     timestamp,
     mode,
-    setMode: (next: 'REAL' | 'DEMO') => {
-      setSelectedMode(next)
+    moneySource,
+    setMoneySource: (next: 'ALL' | 'CASH' | 'BANK') => {
+      setMoneySource(next)
       setPage(0)
       setPeerPage(0)
     },
