@@ -1641,6 +1641,68 @@
           }
         }
       }
+    },
+    "/payments/{id}/counter-cash": {
+      "post": {
+        "operationId": "collectCounterCash",
+        "summary": "Ghi nhận đã nhận đủ tiền mặt tại quầy",
+        "description": "Original counter operator only, with current facility permissions. Idempotent by original payment ID. Rejects expired, settled or partially bank-funded obligations. Late bank transfers remain unapplied.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Payment"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data",
+                    "timestamp"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No current counter permission"
+          },
+          "409": {
+            "description": "Already collected, expired or bank credits exist"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2204,6 +2266,14 @@
           },
           "lastErrorCode": {
             "type": "string",
+            "nullable": true
+          },
+          "counterCashAllowed": {
+            "type": "boolean"
+          },
+          "cashPaymentId": {
+            "type": "string",
+            "format": "uuid",
             "nullable": true
           }
         },

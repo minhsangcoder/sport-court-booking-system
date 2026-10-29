@@ -26,6 +26,8 @@ export type BankQrSession = {
   expiresAt: string
   confirmationMethod: string | null
   applicationState: string
+  counterCashAllowed?: boolean
+  cashPaymentId?: string | null
   lastErrorCode: string | null
 }
 export type PayosChannel = {

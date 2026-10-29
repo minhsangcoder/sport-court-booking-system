@@ -27,6 +27,11 @@ public class BookingRealReceipts {
     var p = event.path("payload");
     boolean real = BookingMoneyCohorts.isReal(booking);
     int version = event.path("eventVersion").asInt();
+    boolean cash = "CASH".equals(p.path("provider").asText())
+        && "CASH_RECEIVED".equals(p.path("confirmationMethod").asText())
+        && "OFFLINE_COUNTER".equals(booking.source())
+        && "BOOKING".equals(p.path("purpose").asText())
+        && booking.createdBy().toString().equals(p.path("payerId").asText());
     if (version == 1) {
       if (real || "REAL".equals(p.path("moneyClass").asText()))
         throw new AmqpRejectAndDontRequeueException("A v1 outcome cannot certify REAL money");
@@ -35,9 +40,9 @@ public class BookingRealReceipts {
     if (version != 2
         || !real
         || !"payment-service".equals(event.path("producer").asText())
-        || !Set.of("PAYOS", "SEPAY").contains(p.path("provider").asText())
+        || !(cash || Set.of("PAYOS", "SEPAY").contains(p.path("provider").asText()))
         || !"REAL".equals(p.path("moneyClass").asText())
-        || !"BANK_VERIFIED".equals(p.path("confirmationMethod").asText())
+        || !(cash || "BANK_VERIFIED".equals(p.path("confirmationMethod").asText()))
         || !p.path("proofHash").asText().matches("[a-f0-9]{64}")
         || !p.path("proofId").asText().equals(p.path("paymentId").asText())
         || !booking.id().toString().equals(p.path("bookingId").asText())

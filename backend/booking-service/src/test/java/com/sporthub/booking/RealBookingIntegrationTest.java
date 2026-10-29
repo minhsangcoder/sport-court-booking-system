@@ -383,6 +383,32 @@ class RealBookingIntegrationTest {
   }
 
   @Test
+  void cashReceiptConfirmsOnlyCounterBookingAndReplaysOnce() {
+    scopePermissions();
+    var operator = new Caller(owner,"Owner",Set.of("OWNER"),Map.of());
+    var b=service.counter(new CounterInput(court,start,end,courtAmount,"Cash Guest","0900000000",
+        "BANK_QR",policy.path("termsHash").asText()),key(),operator,"token");
+    UUID payment=UUID.randomUUID();
+    var proof=event(b,payment,owner,"BOOKING",null,b.amount());
+    ((com.fasterxml.jackson.databind.node.ObjectNode)proof.path("payload"))
+        .put("provider","CASH").put("confirmationMethod","CASH_RECEIVED");
+    consumer.apply(proof); consumer.apply(proof);
+    assertThat(repo.find(b.id()).status()).isEqualTo("CONFIRMED");
+    assertThat(repo.find(b.id()).paymentId()).isEqualTo(payment);
+    assertThat(repo.jdbc().queryForObject("SELECT count(*) FROM booking_real_collections WHERE payment_id=?",Integer.class,payment)).isEqualTo(1);
+  }
+
+  @Test
+  void cashProofCannotConfirmAnOnlineBooking() {
+    var b=pending();
+    var proof=event(b,UUID.randomUUID(),customer.id(),"BOOKING",null,b.amount());
+    ((com.fasterxml.jackson.databind.node.ObjectNode)proof.path("payload"))
+        .put("provider","CASH").put("confirmationMethod","CASH_RECEIVED");
+    assertThatThrownBy(() -> consumer.apply(proof)).isInstanceOf(org.springframework.amqp.AmqpRejectAndDontRequeueException.class);
+    assertThat(repo.find(b.id()).status()).isEqualTo("PENDING");
+  }
+
+  @Test
   void directGuestCommandCannotBypassCustomerCredentialForOnlineOrLinkedBookings() {
     scopePermissions();
     var online = pending();

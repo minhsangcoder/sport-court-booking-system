@@ -18,6 +18,7 @@ import { RefundPolicyNotice } from './refund-policy-notice'
 import { notifyDemoMoneyChanged } from './demo-finance'
 import { TransferFinanceNotice } from '@/features/transfers/finance-notice'
 import type { Acquisition } from '@/features/transfers/types'
+import { CashPaymentResult } from '@/features/payments/counter-cash-payment'
 import { BankPaymentInstructions } from '@/features/payments/bank-payment-instructions'
 import type { PaymentRuntime } from '@/features/payments/types'
 export function PaymentPage({ id }: { id: string }) {
@@ -132,6 +133,12 @@ function Loaded({ id }: { id: string }) {
     user,
     owned.data?.map((f) => f.id),
   )
+  if (p.provider === 'CASH')
+    return (
+      <div className="mx-auto max-w-xl px-5 py-10">
+        <CashPaymentResult id={p.id} resultHref={resultPath} />
+      </div>
+    )
   if (['SEPAY', 'PAYOS'].includes(p.provider))
     return (
       <div className="mx-auto max-w-xl space-y-5 px-5 py-10">

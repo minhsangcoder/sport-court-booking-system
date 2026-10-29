@@ -1,5 +1,6 @@
 'use client'
 import Image from 'next/image'
+import { CounterCashPayment, CashPaymentResult } from './counter-cash-payment'
 import Link from 'next/link'
 import { useState } from 'react'
 import { api, ApiError } from '@/lib/api'
@@ -33,6 +34,7 @@ export function BankPaymentInstructions(props: InstructionProps) {
 }
 function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
   const resource = useApi<BankQrSession>(`/payments/${payment.id}/qr`)
+  const [cashId, setCashId] = useState<string | null>(null)
   const [latest, setLatest] = useState<BankQrSession | null>(null)
   const [applied, setApplied] = useState(false)
   const [stopped, setStopped] = useState(false)
@@ -133,6 +135,7 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
       setBusy(false)
     }
   }
+  const effectiveCashId = cashId || session?.cashPaymentId
   const showQr =
     !stopped && session?.state === 'READY' && session.qrCode && remaining !== null && remaining > 0
   const result =
@@ -143,8 +146,13 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
         : payment.purpose === 'GROUP_CONTRIBUTION'
           ? `/customer/groups/${payment.bookingId}`
           : `/customer/bookings/${payment.bookingId}`
-  return (
+  return effectiveCashId ? (
+    <CashPaymentResult id={effectiveCashId} onApplied={onApplied} resultHref={result} />
+  ) : (
     <section className="space-y-4 rounded-2xl border bg-white p-5 text-slate-900">
+      {session?.counterCashAllowed && (
+        <CounterCashPayment payment={payment} onReceived={setCashId} />
+      )}
       <h2 className="text-lg font-bold">Chuyển khoản cho cơ sở</h2>
       <p className="text-sm">
         Quyền sử dụng sân được cấp sau khi máy chủ xác minh đủ tiền và hoàn tất áp dụng hoặc bàn

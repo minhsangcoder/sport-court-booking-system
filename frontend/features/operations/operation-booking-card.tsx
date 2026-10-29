@@ -100,7 +100,7 @@ export function OperationBookingCard({
           className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 rounded-lg flex items-center mt-3"
         >
           <CreditCard className="size-4" />
-          <span>Thanh toán mô phỏng tại quầy</span>
+          <span>Thanh toán tại quầy</span>
         </Button>
       )}
     </Card>

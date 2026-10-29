@@ -29,7 +29,9 @@ public class PaymentQrSessions {
       Instant expiresAt,
       String confirmationMethod,
       String applicationState,
-      String lastErrorCode) {}
+      String lastErrorCode,
+      boolean counterCashAllowed,
+      UUID cashPaymentId) {}
 
   private final PaymentRepository repo;
   private final PayosChannels channels;
@@ -98,7 +100,12 @@ public class PaymentQrSessions {
         order.expiresAt(),
         state.equals("VERIFIED") ? "BANK_VERIFIED" : null,
         applying,
-        Objects.toString(row.get("last_error_code"), null));
+        Objects.toString(row.get("last_error_code"), null),
+        Boolean.TRUE.equals(row.get("counter_operator")) && order.purpose().equals("BOOKING")
+            && order.status().equals("PENDING") && clock.instant().isBefore(order.expiresAt())
+            && ((java.math.BigDecimal) row.get("amount_received")).signum() == 0,
+        repo.jdbc().query("SELECT payment_id FROM counter_cash_receipts WHERE original_payment_id=?",
+            rs -> rs.next() ? (UUID)rs.getObject(1) : null, payment));
   }
 
   @Transactional

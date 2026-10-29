@@ -148,7 +148,7 @@ export function OperationCards({
                   className="mt-4 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow-xs flex items-center"
                 >
                   <CreditCard className="size-4" />
-                  <span>Thanh toán mô phỏng tại quầy</span>
+                  <span>Thanh toán tại quầy</span>
                 </Button>
               )}
             </article>

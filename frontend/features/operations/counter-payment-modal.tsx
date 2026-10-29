@@ -90,7 +90,7 @@ function RealCounterPayment({
       <div className="max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-5">
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 id="real-counter-title" className="text-lg font-bold">
-            Thu tiền tại quầy bằng chuyển khoản
+            Thanh toán tại quầy
           </h2>
           <Button variant="outline" onClick={onClose}>
             Đóng
@@ -119,7 +119,7 @@ function RealCounterPayment({
           <BankPaymentInstructions
             payment={payment}
             onApplied={() => {
-              onSuccess('Đã xác minh đủ tiền và xác nhận lượt đặt.')
+              onSuccess('Đã ghi nhận đủ tiền và xác nhận lượt đặt.')
               onClose()
             }}
           />
@@ -192,7 +192,7 @@ function PaymentForm({
           <Banknote className="size-7 text-emerald-600" />
           <div>
             <h2 id="counter-payment-title" className="text-lg font-bold">
-              Thanh toán mô phỏng tại quầy
+              Thanh toán tại quầy
             </h2>
             <p className="text-xs text-slate-500">
               Mô phỏng thanh toán, không phát sinh giao dịch tiền thật.

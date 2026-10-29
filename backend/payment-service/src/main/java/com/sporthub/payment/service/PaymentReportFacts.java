@@ -100,6 +100,12 @@ LEFT JOIN verified_payment_collections v ON v.payment_id=p.id WHERE p.id=ANY(?::
         problems.add(new Problem(payment, "BINDING_MISMATCH"));
         continue;
       }
+      if ("CASH".equals(row.get("provider"))) {
+        var receipts=repo.jdbc().queryForList("SELECT payload::text FROM counter_cash_receipts WHERE payment_id=?",payment);
+        if (receipts.isEmpty()) problems.add(new Problem(payment,"CASH_RECEIPT_MISSING"));
+        else facts.add(CashReceiptFacts.fact(row,binding,read(receipts.getFirst().get("payload").toString()),eventByPayment.getOrDefault(payment,List.of())));
+        continue;
+      }
       if (sources.sessions().containsKey(payment)) {
         facts.add(
             real.fact(row, binding, sources, eventByPayment.getOrDefault(payment, List.of())));
