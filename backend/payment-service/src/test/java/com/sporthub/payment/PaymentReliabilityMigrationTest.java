@@ -27,7 +27,7 @@ class PaymentReliabilityMigrationTest {
                     .load();
             f.migrate();
             f.validate();
-            assertThat(f.info().current().getVersion().toString()).isEqualTo("17");
+            assertThat(f.info().current().getVersion().toString()).isEqualTo("19");
             try (var r =
                 s.executeQuery(
                     "SELECT p.status,p.amount,p.paid_at IS NOT"

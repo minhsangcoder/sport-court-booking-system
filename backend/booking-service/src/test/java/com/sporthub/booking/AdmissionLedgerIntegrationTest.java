@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.sporthub.booking.web.BookingDtos.*;
+import com.sporthub.common.exception.ForbiddenException;
 import com.sporthub.common.money.*;
 import com.sporthub.common.security.RemoteIdentity.Caller;
 import java.time.*;
@@ -155,19 +156,18 @@ class AdmissionLedgerIntegrationTest extends HoldProtectionTestSupport {
   }
 
   @Test
-  void ledgerOperatorCancellationDoesNotPunishTheCustomer() {
+  void ledgerOperatorCannotCancelTheCustomerBookingOrPunishTheCustomer() {
     var booking = pending();
     UUID source = source(booking.id());
     var operator = new Caller(owner, "Chủ cơ sở", Set.of("OWNER"), Map.of());
-    service.cancel(booking.id(), new CancelInput("Cơ sở ngừng nhận lượt này"), operator, "token");
+    assertThatThrownBy(
+            () ->
+                service.cancel(
+                    booking.id(), new CancelInput("Cơ sở ngừng nhận lượt này"), operator, "token"))
+        .isInstanceOf(ForbiddenException.class);
+    assertThat(repo.find(booking.id()).status()).isEqualTo("PENDING");
     assertThat(count("booking_abandonment_events", source)).isZero();
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT reason FROM booking_admission_exemptions WHERE source_id=?",
-                    String.class,
-                    source))
-        .isEqualTo("FACILITY_CANCEL");
+    assertThat(count("booking_admission_exemptions", source)).isZero();
   }
 
   @Test

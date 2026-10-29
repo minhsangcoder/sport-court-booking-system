@@ -33,8 +33,8 @@ public class ScheduleRepository {
     }
     public BookingPolicy bookingPolicy(UUID facility) {
         return jdbc.query("SELECT * FROM facility_booking_policies WHERE facility_id=?",(r,n)->
-            new BookingPolicy(r.getBoolean("enabled"),r.getLong("version"),r.getInt("selection_step_minutes"),r.getInt("minimum_minutes"),r.getInt("maximum_minutes")),facility)
-            .stream().findFirst().orElse(new BookingPolicy(false,0,30,60,240));
+            new BookingPolicy(r.getBoolean("enabled"),r.getLong("version"),r.getInt("selection_step_minutes"),r.getInt("minimum_minutes"),(Integer)r.getObject("maximum_minutes")),facility)
+            .stream().findFirst().orElse(new BookingPolicy(false,0,30,30,null));
     }
     private static UUID uuid(ResultSet r,String name) throws SQLException {return r.getObject(name,UUID.class);}
 }

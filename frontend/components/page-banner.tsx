@@ -12,7 +12,7 @@ export function PageBanner({
   children,
   icon = 'tennis',
 }: {
-  eyebrow?: string
+  eyebrow?: ReactNode
   title: string
   description?: string
   actions?: ReactNode

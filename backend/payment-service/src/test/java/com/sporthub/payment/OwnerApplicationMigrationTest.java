@@ -45,7 +45,7 @@ class OwnerApplicationMigrationTest {
                 .load();
         latest.migrate();
         latest.validate();
-        assertThat(latest.info().current().getVersion().toString()).isEqualTo("17");
+        assertThat(latest.info().current().getVersion().toString()).isEqualTo("19");
         try (var connection = DriverManager.getConnection(url, user, password);
             var statement = connection.createStatement();
             var results =

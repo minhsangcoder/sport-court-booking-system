@@ -51,7 +51,7 @@ Những ràng buộc đọc từ source hiện tại:
 
 ### D1. Khoảng giờ và đơn giá có phiên bản
 
-Một booking mới là một khoảng liên tục trong cùng ngày địa phương và một khoảng mở cửa hiệu lực của sân. Điểm chọn cách nhau30 phút, neo tại đầu khoảng mở cửa như grid hiện tại; thời lượng60–240 phút. Không gộp qua giờ nghỉ, đóng cửa, bảo trì hoặc booking/hold khác. Thay đổi giữa chừng bằng giá/giờ, không buộc bằng slot vận hành cũ.
+Một booking mới là một khoảng liên tục trong cùng ngày địa phương và một khoảng mở cửa hiệu lực của sân. Điểm chọn cách nhau30 phút, neo tại đầu khoảng mở cửa như grid hiện tại; thời lượng từ30 phút trở lên, không giới hạn tối đa (mục33; policy minimumMinutes=30, maximumMinutes=null, schedule migration V7). Giới hạn tự nhiên là một khoảng mở cửa liên tục trong ngày. Không gộp qua giờ nghỉ, đóng cửa, bảo trì hoặc booking/hold khác. Thay đổi giữa chừng bằng giá/giờ, không buộc bằng slot vận hành cũ.
 
 Tạo quote v2 có `quoteVersion`, `pricingMode=HOURLY_INTERVAL_V1`, `pricingRevision`, `policyVersion`, startsAt/endsAt/timezone, durationMinutes, amount nguyên VND và segments. Cắt tại mọi biên giá/rule hiệu lực trong khoảng yêu cầu; dùng precedence hiện có trên từng đoạn; không có giá, nhiều rule cùng hạng hoặc currency khác thì từ chối.
 
@@ -61,11 +61,13 @@ Ví dụ15:30–16:30: `(100000×30 + 200000×30)/60 = 150000`. Một giờ giá
 
 Không đổi nghĩa ngầm `pricePerSlot` thành `pricePerHour`: thêm pricing unit/version. Row cũ giữ LEGACY_SLOT, snapshot cũ không sửa. Owner có màn preview và công bố giá HOURLY cho thời điểm áp dụng mới. Cơ sở chưa có coverage HOURLY đầy đủ chưa nhận booking linh hoạt; lịch/booking cũ vẫn đọc và vận hành bình thường. Chỉ hỗ trợ chuyển đổi tự gợi ý khi xác định duy nhất slot basis; lịch nhiều slotMinutes phải được Owner chốt rate, không tự nhân/chia60.
 
-### D2. Orphan gap là cảnh báo mềm
+### D2. Không còn orphan gap
 
-Quote/availability hiển thị khoảng trống mới liền kề dưới60 phút và tối đa3 gợi ý hợp lệ: căn lại đầu/cuối hoặc gộp phần còn trống nhưng không vượt240 phút. Đo gap trên free component sau khi trừ giờ nghỉ/bảo trì/booking và hold còn hiệu lực, không coi đã hết hạn là occupied lâu dài.
+Mục33 hạ thời lượng tối thiểu xuống bằng một bước30 phút, nên mọi khoảng trống còn lại trên lưới đều bán được. `OrphanGapAdvice` giữ ngưỡng bằng thời lượng tối thiểu (30 phút); trên lưới30 phút ngưỡng này không bao giờ bị chạm, nên quote luôn trả `warnings`/`suggestions` rỗng. Vẫn kiểm khoảng chọn còn trống liên tục dưới court lock khi nhận hold. Người dùng đặt15:30–16:30 dù còn30 phút mỗi bên; hai khoảng đó đặt được cho người khác và không bị coi là vi phạm/strike.
 
-Recompute khi nhận hold dưới court lock. Cảnh báo không thay đổi amount hoặc tự kéo dài lịch và không làm thất bại request chỉ vì gap. Người dùng vẫn đặt15:30–16:30 dù còn30 phút mỗi bên; hard-reject orphan sẽ mâu thuẫn ví dụ đã chốt. Khoảng30 phút có sẵn không được coi thành vi phạm/strike của người đến sau.
+### D2b. Giá tìm sân theo giờ
+
+Discovery quy đổi mỗi slot về đơn giá giờ (`pricePerHour`, hoặc tiền slot × 60 / phút) trước khi lọc, sắp xếp và chọn `fromPrice`, vì giao diện ghi “/giờ” và bộ lọc ghi “/h”. Lưới chọn giờ vẫn hiển thị tiền từng ô30 phút.
 
 ### D3. Một nguồn quyền giữ chỗ và cấm chợ
 
@@ -191,7 +193,7 @@ Phân biệt hai phép đo: fixture/stub ổn định để so code và integrat
 
 QR fetch/storage I/O ngoài lock; QR cache theo attempt/terms không kéo dài hạn hoặc dùng lại sau mất quyền. Không đổi court/user lock, exclusion, idempotency, bank proof, tiền đã chốt hay CHECKED_IN chỉ để đạt benchmark. Mỗi tối ưu có regression tests tại module và số đo trước/sau; chỉ tách file theo trách nhiệm/budget đã có, không coi số dòng là thời gian chạy.
 
-Không thêm Redis lock thay thế DB exclusion; không chỉ dùng Gateway quota; không mặc định webhook xác thực một ảnh QR; không dùng legacy payment SUCCESS cho seller ack; không hard-block orphan dưới60 phút; không dùng deadline để xóa money case. Các phương án đó ngắn hơn nhưng sai nghiệp vụ hoặc mở lỗ hổng race/claim tiền.
+Không thêm Redis lock thay thế DB exclusion; không chỉ dùng Gateway quota; không mặc định webhook xác thực một ảnh QR; không dùng legacy payment SUCCESS cho seller ack; không hard-block lựa chọn chỉ vì để lại khoảng trống; không dùng deadline để xóa money case. Các phương án đó ngắn hơn nhưng sai nghiệp vụ hoặc mở lỗ hổng race/claim tiền.
 
 ### D13. Khóa thay đổi tài khoản ngân hàng theo trách nhiệm của user
 

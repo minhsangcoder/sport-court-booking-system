@@ -124,8 +124,8 @@ public final class FlexiblePricingEngine {
         List.copyOf(slots),
         prorateSlots ? "PRORATED_SLOT_INTERVAL_V1" : "HOURLY_INTERVAL_V1",
         30,
-        60,
-        240,
+        30,
+        null,
         policy.version());
   }
 
@@ -138,9 +138,9 @@ public final class FlexiblePricingEngine {
         || start.getEpochSecond() % 60 != 0
         || end.getEpochSecond() % 60 != 0)
       throw new IllegalArgumentException("Chọn khoảng giờ hợp lệ theo phút.");
-    int duration = minutes(start, end);
-    if (duration < 60 || duration > 240)
-      throw new IllegalArgumentException("Mỗi lượt đặt phải từ 60 đến 240 phút.");
+    // At least one 30-minute step; no upper limit beyond one continuous opening window.
+    if (minutes(start, end) < 30)
+      throw new IllegalArgumentException("Mỗi lượt đặt phải từ 30 phút trở lên.");
     var localStart = start.atZone(context.timezone());
     var localEnd = end.atZone(context.timezone());
     if (!localStart.toLocalDate().equals(localEnd.toLocalDate()))

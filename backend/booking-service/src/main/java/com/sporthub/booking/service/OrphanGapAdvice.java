@@ -9,6 +9,8 @@ import java.util.*;
 
 /** Advice is observational; only the reservation exclusion constraint acquires a court interval. */
 public final class OrphanGapAdvice {
+  static final int MINIMUM_MINUTES = 30;
+
   private record Range(Instant from, Instant to) {}
 
   public ObjectNode attach(JsonNode quote, JsonNode availability) {
@@ -67,8 +69,7 @@ public final class OrphanGapAdvice {
     for (var candidate : candidates) {
       if (suggestions.size() == 3) break;
       long minutes = Duration.between(candidate.from(), candidate.to()).toMinutes();
-      if (minutes < 60
-          || minutes > 240
+      if (minutes < MINIMUM_MINUTES
           || minutes % 30 != 0
           || candidate.equals(new Range(from, to))
           || candidate.from().isBefore(freeFrom)
@@ -84,9 +85,12 @@ public final class OrphanGapAdvice {
     return result;
   }
 
+  /** A gap shorter than the minimum booking cannot be sold to anyone. */
   private static boolean shortGap(Instant from, Instant to) {
     Duration gap = Duration.between(from, to);
-    return !gap.isNegative() && !gap.isZero() && gap.compareTo(Duration.ofMinutes(60)) < 0;
+    return !gap.isNegative()
+        && !gap.isZero()
+        && gap.compareTo(Duration.ofMinutes(MINIMUM_MINUTES)) < 0;
   }
 
   private static boolean available(JsonNode slot) {

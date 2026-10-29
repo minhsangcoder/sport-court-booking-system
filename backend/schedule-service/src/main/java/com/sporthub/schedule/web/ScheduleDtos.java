@@ -308,8 +308,8 @@ public final class ScheduleDtos {
       boolean enabled,
       @PositiveOrZero long version,
       @Min(30) @Max(30) int selectionStepMinutes,
-      @Min(60) @Max(60) int minimumMinutes,
-      @Min(240) @Max(240) int maximumMinutes) {}
+      @Min(30) @Max(30) int minimumMinutes,
+      @Null Integer maximumMinutes) {}
 
   public record Slot(
       Instant startsAt,

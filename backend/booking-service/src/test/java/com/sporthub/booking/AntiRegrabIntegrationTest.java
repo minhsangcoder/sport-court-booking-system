@@ -17,6 +17,8 @@ class AntiRegrabIntegrationTest extends HoldProtectionTestSupport {
     doAnswer(
             call -> {
               HoldInput input = call.getArgument(0);
+              // Inherited tests restub with when(quote(any())), which invokes this answer with null.
+              if (input == null) return null;
               var result =
                   json.createObjectNode()
                       .put("facilityId", facility.toString())

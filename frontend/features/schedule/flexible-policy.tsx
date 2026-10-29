@@ -9,7 +9,7 @@ type Policy = {
   version: number
   selectionStepMinutes: number
   minimumMinutes: number
-  maximumMinutes: number
+  maximumMinutes: number | null
 }
 
 export function FlexiblePolicy({ facilityId }: { facilityId: string }) {
@@ -30,8 +30,8 @@ export function FlexiblePolicy({ facilityId }: { facilityId: string }) {
           enabled: !policy.data.enabled,
           version: policy.data.version,
           selectionStepMinutes: 30,
-          minimumMinutes: 60,
-          maximumMinutes: 240,
+          minimumMinutes: 30,
+          maximumMinutes: null,
         }),
       }
     try {
@@ -64,7 +64,7 @@ export function FlexiblePolicy({ facilityId }: { facilityId: string }) {
         {!policy.data
           ? 'Đang kiểm tra cấu hình đặt giờ của cơ sở.'
           : policy.data.enabled
-            ? 'Đang bật: khách chọn giờ theo bước 30 phút, từ 60 phút đến 4 giờ mỗi lượt.'
+            ? 'Đang bật: khách chọn giờ theo bước 30 phút, từ 30 phút trở lên mỗi lượt.'
             : 'Chưa bật. Hãy khai giá theo giờ cho toàn bộ lịch mở cửa của các sân trước khi bật.'}{' '}
         Hệ thống kiểm tra giá còn thiếu hoặc trùng; các lượt đặt đã chốt giữ nguyên giá.
       </p>

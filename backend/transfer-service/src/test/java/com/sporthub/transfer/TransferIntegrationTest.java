@@ -167,7 +167,7 @@ class TransferIntegrationTest {
   var validBooks=new HashMap<UUID,JsonNode>();UUID wanted=null;
   for(int i=0;i<105;i++){
    UUID next=UUID.randomUUID();var data=(com.fasterxml.jackson.databind.node.ObjectNode)booking.deepCopy();data.put("id",next.toString());validBooks.put(next,data);doReturn(data).when(dependencies).booking(next);
-   UUID id=historicalListing(data,start.minusSeconds(3600));if(i==104)repo.jdbc().update("UPDATE transfer_listings SET price=50000 WHERE id=?",id);workflow.sync(id);if(i==104)wanted=id;
+   UUID id=historicalListing(data,start.minusSeconds(3600));workflow.sync(id);if(i==104){repo.jdbc().update("UPDATE transfer_listings SET price=50000 WHERE id=?",id);wanted=id;}
   }
   assertThat(service.market(null,null,null,null,new BigDecimal("50000"),"price",buyer)).extracting(Listing::id).containsExactly(wanted);assertThat(service.market(null,null,null,null,null,"price",buyer).getFirst().id()).isEqualTo(wanted);
   // Make the first 100 rows in start order invalid; search must continue to the valid tail.

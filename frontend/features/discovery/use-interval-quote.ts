@@ -11,8 +11,8 @@ export function selectionInterval(courtId: string, selection: Slot[]) {
   const startsAt = selection[0].startsAt,
     endsAt = selection[selection.length - 1].endsAt
   const minutes = (Date.parse(endsAt) - Date.parse(startsAt)) / 60000
-  if (minutes < 60 || minutes > 240)
-    return { interval: null, error: 'Mỗi lượt đặt phải từ 60 phút đến 4 giờ.' }
+  if (minutes < 30)
+    return { interval: null, error: 'Mỗi lượt đặt phải từ 30 phút trở lên.' }
   return { interval: { courtId, startsAt, endsAt }, error: '' }
 }
 

@@ -125,7 +125,7 @@ try {
   await call('owner', 'PUT', `/schedules/facilities/${facility}/hours`, { intervals: Array.from({ length: 7 }, (_, index) => ({ dayOfWeek: index + 1, opensAt: '00:00', closesAt: '23:30', slotMinutes: 30 })) })
   const today = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10)
   for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) await call('owner', 'POST', `/schedules/facilities/${facility}/pricing`, { dayOfWeek, startsAt: '00:00', endsAt: '23:30', pricingUnit: 'HOURLY', pricePerHour: 120000, pricePerSlot: null, priority: 0, label: 'Synthetic REAL price', effectiveFrom: today, currency: 'VND' }, 201)
-  await call('owner','PUT',`/schedules/facilities/${facility}/booking-policy`,{enabled:true,version:0,selectionStepMinutes:30,minimumMinutes:60,maximumMinutes:240},200,key())
+  await call('owner','PUT',`/schedules/facilities/${facility}/booking-policy`,{enabled:true,version:0,selectionStepMinutes:30,minimumMinutes:30,maximumMinutes:null},200,key())
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jB3sAAAAASUVORK5CYII=', 'base64')
   for (const name of ['identity.png', 'location.png']) await call('owner', 'POST', `/owner/facilities/${facility}/documents`, undefined, 200, {}, { multipart: { file: { name, mimeType: 'image/png', buffer: png } } })
   await call('owner', 'POST', `/owner/facilities/${facility}/images`, undefined, 201, {}, { multipart: { file: { name: 'facility.png', mimeType: 'image/png', buffer: png } } })

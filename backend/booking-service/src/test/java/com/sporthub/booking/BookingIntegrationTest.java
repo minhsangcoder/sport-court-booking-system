@@ -1657,7 +1657,8 @@ class BookingIntegrationTest {
   void groupMinimumLeadIsRevalidatedAfterQuoteAndRollsBack() {
     var initial = groupInput();
     service.releaseHold(initial.holdId(), user, "token");
-    start = now.plusSeconds(7201);
+    // One second above the 15-minute minimum; the 2-second clock move during the quote crosses it.
+    start = now.plusSeconds(901);
     end = start.plusSeconds(3600);
     ((com.fasterxml.jackson.databind.node.ObjectNode) quote)
         .put("startsAt", start.toString())
@@ -6334,8 +6335,19 @@ class BookingIntegrationTest {
   }
 
   UUID seedHistoricalDemoRefund(Booking booking, Caller actor) {
+    return seedHistoricalDemoRefund(booking, actor, null);
+  }
+
+  UUID seedHistoricalDemoRefund(Booking booking, Caller actor, JsonNode legacyPolicy) {
     return HistoricalDemoRefund.seed(
-        repo, lifecycle, demoFinance, txManager, booking, actor.id(), clock.instant());
+        repo,
+        lifecycle,
+        demoFinance,
+        txManager,
+        booking,
+        actor.id(),
+        clock.instant(),
+        legacyPolicy);
   }
 
   Booking demoConfirmed() {
@@ -7162,11 +7174,10 @@ class BookingIntegrationTest {
 
   @Test
   void historicalDemoFacilityZeroRefundPolicyRecordsCancellationWithoutAMoneyEvent() {
-
     var b = demoConfirmed();
     var owner = demoOwner();
     demoAcl(owner);
-    UUID refund = seedHistoricalDemoRefund(b, owner);
+    UUID refund = seedHistoricalDemoRefund(b, owner, policy(b.facilityId(), 0, 1));
     assertThat(
             demoFinance
                 .refund(refund, new BookingDemoFinance.Outcome("SUCCESS"), key(), owner, "token")

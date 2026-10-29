@@ -1,5 +1,6 @@
 package com.sporthub.booking;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sporthub.booking.repository.BookingRepository;
 import com.sporthub.booking.service.BookingDemoFinance;
 import com.sporthub.booking.service.BookingLifecycle;
@@ -14,6 +15,37 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /** Test-only historical data: never calls the removed cancellation HTTP/service flow. */
 final class HistoricalDemoRefund {
+  /**
+   * New bookings no longer record a refund-policy snapshot, so a historical refund fixture adopts
+   * the given legacy policy, or the one carried in the booking's accepted price snapshot.
+   */
+  static void legacySnapshot(
+      BookingRepository repo, Booking b, UUID actor, Instant at, JsonNode legacyPolicy) {
+    if (repo.jdbc()
+        .queryForObject(
+            "SELECT EXISTS(SELECT 1 FROM booking_refund_policy_snapshots WHERE booking_id=?)",
+            Boolean.class,
+            b.id())) return;
+    var policy = legacyPolicy != null ? legacyPolicy : b.priceSnapshot().path("refundPolicy");
+    if (!policy.path("configured").asBoolean(false))
+      throw new IllegalStateException("Historical refund fixture needs a booking with a policy");
+    repo.jdbc()
+        .update(
+            """
+INSERT INTO booking_refund_policy_snapshots(booking_id,facility_id,policy_id,policy_version,refund_rate_bps,
+ currency,rounding,terms_hash,origin,accepted_by,accepted_at,adoption_reason)
+VALUES(?,?,?,?,?,'VND','HALF_UP',?,'LEGACY_ADOPTION',?,?,'Historical refund test fixture')
+""",
+            b.id(),
+            b.facilityId(),
+            UUID.fromString(policy.path("id").asText()),
+            policy.path("version").asLong(),
+            policy.path("rateBps").asInt(),
+            policy.path("termsHash").asText(),
+            actor,
+            Timestamp.from(at));
+  }
+
   static UUID seed(
       BookingRepository repo,
       BookingLifecycle lifecycle,
@@ -22,11 +54,24 @@ final class HistoricalDemoRefund {
       Booking original,
       UUID actor,
       Instant at) {
+    return seed(repo, lifecycle, finance, manager, original, actor, at, null);
+  }
+
+  static UUID seed(
+      BookingRepository repo,
+      BookingLifecycle lifecycle,
+      BookingDemoFinance finance,
+      PlatformTransactionManager manager,
+      Booking original,
+      UUID actor,
+      Instant at,
+      JsonNode legacyPolicy) {
     return new TransactionTemplate(manager)
         .execute(
             tx -> {
               var b = repo.find(original.id());
               repo.lock(b.courtId());
+              legacySnapshot(repo, b, actor, at, legacyPolicy);
               var policy =
                   repo.jdbc()
                       .queryForMap(

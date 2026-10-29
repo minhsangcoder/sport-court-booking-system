@@ -16,7 +16,7 @@ class FlexiblePricingEngineTest {
   private final LocalDate day = LocalDate.of(2026, 10, 26);
   private final FacilityClient.Context context = new FacilityClient.Context(facility, court, category,
       ZoneId.of("Asia/Ho_Chi_Minh"), true, "ACTIVE", List.of());
-  private final BookingPolicy policy = new BookingPolicy(true, 1, 30, 60, 240);
+  private final BookingPolicy policy = new BookingPolicy(true, 1, 30, 30, null);
   private final ScheduleReads.CalendarDay calendar = new ScheduleReads.CalendarDay(false,
       List.of(new Interval(1, LocalTime.of(6, 0), LocalTime.of(22, 0), 60)));
 
@@ -83,7 +83,7 @@ class FlexiblePricingEngineTest {
         .usingComparatorForType(BigDecimal::compareTo, BigDecimal.class)
         .containsExactly(new BigDecimal("50000"), new BigDecimal("100000"));
     assertThat(quote(rates, 15, 30, 16, 30).quoteHash()).isEqualTo(result.quoteHash());
-    var newPolicy = new BookingPolicy(true, 2, 30, 60, 240);
+    var newPolicy = new BookingPolicy(true, 2, 30, 30, null);
     assertThat(engine.quote(context, calendar, rates, newPolicy,
         new QuoteInput(court, at(15, 30), at(16, 30))).quoteHash()).isNotEqualTo(result.quoteHash());
   }
@@ -124,11 +124,12 @@ class FlexiblePricingEngineTest {
   }
 
   @Test
-  void rejectsInvalidDurationGridDayAndMaintenanceWithoutSplittingAtEveryMinute() {
+  void acceptsAnyThirtyMinuteMultipleButRejectsInvalidGridDayAndMaintenance() {
     var rates = List.of(rate(6, 0, 22, 0, "100000", 0));
-    assertThatThrownBy(() -> quote(rates, 15, 0, 15, 30)).isInstanceOf(IllegalArgumentException.class);
+    assertThat(quote(rates, 15, 0, 15, 30).amount()).isEqualByComparingTo("50000");
+    assertThat(quote(rates, 15, 0, 19, 30).amount()).isEqualByComparingTo("450000");
+    assertThat(quote(rates, 6, 0, 22, 0).amount()).isEqualByComparingTo("1600000");
     assertThatThrownBy(() -> quote(rates, 15, 15, 16, 15)).isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(() -> quote(rates, 15, 0, 19, 30)).isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> engine.quote(context, calendar, rates, policy,
         new QuoteInput(court, at(23, 30), at(23, 30).plusSeconds(3600))))
         .isInstanceOf(IllegalArgumentException.class);

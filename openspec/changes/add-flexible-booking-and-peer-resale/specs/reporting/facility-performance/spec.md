@@ -28,7 +28,7 @@ H đã ghi nhận trước khi bỏ quyền hoàn riêng của người mua lạ
 
 ### Requirement: Reports distinguish declarations acknowledgments adjudications and bank evidence
 
-Report/receipt SHALL phân biệt B tự khai, A xác nhận nhận, Owner phân xử, BANK_VERIFIED của tiền sân và MANUALLY_RECORDED của hoàn cơ sở. Ảnh hoặc peer confirmation SHALL không được trình bày thành bank proof.
+Report/receipt SHALL phân biệt B tự khai, A xác nhận nhận, Owner phân xử, BANK_VERIFIED và CASH_RECEIVED của tiền sân, và MANUALLY_RECORDED của hoàn cơ sở (chỉ còn là lịch sử từ trước mục33). Ảnh hoặc peer confirmation SHALL không được trình bày thành bank proof.
 
 #### Scenario: Owner reviews a disputed peer sale
 - **WHEN** chỉ có B khai chuyển tiền và case đang mở
@@ -81,3 +81,11 @@ Tối ưu report SHALL giữ cùng kỳ/cutoff, money mode, scope, số tiền, 
 #### Scenario: A refactor reduces file size but does not improve load time
 - **WHEN** thời gian vẫn chưa đạt mục tiêu hoặc dữ liệu test đã bị cắt khác baseline
 - **THEN** không đánh dấu hoàn tất tối ưu dựa trên số dòng, ghi việc còn lại và đo lại trên cùng điều kiện
+
+### Requirement: Receipts without Payment evidence are excluded rather than guessed
+
+Tiền sân REAL của cơ sở SHALL chỉ có hai loại thu: BANK (SePay đã xác minh) và CASH (tiền mặt tại quầy). Khi payment-service tạm thời không trả được chứng từ của một khoản thu, khoản đó SHALL không được cộng vào ALL, CASH hoặc BANK, để ALL luôn bằng CASH + BANK. Báo cáo SHALL ghi moneyAvailability=UNAVAILABLE (hoặc PARTIAL nếu còn khoản khác đã phân loại) kèm lý do REAL_PAYMENT_FACTS_UNAVAILABLE, và SHALL không hiển thị COMPLETE với số0.
+
+#### Scenario: Payment evidence is unavailable for every receipt
+- **WHEN** khoản thu sân100000đ có trong booking nhưng Payment không trả chứng từ và tín dụng ngân hàng
+- **THEN** courtCollected là0, moneyAvailability=UNAVAILABLE và lý do có REAL_PAYMENT_FACTS_UNAVAILABLE; dữ liệu chuyển nhượng vẫn hiển thị riêng

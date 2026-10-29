@@ -44,7 +44,7 @@ class RealPaymentsMigrationTest {
                 .load();
         all.migrate();
         all.validate();
-        assertThat(all.info().current().getVersion().toString()).isEqualTo("17");
+        assertThat(all.info().current().getVersion().toString()).isEqualTo("19");
         assertThat(count(s, "payos_channels")).isZero();
         assertThat(count(s, "real_payment_collections")).isZero();
         try (var r = s.executeQuery("SELECT provider,amount,status FROM payment_orders")) {
@@ -129,7 +129,7 @@ class RealPaymentsMigrationTest {
               .load();
       fresh.migrate();
       fresh.validate();
-      assertThat(fresh.info().current().getVersion().toString()).isEqualTo("17");
+      assertThat(fresh.info().current().getVersion().toString()).isEqualTo("19");
     }
   }
 

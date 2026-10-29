@@ -51,10 +51,12 @@ class FlexiblePricingMigrationTest {
           assertThat(rows.next()).isTrue();
           assertThat(rows.getBoolean(1)).isFalse();
           assertThat(rows.getInt(2)).isEqualTo(30);
-          assertThat(rows.getInt(3)).isEqualTo(60);
-          assertThat(rows.getInt(4)).isEqualTo(240);
+          assertThat(rows.getInt(3)).isEqualTo(30);
+          assertThat(rows.getObject(4)).isNull();
         }
-        assertThatThrownBy(() -> statement.execute("UPDATE facility_booking_policies SET minimum_minutes=30"))
+        assertThatThrownBy(() -> statement.execute("UPDATE facility_booking_policies SET minimum_minutes=60"))
+            .isInstanceOf(java.sql.SQLException.class);
+        assertThatThrownBy(() -> statement.execute("UPDATE facility_booking_policies SET maximum_minutes=240"))
             .isInstanceOf(java.sql.SQLException.class);
       }
       // Extensions are database-wide; a fresh install needs its own database, not a second schema.

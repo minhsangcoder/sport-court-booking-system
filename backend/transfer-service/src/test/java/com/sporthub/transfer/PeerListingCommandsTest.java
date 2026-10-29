@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.*;
 
-class PeerListingCommandsTest extends PeerTransferFlowTest {
+class PeerListingCommandsTest extends PeerTransferFlowFixture {
   PeerListingCommands commands;
   Map<String, JsonNode> committed;
   AtomicBoolean lost;

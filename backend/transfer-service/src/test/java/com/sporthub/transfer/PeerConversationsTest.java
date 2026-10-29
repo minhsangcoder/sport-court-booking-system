@@ -12,7 +12,7 @@ import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionTemplate;
 
-class PeerConversationsTest extends PeerTransferFlowTest {
+class PeerConversationsTest extends PeerTransferFlowFixture {
   PeerConversations chat() {
     return new PeerConversations(repo, clock);
   }

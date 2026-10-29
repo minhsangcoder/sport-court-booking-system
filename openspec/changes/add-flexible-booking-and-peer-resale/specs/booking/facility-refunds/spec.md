@@ -34,13 +34,21 @@ Customer booking/payment SHALL bỏ khối phụ gồm mô tả 100% chuyển nh
 - **WHEN** snapshot cũ chứa rateBps=9500
 - **THEN** vẫn hiển thị quy định không hoàn khi tự hủy, không có chi tiết hoàn95% hoặc khối phụ đã bỏ
 
-### Requirement: Recorded obligations and unrelated refunds remain intact
+### Requirement: Recorded obligations and unrelated refunds remain intact as history
 
-Khoản hoàn đã ghi nhận, funding, beneficiary, snapshots, F/N/H, lịch sử thu chi SHALL được giữ và thực hiện theo quyền hiện hành. Replay thực hiện nghĩa vụ đã chốt SHALL không tạo bản sao. Lịch sử group/counter và hoàn thu lỗi SHALL không bị xóa; điều này SHALL không cho phép tạo hủy theo chính sách mới. Nghĩa vụ chưa thực hiện vẫn khóa ngân hàng theo nguồn trách nhiệm tương ứng.
+Khoản hoàn đã ghi nhận, funding, beneficiary, snapshots, F/N/H, nghĩa vụ chi/hoàn, biên nhận MANUALLY_RECORDED và lịch sử thu chi SHALL được giữ làm dữ liệu lịch sử cho báo cáo và màn giám sát Admin chỉ đọc. Lịch sử group/counter và hoàn thu lỗi SHALL không bị xóa; điều này SHALL không cho phép tạo hủy theo chính sách mới.
 
-#### Scenario: A historical buyer refund is still unpaid
-- **WHEN** Owner hoặc Staff có quyền đúng cơ sở thực hiện nghĩa vụ đã ghi nhận trước thay đổi
-- **THEN** dùng đúng người nhận/nguồn thu cũ và ghi MANUALLY_RECORDED, không tạo quyền hủy mới
+#### Scenario: A historical refund receipt is reported
+- **WHEN** báo cáo kỳ có nghĩa vụ hoàn đã được ghi MANUALLY_RECORDED trước mục33
+- **THEN** báo cáo và Admin vẫn đọc đúng người nhận, số tiền và thời điểm ghi nhận; không có thao tác sửa hoặc thực hiện lại
+
+### Requirement: Facility manual payout and refund execution is removed
+
+Theo mục33, cơ sở SHALL không còn màn hình hoặc API thực hiện chi trả/hoàn thủ công: khối “Trả người chuyển nhượng và hoàn tiền” (REAL và mô phỏng) bị gỡ khỏi trang vận hành; `/bookings/facility-finance/*` không còn tồn tại; bảng operations, commands, audit của luồng này bị xóa (migration V21) trong khi nghĩa vụ và biên nhận lịch sử được giữ. Cách xử lý nghĩa vụ chưa thực hiện và nguồn khóa ngân hàng tương ứng là điểm mở của mục33, chưa được quyết định.
+
+#### Scenario: Owner opens booking operations
+- **WHEN** Owner hoặc Staff có BOOKING_REFUND/TRANSFER_PAYOUT mở Vận hành lịch đặt
+- **THEN** không thấy khối chi trả/hoàn, không có nút nhận xử lý/mở QR/xác nhận đã chuyển, và gọi `/bookings/facility-finance/*` trả404
 
 ### Requirement: Customer pages omit facility payout and refund dashboards
 

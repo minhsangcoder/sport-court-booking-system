@@ -42,7 +42,7 @@ class BankActivationMigrationTest {
       try (var connection = pg.createConnection(""); var sql = connection.createStatement()) { sql.execute("CREATE DATABASE bank_fresh"); }
       var fresh = Flyway.configure().dataSource(pg.getJdbcUrl().replace(pg.getDatabaseName(), "bank_fresh"), pg.getUsername(), pg.getPassword()).load();
       fresh.migrate(); fresh.validate();
-      assertThat(fresh.info().current().getVersion().toString()).isEqualTo("17");
+      assertThat(fresh.info().current().getVersion().toString()).isEqualTo("19");
     }
   }
 }

@@ -137,25 +137,17 @@ class HourlyQuoteHoldTest extends BookingIntegrationTest {
   }
 
   @Test
-  void v2DurationCannotBeBypassedThroughTheLegacyHoldRoute() {
+  void minimumDurationCannotBeBypassedThroughTheLegacyHoldRoute() {
     assertThatThrownBy(
             () ->
                 service.hold(
-                    new HoldInput(court, start, start.plusSeconds(1800), new BigDecimal("150000")),
+                    new HoldInput(court, start, start.plusSeconds(1799), new BigDecimal("150000")),
                     key(),
                     user,
                     "token",
                     false))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () ->
-                service.hold(
-                    new HoldInput(court, start, start.plusSeconds(14401), new BigDecimal("150000")),
-                    key(),
-                    user,
-                    "token",
-                    false))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Mỗi lượt đặt phải từ 30 phút trở lên.");
     assertThat(json.valueToTree(input()).has("quoteHash")).isFalse();
   }
 
@@ -211,7 +203,8 @@ class HourlyQuoteHoldTest extends BookingIntegrationTest {
   }
 
   @Test
-  void v2PublicQuoteAndHoldWarnAboutShortGapsWithoutRejectingThe150kBooking() throws Exception {
+  void v2PublicQuoteAndHoldTreatThirtyMinuteGapsAsBookableAndKeepThe150kBooking()
+      throws Exception {
     hourly();
     var preview =
         json.createObjectNode()
@@ -241,7 +234,7 @@ class HourlyQuoteHoldTest extends BookingIntegrationTest {
         .andExpect(
             org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
                     "$.data.warnings.length()")
-                .value(2));
+                .value(0));
     assertThat(
             repo.jdbc()
                 .queryForObject(
@@ -251,7 +244,7 @@ class HourlyQuoteHoldTest extends BookingIntegrationTest {
         .isZero();
     var held = service.hold(hourlyInput(HASH), key(), user, "token", false);
     assertThat(held.state()).isEqualTo("HOLD");
-    assertThat(held.quote().path("warnings").size()).isEqualTo(2);
+    assertThat(held.quote().path("warnings").size()).isZero();
     assertThat(held.quote().path("amount").decimalValue()).isEqualByComparingTo("150000");
   }
 }

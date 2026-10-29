@@ -43,17 +43,13 @@ export function useAuthForm({ mode: initialMode = 'login' }: { mode?: Mode }) {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
 
-  // Form controlled inputs for demo quick fill
   const [identifierInput, setIdentifierInput] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
-  const [demoNotice, setDemoNotice] = useState('')
 
   const [applyAsOwner, setApplyAsOwner] = useState(false)
   const [ownerVisited, setOwnerVisited] = useState(false)
   const [location, setLocation] = useState<FacilityLocation>(null)
   const signupRetry = useRef<{ fingerprint: string; key: string } | null>(null)
-  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  useEffect(() => () => clearTimeout(noticeTimer.current), [])
 
   const googleError =
     mode === 'login'
@@ -67,15 +63,6 @@ export function useAuthForm({ mode: initialMode = 'login' }: { mode?: Mode }) {
         }[params.get('authError') ?? ''] ??
         (params.has('authError') ? 'Không thể đăng nhập bằng Google. Vui lòng thử lại.' : ''))
       : ''
-
-  function fillDemoAccount(email: string) {
-    setIdentifierInput(email)
-    setPasswordInput('')
-    setDemoNotice(`Đã điền tài khoản: ${email}`)
-    setError('')
-    clearTimeout(noticeTimer.current)
-    noticeTimer.current = setTimeout(() => setDemoNotice(''), 4000)
-  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -188,7 +175,6 @@ export function useAuthForm({ mode: initialMode = 'login' }: { mode?: Mode }) {
     setIdentifierInput,
     passwordInput,
     setPasswordInput,
-    demoNotice,
     applyAsOwner,
     setApplyAsOwner,
     ownerVisited,
@@ -196,7 +182,6 @@ export function useAuthForm({ mode: initialMode = 'login' }: { mode?: Mode }) {
     location,
     setLocation,
     googleError,
-    fillDemoAccount,
     submit,
     params,
     isExpandedOwner,

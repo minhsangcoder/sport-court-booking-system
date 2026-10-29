@@ -84,13 +84,13 @@ export function AvailabilityPage({
     (s) =>
       s.state === 'AVAILABLE' &&
       ranges.some(
-        (r) => s.startsAt >= r.startsAt && Date.parse(s.startsAt) + 3600000 <= Date.parse(r.endsAt),
+        (r) => s.startsAt >= r.startsAt && Date.parse(s.startsAt) + 1800000 <= Date.parse(r.endsAt),
       ),
   )
   const endOptions = start
     ? slots.filter((s) => {
         const minutes = (Date.parse(s.endsAt) - Date.parse(start)) / 60000
-        return minutes >= 60 && minutes <= 240 && rangeSelection(slots, start, s.endsAt).length > 0
+        return minutes >= 30 && rangeSelection(slots, start, s.endsAt).length > 0
       })
     : []
   function select(slot: Slot) {
@@ -187,7 +187,7 @@ export function AvailabilityPage({
         </p>
         {resource.data?.selectionStepMinutes === 30 && (
           <p className="mt-1.5 text-xs text-slate-500">
-            Chọn liên tiếp từ 60 phút đến 4 giờ, theo bước 30 phút. Giá cuối tính theo toàn bộ
+            Chọn liên tiếp từ 30 phút trở lên, theo bước 30 phút. Giá cuối tính theo toàn bộ
             khoảng chọn và làm tròn một lần.
           </p>
         )}
@@ -323,7 +323,7 @@ export function AvailabilityPage({
             </label>
           </div>
           <p className="mt-2.5 text-xs text-slate-500">
-            Chọn từ 60 phút đến 4 giờ. Chỉ các khoảng còn trống liên tục mới có thể đặt.
+            Chọn từ 30 phút trở lên. Chỉ các khoảng còn trống liên tục mới có thể đặt.
           </p>
         </section>
         {(resource.error || facility.error || courts.error || error) && (
@@ -377,7 +377,7 @@ export function AvailabilityPage({
             className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs"
           >
             <p>
-              Khoảng chọn để lại giờ trống dưới 60 phút. Bạn vẫn có thể tiếp tục hoặc chọn gợi ý:
+              Khoảng chọn để lại giờ trống dưới 30 phút. Bạn vẫn có thể tiếp tục hoặc chọn gợi ý:
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {pricing.quote.suggestions?.map((suggestion) => (

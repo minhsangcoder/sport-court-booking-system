@@ -32,7 +32,7 @@ class BookingIntegrityMigrationTest {
                     .load();
             latest.migrate();
             latest.validate();
-            assertThat(latest.info().current().getVersion().toString()).isEqualTo("19");
+            assertThat(latest.info().current().getVersion().toString()).isEqualTo("21");
             try (var r =
                 s.executeQuery(
                     "SELECT amount,price_snapshot->>'marker',b.hold_expires_at=r.expires_at FROM"

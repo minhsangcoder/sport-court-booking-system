@@ -4,7 +4,14 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: section 32 (2026-10-29): report source ALL/CASH/BANK uses verified REAL receipts; remove DEMO selector and disbursement link.
+Latest business revision: section 33 (2026-10-30): a booking is any continuous range from 30 minutes
+with no upper limit (replaces 60–240 minutes; no more orphan-gap warnings); search shows the Owner's
+hourly price; the facility manual payout/refund workflow is removed (UI, `/bookings/facility-finance/*`,
+booking migration V21; obligations/receipts stay read-only history); receipts whose CASH/BANK evidence Payment cannot return at report time
+stay out of ALL; login 1-tap demo accounts removed; booking detail redesigned. Open decision 33.4:
+how to settle unpaid facility obligations that still lock the payee's bank changes.
+
+Earlier business revision: section 32 (2026-10-29): report source ALL/CASH/BANK uses verified REAL receipts; remove DEMO selector and disbursement link.
 
 Earlier business revision: section 31 (2026-10-29): Owner revenue displays court collections only; peer section displays completed handoffs and open usage cases only.
 

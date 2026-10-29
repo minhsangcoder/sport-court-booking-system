@@ -197,8 +197,11 @@ class PeerReportIntegrationTest extends PeerUsageIntegrationTest {
             venueOwner(),
             "token",
             "REAL");
-    assertThat(report.moneyAvailability()).isEqualTo("PARTIAL");
-    assertThat(report.summary().money().courtCollected()).isEqualTo("100000");
+    // Without Payment facts a receipt cannot be classified CASH or BANK, so it stays out of ALL
+    // (ALL = CASH + BANK) and the report says UNAVAILABLE rather than a COMPLETE zero.
+    assertThat(report.moneyAvailability()).isEqualTo("UNAVAILABLE");
+    assertThat(report.summary().money().courtCollected()).isEqualTo("0");
+    assertThat(report.reasons()).contains("REAL_PAYMENT_FACTS_UNAVAILABLE");
     assertThat(report.reasons()).contains("REAL_BANK_CREDITS_UNAVAILABLE");
     assertThat(report.peer().transactions().items()).hasSize(1);
     UUID emptyFacility = UUID.randomUUID();

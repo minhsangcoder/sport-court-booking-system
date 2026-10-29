@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import org.junit.jupiter.api.*;
 
-class PeerMoneyCommandsTest extends PeerPartyCommandsTest {
+class PeerMoneyCommandsTest extends PeerPartyCommandsFixture {
   PeerMoneyCommands money;
 
   @BeforeEach

@@ -130,13 +130,19 @@ test('free ranges merge only adjacent available cells and reject selections thro
   assert.equal(rangeSelection(cells, cells[3].startsAt, cells[4].endsAt).length, 0)
 })
 
-test('selection uses one continuous 60–240 minute interval rather than adding rounded cells', () => {
+test('selection uses one continuous interval of at least 30 minutes without an upper limit', () => {
   const { selectionInterval } = moduleLoader(
     {},
     { react: hookDriver().react },
   )('features/discovery/use-interval-quote.ts')
-  assert.ok(selectionInterval('court', selection('15:30', '16:00')).error)
-  assert.ok(selectionInterval('court', selection('15:30', '20:00')).error)
+  assert.equal(
+    selectionInterval('court', selection('15:30', '16:00')).interval.endsAt,
+    '2026-10-26T16:00:00Z',
+  )
+  assert.equal(
+    selectionInterval('court', selection('15:30', '20:00')).interval.endsAt,
+    '2026-10-26T20:00:00Z',
+  )
   const slots = [...selection('15:30', '16:00'), ...selection('16:00', '16:30')]
   assert.equal(selectionInterval('court', slots).interval.endsAt, '2026-10-26T16:30:00Z')
   assert.ok(

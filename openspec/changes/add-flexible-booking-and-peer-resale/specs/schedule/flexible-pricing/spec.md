@@ -20,14 +20,18 @@ Availability/quote SHALL giới hạn dữ liệu theo sân/ngày/khoảng đang
 
 ### Requirement: Flexible intervals respect effective opening hours
 
-Booking mới SHALL chọn khoảng liên tục60–240 phút, điểm chọn cách30 phút neo tại đầu khoảng mở cửa hiệu lực, trong cùng ngày địa phương. SHALL từ chối qua giờ nghỉ, bảo trì, đóng cửa, khoảng đã đặt hoặc hold còn hiệu lực.
+Booking mới SHALL chọn khoảng liên tục từ30 phút trở lên, không giới hạn tối đa (mục33), điểm chọn cách30 phút neo tại đầu khoảng mở cửa hiệu lực, trong cùng ngày địa phương và trong một khoảng mở cửa liên tục. Chính sách đặt giờ SHALL lưu minimumMinutes=30 và maximumMinutes=null. SHALL từ chối dưới30 phút, qua giờ nghỉ, bảo trì, đóng cửa, khoảng đã đặt hoặc hold còn hiệu lực.
 
-#### Scenario: Customer chooses a half hour start
-- **WHEN** sân mở06:00–22:00, khách chọn15:30–16:30 còn trống
-- **THEN** hệ thống cho xem quote và giữ đúng khoảng60 phút này
+#### Scenario: Customer books a single thirty minute step
+- **WHEN** sân mở06:00–22:00, khách chọn06:00–06:30 còn trống
+- **THEN** hệ thống cho xem quote và giữ đúng khoảng30 phút này
+
+#### Scenario: Customer books a long continuous range
+- **WHEN** sân mở06:00–22:00 không có giờ nghỉ, khách chọn09:00–15:00 còn trống
+- **THEN** hệ thống báo giá đủ6 giờ và cho giữ chỗ; không có giới hạn240 phút
 
 #### Scenario: Invalid interval is submitted directly
-- **WHEN** request là30 phút,270 phút, bắt đầu lệch bước, qua nửa đêm hoặc bắc qua giờ nghỉ
+- **WHEN** request dưới30 phút, bắt đầu lệch bước, qua nửa đêm hoặc bắc qua giờ nghỉ
 - **THEN** server từ chối dù client đã tự tính số tiền
 
 ### Requirement: Pricing partitions the requested interval at every applicable rate boundary
@@ -58,17 +62,13 @@ Quote SHALL trả interval, timezone, duration, đơn giá/segments, tổng và 
 - **WHEN** khách gửi expectedAmount/hash cũ sau Owner công bố giá mới
 - **THEN** không giữ sân theo giá cũ; trả lỗi thay đổi giá để khách xem lại
 
-### Requirement: Short orphan gaps produce warnings without blocking valid intervals
+### Requirement: Remaining gaps stay bookable without warnings
 
-Hệ thống SHALL cảnh báo khoảng trống mới liền kề dưới60 phút và gợi ý tối đa3 khoảng thay thế còn hợp lệ. Cảnh báo SHALL không tự đổi khoảng/giá, tạo strike hoặc từ chối booking chỉ vì gap.
+Vì lượt đặt tối thiểu bằng một bước30 phút, mọi khoảng trống còn lại trên lưới đều đặt được. Quote SHALL không phát cảnh báo khoảng trống lẻ hoặc gợi ý giờ khác; trường warnings/suggestions SHALL vẫn có và rỗng. Một khoảng trống SHALL không tự đổi khoảng/giá, tạo strike hoặc làm từ chối booking.
 
-#### Scenario: The requested example leaves two short gaps
+#### Scenario: The requested example leaves thirty minutes on each side
 - **WHEN**15–17 trống, khách chọn15:30–16:30 để lại30 phút hai bên
-- **THEN** vẫn được đặt giá150000đ, kèm cảnh báo/gợi ý, không hard-reject
-
-#### Scenario: Suggested extension violates a duration limit
-- **WHEN** gộp gap khiến booking dài hơn240 phút hoặc đụng booking khác
-- **THEN** không gợi ý khoảng không thể đặt đó; gap cũ đã có không bị quy thành gian dối
+- **THEN** vẫn được đặt giá150000đ, không có cảnh báo hoặc gợi ý; hai khoảng30 phút còn lại đặt được cho người khác
 
 ### Requirement: Legacy per slot prices are not silently reinterpreted
 
@@ -88,3 +88,11 @@ UI SHALL cung cấp giờ bắt đầu/kết thúc theo mốc30 phút và tổng
 #### Scenario: Another customer holds the selected interval
 - **WHEN** polling trả khoảng chọn bị giữ
 - **THEN** UI báo khoảng không còn trống và chặn tiếp tục; server vẫn kiểm overlap khi tạo hold
+
+### Requirement: Discovery shows the owner's hourly price
+
+Kết quả tìm sân SHALL hiển thị “Giá thuê từ … /giờ” bằng đơn giá theo giờ Owner thiết lập: pricePerHour của slot nếu có, nếu không thì tiền slot × 60 / số phút của slot, làm tròn tối đa2 chữ số thập phân. Bộ lọc và sắp xếp theo giá SHALL dùng cùng đơn giá giờ. Lưới chọn giờ SHALL vẫn hiển thị tiền của từng ô30 phút.
+
+#### Scenario: A sixty minute price is shown per hour, not per cell
+- **WHEN** Owner đặt2000đ cho khung60 phút và lưới hiển thị mỗi ô30 phút1000đ
+- **THEN** thẻ tìm sân, bản đồ và trang chủ hiển thị “Từ2.000đ/giờ”; lọc “Giá tối thiểu/giờ =2000” vẫn giữ sân này

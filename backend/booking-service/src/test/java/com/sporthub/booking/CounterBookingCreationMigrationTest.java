@@ -90,7 +90,7 @@ class CounterBookingCreationMigrationTest {
                     .load();
             latest.migrate();
             latest.validate();
-            assertThat(latest.info().current().getVersion().toString()).isEqualTo("19");
+            assertThat(latest.info().current().getVersion().toString()).isEqualTo("21");
             try (var r =
                 s.executeQuery(
                     "SELECT (SELECT count(*) FROM booking_refund_policy_snapshots),(SELECT count(*)"

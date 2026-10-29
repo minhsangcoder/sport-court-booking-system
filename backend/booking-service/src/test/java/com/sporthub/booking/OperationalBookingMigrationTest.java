@@ -47,7 +47,7 @@ class OperationalBookingMigrationTest {
                     .load();
             latest.migrate();
             latest.validate();
-            assertThat(latest.info().current().getVersion().toString()).isEqualTo("19");
+            assertThat(latest.info().current().getVersion().toString()).isEqualTo("21");
             try (var r =
                 s.executeQuery(
                     "SELECT booking_code,amount,price_snapshot,customer_id=current_holder_id AND"

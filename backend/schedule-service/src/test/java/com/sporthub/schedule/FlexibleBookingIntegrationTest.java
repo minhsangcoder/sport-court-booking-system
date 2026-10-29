@@ -45,7 +45,7 @@ class FlexibleBookingIntegrationTest extends ScheduleIntegrationTest {
     assertThat(service.quote(input).amount()).isEqualByComparingTo("90000");
     assertThat(service.quote(input).pricingMode()).isEqualTo("PRORATED_SLOT_INTERVAL_V1");
     assertThat(service.publicPreview(courtId, day).slots()).hasSize(4);
-    var command = new BookingPolicy(true, 0, 30, 60, 240);
+    var command = new BookingPolicy(true, 0, 30, 30, null);
     var published = policies.publish(facilityId, command, "publish-hourly", owner, "token");
     assertThat(published.version()).isEqualTo(1);
     assertThat(policies.publish(facilityId, command, "publish-hourly", owner, "token")).isEqualTo(published);
@@ -63,7 +63,7 @@ class FlexibleBookingIntegrationTest extends ScheduleIntegrationTest {
     assertThat(changed.quoteHash()).isNotEqualTo(quote.quoteHash());
     assertThat(service.rules(facilityId, owner, "token").stream().filter(r -> r.pricingUnit().equals("LEGACY_SLOT")))
         .singleElement().satisfies(r -> assertThat(r.pricePerSlot()).isEqualByComparingTo("90000"));
-    assertThatThrownBy(() -> policies.publish(facilityId, new BookingPolicy(false, 1, 30, 60, 240), "publish-hourly", owner, "token"))
+    assertThatThrownBy(() -> policies.publish(facilityId, new BookingPolicy(false, 1, 30, 30, null), "publish-hourly", owner, "token"))
         .isInstanceOf(ConflictException.class);
   }
 
@@ -71,7 +71,7 @@ class FlexibleBookingIntegrationTest extends ScheduleIntegrationTest {
   void hourlyPublicationRejectsIncompleteCoverageWithoutSwitchingTheFacility() {
     openingHours();
     service.addPrice(facilityId, hourly(LocalTime.of(15, 0), LocalTime.of(16, 0), "100000", 0), owner, "token");
-    assertThatThrownBy(() -> policies.publish(facilityId, new BookingPolicy(true, 0, 30, 60, 240),
+    assertThatThrownBy(() -> policies.publish(facilityId, new BookingPolicy(true, 0, 30, 30, null),
         UUID.randomUUID().toString(), owner, "token")).isInstanceOf(ConflictException.class);
     assertThat(policies.read(facilityId, owner, "token").enabled()).isFalse();
   }
@@ -82,7 +82,7 @@ class FlexibleBookingIntegrationTest extends ScheduleIntegrationTest {
     service.replaceHours(facilityId, new HoursInput(null, List.of(new Interval(
         day.getDayOfWeek().getValue(), LocalTime.of(15, 0), LocalTime.of(20, 0), 60))), owner, "token");
     service.addPrice(facilityId, hourly(LocalTime.of(15, 0), LocalTime.of(20, 0), "100000", 0), owner, "token");
-    policies.publish(facilityId, new BookingPolicy(true, 0, 30, 60, 240), "enable-hourly", owner, "token");
+    policies.publish(facilityId, new BookingPolicy(true, 0, 30, 30, null), "enable-hourly", owner, "token");
     var original = service.quote(new QuoteInput(courtId,
         day.atTime(15, 30).atZone(context.timezone()).toInstant(),
         day.atTime(16, 30).atZone(context.timezone()).toInstant()));

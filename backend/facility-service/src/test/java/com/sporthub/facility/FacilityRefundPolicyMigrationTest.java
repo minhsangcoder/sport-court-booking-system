@@ -9,7 +9,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 
 class FacilityRefundPolicyMigrationTest {
-    @Test void freshAndUpgradePreserveFacilitiesWithoutInventingPolicy() {
+    @Test void freshAndUpgradeRemoveRefundPolicyTablesAndPreserveFacilities() {
         try (var database = new PostgreSQLContainer<>("postgres:16-alpine")) {
             database.start();
             for (boolean upgrade : new boolean[]{false, true}) {
@@ -28,9 +28,11 @@ class FacilityRefundPolicyMigrationTest {
                 var latest = Flyway.configure().dataSource(source).schemas(schema).defaultSchema(schema).load();
                 latest.migrate();
                 latest.validate();
-                assertThat(latest.info().current().getVersion().toString()).isEqualTo("16");
-                assertThat(jdbc.queryForObject("SELECT count(*) FROM facility_refund_policy_versions", Integer.class)).isZero();
-                assertThat(jdbc.queryForObject("SELECT count(*) FROM facility_refund_policy_heads", Integer.class)).isZero();
+                assertThat(latest.info().current().getVersion().toString()).isEqualTo("17");
+                assertThat(jdbc.queryForObject("""
+                        SELECT count(*) FROM information_schema.tables WHERE table_schema=?
+                        AND table_name IN('facility_refund_policy_versions','facility_refund_policy_heads')
+                        """, Integer.class, schema)).isZero();
                 if (upgrade) assertThat(jdbc.queryForObject("SELECT name FROM facilities WHERE id=?", String.class, facility)).isEqualTo("Legacy facility");
             }
         }

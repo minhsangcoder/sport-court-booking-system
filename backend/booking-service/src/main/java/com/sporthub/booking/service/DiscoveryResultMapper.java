@@ -3,6 +3,8 @@ package com.sporthub.booking.service;
 import static com.sporthub.booking.service.DiscoveryService.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.*;
 import java.util.*;
 import org.springframework.stereotype.Service;
@@ -68,7 +70,7 @@ class DiscoveryResultMapper {
       Instant start = Instant.parse(slot.path("startsAt").asText()),
           end = Instant.parse(slot.path("endsAt").asText());
       if (start.isAfter(clock.instant().plusSeconds(advanceDays * 86400L))) continue;
-      var amount = slot.path("amount").decimalValue();
+      var amount = hourlyRate(slot);
       if (after != null && start.atZone(zone).toLocalTime().isBefore(after)
           || before != null && end.atZone(zone).toLocalTime().isAfter(before)
           || input.minPrice() != null && amount.compareTo(input.minPrice()) < 0
@@ -80,7 +82,7 @@ class DiscoveryResultMapper {
         slots.stream().min(Comparator.comparing(s -> s.path("startsAt").asText())).orElseThrow();
     var cheapest =
         slots.stream()
-            .min(Comparator.comparing(s -> s.path("amount").decimalValue()))
+            .min(Comparator.comparing(DiscoveryResultMapper::hourlyRate))
             .orElseThrow();
     return new Result(
         summary,
@@ -89,11 +91,31 @@ class DiscoveryResultMapper {
         category,
         names.get(category),
         playDay.toString(),
-        cheapest.path("amount").decimalValue(),
+        hourlyRate(cheapest),
         cheapest.path("currency").asText("VND"),
         slots.size(),
         Instant.parse(first.path("startsAt").asText()),
         Instant.parse(first.path("endsAt").asText()),
         distance);
+  }
+
+  /** Discovery prices are per hour; a slot amount only covers the slot's own duration. */
+  static BigDecimal hourlyRate(JsonNode slot) {
+    BigDecimal rate;
+    if (slot.path("pricePerHour").isNumber()) rate = slot.path("pricePerHour").decimalValue();
+    else {
+      long minutes =
+          Duration.between(
+                  Instant.parse(slot.path("startsAt").asText()),
+                  Instant.parse(slot.path("endsAt").asText()))
+              .toMinutes();
+      rate =
+          slot.path("amount")
+              .decimalValue()
+              .multiply(BigDecimal.valueOf(60))
+              .divide(BigDecimal.valueOf(minutes), 2, RoundingMode.HALF_UP);
+    }
+    rate = rate.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
+    return rate.scale() < 0 ? rate.setScale(0) : rate;
   }
 }

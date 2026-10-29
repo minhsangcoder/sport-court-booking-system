@@ -1,6 +1,6 @@
 const stats = [
   { value: '30′', label: 'Bước đặt linh hoạt' },
-  { value: '60–240′', label: 'Thời lượng mỗi lượt' },
+  { value: 'Từ 30′', label: 'Thời lượng mỗi lượt' },
   { value: '2′', label: 'QR vào sân tự làm mới' },
   { value: '0%', label: 'Phí chuyển nhượng P2P' },
 ]

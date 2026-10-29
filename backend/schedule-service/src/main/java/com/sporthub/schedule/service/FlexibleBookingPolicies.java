@@ -58,10 +58,10 @@ public class FlexibleBookingPolicies {
       throw new IllegalArgumentException("Cần mã yêu cầu hợp lệ.");
     if (input.version() < 0
         || input.selectionStepMinutes() != 30
-        || input.minimumMinutes() != 60
-        || input.maximumMinutes() != 240)
+        || input.minimumMinutes() != 30
+        || input.maximumMinutes() != null)
       throw new IllegalArgumentException(
-          "Giờ tự chọn dùng bước 30 phút, tối thiểu 60 và tối đa 240 phút.");
+          "Giờ tự chọn dùng bước 30 phút, tối thiểu 30 phút và không giới hạn tối đa.");
     access.owner(facility, caller, token);
     String fingerprint = Signatures.sha256(facility + "|" + input);
     var previous =
@@ -81,7 +81,7 @@ public class FlexibleBookingPolicies {
       throw new ConflictException("Chính sách giờ đặt đã thay đổi. Vui lòng tải lại.");
     changes.begin(facility);
     if (input.enabled()) requireHourlyCoverage(facility, token);
-    var result = new BookingPolicy(input.enabled(), current.version() + 1, 30, 60, 240);
+    var result = new BookingPolicy(input.enabled(), current.version() + 1, 30, 30, null);
     repo.jdbc()
         .update(
             """
@@ -140,7 +140,7 @@ VALUES(?,?,?::jsonb,?,?,?)
           continue;
         var preview =
             engine.preview(
-                pricedContext, day, calendar, rules, new BookingPolicy(true, 0, 30, 60, 240));
+                pricedContext, day, calendar, rules, new BookingPolicy(true, 0, 30, 30, null));
         var future =
             preview.slots().stream().filter(s -> s.endsAt().isAfter(clock.instant())).toList();
         if (future.stream().anyMatch(s -> !s.state().equals("ELIGIBLE")))

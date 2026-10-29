@@ -36,7 +36,7 @@ try {
   const court = f.courts[0], rules = [], policyRequests = [], quoteRequests = [], holds = [], drafts = []
   const day = new Date(Date.now() + 86400000).toLocaleDateString('en-CA', { timeZone: facility.timezone })
   const at = time => new Date(`${day}T${time}:00+07:00`).toISOString()
-  let policy = { enabled: false, version: 0, selectionStepMinutes: 30, minimumMinutes: 60, maximumMinutes: 240 }
+  let policy = { enabled: false, version: 0, selectionStepMinutes: 30, minimumMinutes: 30, maximumMinutes: null }
   let lostPublishReply = false
   const cells = [ ['15:00', '15:30', 50000], ['15:30', '16:00', 50000], ['16:00', '16:30', 100000], ['16:30', '17:00', 100000] ]
     .map(([from, to, amount]) => ({ startsAt: at(from), endsAt: at(to), amount, currency: 'VND', state: 'AVAILABLE', reason: null, ruleId: id(55), ruleVersion: 0 }))
@@ -48,7 +48,7 @@ try {
       if (method === 'PUT') {
         const input = request.postDataJSON(), key = request.headers()['idempotency-key']
         policyRequests.push({ input, key })
-        assert.equal(input.selectionStepMinutes, 30); assert.equal(input.minimumMinutes, 60); assert.equal(input.maximumMinutes, 240)
+        assert.equal(input.selectionStepMinutes, 30); assert.equal(input.minimumMinutes, 30); assert.equal(input.maximumMinutes, null)
         if (!lostPublishReply) { policy = { ...input, version: 1 }; lostPublishReply = true; await route.abort('connectionreset'); return }
         assert.equal(key, policyRequests[0].key); assert.deepEqual(input, policyRequests[0].input)
       }
@@ -70,7 +70,7 @@ try {
     }
     if (uri === `/facilities/${facility.id}/refund-policy`) return reply(refundPolicy)
     if (uri === '/bookings/availability') return reply({ facilityId: facility.id, courtId: court.id, date: day, timezone: facility.timezone,
-      pricingMode: 'HOURLY_INTERVAL_V1', selectionStepMinutes: 30, minimumMinutes: 60, maximumMinutes: 240, policyVersion: 1, slots: cells })
+      pricingMode: 'HOURLY_INTERVAL_V1', selectionStepMinutes: 30, minimumMinutes: 30, maximumMinutes: null, policyVersion: 1, slots: cells })
     if (uri === '/bookings/quote') {
       const input = request.postDataJSON(); quoteRequests.push(input)
       assert.equal(input.startsAt, at('15:30')); assert.equal(input.endsAt, at('16:30'))

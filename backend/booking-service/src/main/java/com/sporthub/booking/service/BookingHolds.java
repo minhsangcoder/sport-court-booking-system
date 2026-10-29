@@ -86,9 +86,9 @@ public class BookingHolds {
     if (!input.startsAt().isBefore(input.endsAt()))
       throw new IllegalArgumentException("Booking interval is invalid");
     var duration = Duration.between(input.startsAt(), input.endsAt());
-    if (duration.compareTo(Duration.ofMinutes(60)) < 0
-        || duration.compareTo(Duration.ofMinutes(240)) > 0)
-      throw new IllegalArgumentException("Mỗi lượt đặt phải từ 60 đến 240 phút.");
+    // At least one 30-minute step; the schedule quote bounds the rest to one opening window.
+    if (duration.compareTo(Duration.ofMinutes(OrphanGapAdvice.MINIMUM_MINUTES)) < 0)
+      throw new IllegalArgumentException("Mỗi lượt đặt phải từ 30 phút trở lên.");
     var initial = dependencies.quote(input);
     UUID facility = UUID.fromString(initial.path("facilityId").asText());
     if (counter) dependencies.facilityPermission(facility, caller, token, "BOOKING_CREATE_COUNTER");

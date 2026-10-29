@@ -36,10 +36,10 @@ Chỉ thực hiện khi người dùng yêu cầu apply change này. Căn cứ p
 ## 2. Giờ tự chọn và giá giờ
 
 - [x] 2.1 Tách engine quote khoảng từ ScheduleReads, dùng calendar/maintenance/precedence hiện có và sweep biên giá; kiểm15:30–16:30=150000, rule ưu tiên giữa khoảng, thiếu/ambiguous giá và không query từng phút.
-- [x] 2.2 Áp min60/max240, bước30 neo đầu khoảng mở, cùng ngày và không qua giờ nghỉ/bảo trì; kiểm request trực tiếp lệch bước/30 phút/270 phút/qua ngày và sân có opening override.
+- [x] 2.2 (Đã thay bởi 33.1: tối thiểu 30 phút, không giới hạn tối đa.) Áp min60/max240, bước30 neo đầu khoảng mở, cùng ngày và không qua giờ nghỉ/bảo trì; kiểm request trực tiếp lệch bước/30 phút/270 phút/qua ngày và sân có opening override.
 - [x] 2.3 Tính numerator nguyên và làm tròn tổng một lần, phân bổ đoạn ổn định; kiểm101đ/giờ chia4 đoạn vẫn101đ, tổng segment/group allocation đúng tổng và không dùng float.
 - [x] 2.4 Thêm quote/hash/pricing revision và hold validation chung; thay guard10 segments bằng duration phù hợp. Kiểm đổi giá/lịch giữa preview→hold, bảo toàn snapshot và không bypass từ route quote/hold cũ.
-- [x] 2.5 Thêm orphan warnings và tối đa3 gợi ý hợp lệ từ khoảng trống hiện hành; kiểm ví dụ150k vẫn giữ được, gap30 phút không thành hard reject/strike, gợi ý không vượt4 giờ hoặc đụng booking; cập nhật mô tả quote/owner pricing.
+- [x] 2.5 (Đã thay bởi 33.1: không còn cảnh báo khoảng trống lẻ.) Thêm orphan warnings và tối đa3 gợi ý hợp lệ từ khoảng trống hiện hành; kiểm ví dụ150k vẫn giữ được, gap30 phút không thành hard reject/strike, gợi ý không vượt4 giờ hoặc đụng booking; cập nhật mô tả quote/owner pricing.
 
 ## 3. Quota giữ chỗ chung và lifecycle claims
 
@@ -265,3 +265,17 @@ Doanh thu hiển thị chỉ lấy courtCollected; bỏ phí chuyển nhượng 
 Bỏ liên kết xử lý trả/hoàn; nguồn tiền gồm ALL (mặc định), CASH, BANK. Giao diện luôn dùng REAL, bỏ lựa chọn DEMO. Phân loại tiền mặt từ chứng từ Payment CASH/CASH_RECEIVED đã áp dụng thành công; không chuyển dữ liệu DEMO thành tiền mặt. Lọc khoản thu trước khi tổng hợp theo ngày/sân và phân trang. Tổng ALL bằng CASH + BANK. Chỉ số hoạt động sân và quyền chuyển nhượng vẫn theo toàn cơ sở, không theo phương thức thanh toán.
 
 Hoàn tất mục 32: kiểm thử tích hợp mixed CASH/BANK, chống cộng trùng replay, tổng ALL và nguồn không hợp lệ đạt; 7 kiểm thử frontend liên quan đạt. Frontend production build, backend package, ESLint và OpenSpec strict đạt. Đã chạy frontend localhost:3001 và Booking health UP.
+
+
+## 33. Thời lượng tự do, gỡ chi trả thủ công và đồng bộ giao diện (2026-10-30)
+
+- [x] 33.1 Lượt đặt từ 30 phút trở lên, không giới hạn tối đa: schedule migration V7 (minimumMinutes=30, maximumMinutes=null), FlexiblePricingEngine, BookingHolds, OrphanGapAdvice (ngưỡng 30 phút, không còn cảnh báo) và frontend chọn giờ/văn bản/trang chủ; cập nhật kiểm thử giá, hold, gap và E2E fixture.
+- [x] 33.2 Giá tìm sân theo đơn giá giờ của Owner (`DiscoveryResultMapper.hourlyRate`) cho fromPrice, lọc và sắp xếp; thêm `DiscoveryHourlyRateTest`; đã kiểm API thật: Ba Đình 2.000đ/giờ, Cầu Giấy 140.000đ/giờ, Tây Hồ 160.000đ/giờ.
+- [x] 33.3 Gỡ khối “Trả người chuyển nhượng và hoàn tiền” (REAL và mô phỏng), API `/bookings/facility-finance/*`, các service chi thủ công; booking migration V21 xóa operations/commands/audit, giữ nghĩa vụ/biên nhận lịch sử; Admin monitor chỉ đọc không còn join operations.
+- [ ] 33.4 Quyết định xử lý nghĩa vụ chi/hoàn chưa thực hiện và nguồn khóa ngân hàng `FACILITY_DISBURSEMENT` / `REAL_GROUP_TIMEOUT_REFUND` sau khi gỡ luồng chi thủ công (điểm mở của mục 33, cần người dùng xác nhận).
+- [x] 33.5 Báo cáo: khi payment-service tạm thời không trả được chứng từ, khoản thu (vốn chỉ là CASH hoặc BANK) không được đoán và không cộng vào ALL, trả UNAVAILABLE kèm REAL_PAYMENT_FACTS_UNAVAILABLE; cập nhật kiểm thử báo cáo P2P.
+- [x] 33.6 Giao diện: bỏ hai dòng chú thích trong popup thanh toán tại quầy và khối chuyển khoản; bỏ “Tài khoản thử nghiệm nhanh (1-chạm)” ở trang đăng nhập; thiết kế lại trang chi tiết lượt đặt theo PageBanner/token/hiệu ứng trang chủ, giữ đủ thành phần; PageBanner nhận eyebrow dạng ReactNode.
+- [x] 33.7 Sửa bộ kiểm thử backend: cập nhật kỳ vọng phiên bản migration; tách fixture trừu tượng khỏi lớp test transfer-service để lớp con không chạy lại test kế thừa; fixture hoàn tiền lịch sử tự tạo snapshot LEGACY_ADOPTION; dữ liệu mốc nhóm 15 phút; stub Mockito an toàn với null; test hủy của Owner/Staff theo mục 24.
+- [ ] 33.8 Kiểm tra trực quan trang chi tiết lượt đặt trên trình duyệt (desktop và điện thoại) với tài khoản được người dùng cho phép.
+
+Kết quả mục 33 (30/10/2026): toàn bộ backend 2.700 test case đã chạy đạt, 0 lỗi (401 bỏ qua là bộ đo hiệu năng/tương thích chỉ chạy khi bật cờ); 137 frontend tests và 21 OpenAPI contract checks đạt; typecheck/lint sạch; OpenSpec strict hợp lệ. Schedule migration V7 và booking migration V21 đã áp dụng trên DB local; 7 dịch vụ backend đã build lại và khởi động; API thật báo giá được 30 phút và 6 giờ. Chưa kiểm tra trực quan trang chi tiết lượt đặt (33.8).

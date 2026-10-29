@@ -41,29 +41,22 @@ class OrphanGapAdviceTest {
   }
 
   @Test
-  void twoThirtyMinuteGapsWarnWithoutChangingTheAcceptedRangeOrMoney() {
+  void thirtyMinuteGapsAreBookableSoTheyNeedNoWarningOrSuggestion() {
     var result = advice.attach(quote(30, 90), availability(120));
-    assertThat(result.path("warnings").size()).isEqualTo(2);
+    assertThat(result.path("warnings").size()).isZero();
+    assertThat(result.path("suggestions").size()).isZero();
     assertThat(result.path("amount").intValue()).isEqualTo(150000);
     assertThat(result.path("startsAt").asText()).isEqualTo(at(30));
-    assertThat(result.path("suggestions").size()).isEqualTo(3);
-    assertThat(result.path("suggestions").get(0).path("startsAt").asText()).isEqualTo(at(0));
-    assertThat(result.path("suggestions").get(0).path("endsAt").asText()).isEqualTo(at(120));
   }
 
   @Test
-  void suggestionsDoNotOverlapAnotherReservationOrExceedFourHours() {
+  void longSelectionsAndSingleStepGapsNextToReservationsAreAccepted() {
     var preview = availability(360);
     ((ObjectNode) preview.path("slots").get(0)).put("state", "BLOCKED");
-    var result = advice.attach(quote(60, 300), preview);
-    assertThat(result.path("warnings").size()).isEqualTo(1);
-    assertThat(result.path("suggestions").size()).isBetween(1, 3);
-    for (var candidate : result.path("suggestions")) {
-      var from = Instant.parse(candidate.path("startsAt").asText());
-      var to = Instant.parse(candidate.path("endsAt").asText());
-      assertThat(from).isAfterOrEqualTo(base.plusSeconds(1800));
-      assertThat(java.time.Duration.between(from, to).toMinutes()).isBetween(60L, 240L);
-    }
+    var result = advice.attach(quote(60, 330), preview);
+    assertThat(result.path("warnings").size()).isZero();
+    assertThat(result.path("suggestions").size()).isZero();
+    assertThat(result.path("endsAt").asText()).isEqualTo(at(330));
   }
 
   @Test

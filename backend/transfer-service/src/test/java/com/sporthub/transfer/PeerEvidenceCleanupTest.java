@@ -9,7 +9,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-class PeerEvidenceCleanupTest extends PeerEvidenceTest {
+class PeerEvidenceCleanupTest extends PeerEvidenceFixture {
   @Test
   void peerCleanupRetainsOpenCasesAndReadyEvidenceThenCleansOnlyUnreferencedStages() {
     var ready = evidence.upload(attempt, photo, key(), buyer);

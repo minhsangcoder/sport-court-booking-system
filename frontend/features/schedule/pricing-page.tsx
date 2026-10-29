@@ -15,7 +15,7 @@ export function PricingPage() {
         <div>
           <h2 className="text-2xl font-bold">Bảng giá</h2>
           <p className="mt-2 text-sm text-slate-500">
-            Đặt giá theo giờ để khách chọn khoảng chơi từ 60 phút đến 4 giờ, theo bước 30 phút. Quy
+            Đặt giá theo giờ để khách chọn khoảng chơi từ 30 phút trở lên, theo bước 30 phút. Quy
             tắc theo sân hoặc ngày cụ thể được ưu tiên. Giá theo khung lịch cũ giữ nguyên đơn vị.
           </p>
         </div>
