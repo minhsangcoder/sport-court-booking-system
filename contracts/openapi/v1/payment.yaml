@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "SportHub Payment — verified payOS collections",
+    "title": "SportHub Payment — verified SePay collections",
     "version": "1.0.0"
   },
   "servers": [
@@ -469,261 +469,6 @@
         }
       }
     },
-    "/payments/facilities/{id}/channel": {
-      "get": {
-        "operationId": "getFacilityPaymentChannel",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PaymentChannel"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "403": {
-            "description": "Outside current role/facility scope"
-          },
-          "409": {
-            "description": "Stale version or conflicting command"
-          },
-          "503": {
-            "description": "Dependency unavailable; no simulation fallback"
-          }
-        }
-      },
-      "put": {
-        "operationId": "configureFacilityPaymentChannel",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PaymentChannel"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "403": {
-            "description": "Outside current role/facility scope"
-          },
-          "409": {
-            "description": "Stale version or conflicting command"
-          },
-          "503": {
-            "description": "Dependency unavailable; no simulation fallback"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PaymentChannelInput"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/payments/facilities/{id}/channel/verify": {
-      "post": {
-        "operationId": "verifyFacilityPaymentChannel",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PaymentChannel"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "403": {
-            "description": "Outside current role/facility scope"
-          },
-          "409": {
-            "description": "Stale version or conflicting command"
-          },
-          "503": {
-            "description": "Dependency unavailable; no simulation fallback"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VersionCommand"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/payments/facilities/{id}/channel/disable": {
-      "post": {
-        "operationId": "disableFacilityPaymentChannel",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PaymentChannel"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "403": {
-            "description": "Outside current role/facility scope"
-          },
-          "409": {
-            "description": "Stale version or conflicting command"
-          },
-          "503": {
-            "description": "Dependency unavailable; no simulation fallback"
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VersionCommand"
-              }
-            }
-          }
-        }
-      }
-    },
     "/payments/bank-destinations": {
       "get": {
         "operationId": "listBankDestinations",
@@ -967,63 +712,6 @@
           },
           "503": {
             "description": "Dependency unavailable; no simulation fallback"
-          }
-        }
-      }
-    },
-    "/payments/providers/payos/{channelId}/webhook": {
-      "post": {
-        "operationId": "receivePayosWebhook",
-        "security": [],
-        "parameters": [
-          {
-            "name": "channelId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "object"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "403": {
-            "description": "Outside current role/facility scope"
-          },
-          "409": {
-            "description": "Stale version or conflicting command"
-          },
-          "503": {
-            "description": "Dependency unavailable; no simulation fallback"
-          }
-        },
-        "description": "Native data HMAC required; ACK only after durable observation. Signed foreign/sample credits never grant rights.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NativePayosWebhook"
-              }
-            }
           }
         }
       }
@@ -1382,75 +1070,6 @@
         }
       }
     },
-    "/payments/peer-acquisitions/{id}/case-recipient": {
-      "get": {
-        "operationId": "getOwnerPeerCaseRecipient",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Current facility Owner case access; frozen masked recipient, never full account or credentials",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/BankDestination"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "401": {
-            "description": "Invalid session"
-          },
-          "403": {
-            "description": "Outside participant or facility scope"
-          },
-          "404": {
-            "description": "Resource not found"
-          },
-          "409": {
-            "description": "Version, phase or BANK_PROFILE_LOCKED conflict"
-          },
-          "429": {
-            "description": "Rate limited",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Authoritative dependency unavailable"
-          }
-        }
-      }
-    },
     "/payments/facilities/{id}/sepay-channel": {
       "get": {
         "operationId": "getFacilitySepayChannel",
@@ -1703,6 +1322,79 @@
           }
         }
       }
+    },
+    "/payments/group-claims": {
+      "get": {
+        "operationId": "getGroupContributionClaims",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Open QR per contribution; a member with another payer's open QR must not pay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "memberId",
+                          "paidByCaller"
+                        ],
+                        "properties": {
+                          "memberId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "paidByCaller": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid session"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1931,109 +1623,6 @@
           "state",
           "amount",
           "policyReference"
-        ]
-      },
-      "PaymentChannelInput": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "version": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "clientId": {
-            "type": "string",
-            "writeOnly": true,
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "apiKey": {
-            "type": "string",
-            "writeOnly": true,
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "checksumKey": {
-            "type": "string",
-            "writeOnly": true,
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "bankBin": {
-            "type": "string",
-            "pattern": "^[0-9]{6}$"
-          }
-        },
-        "required": [
-          "version",
-          "clientId",
-          "apiKey",
-          "checksumKey",
-          "bankBin"
-        ]
-      },
-      "PaymentChannel": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "channelId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "facilityId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "receiverOwnerId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "version": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "PREPARING",
-              "READY",
-              "DISABLED"
-            ]
-          },
-          "credentialsConfigured": {
-            "type": "boolean"
-          },
-          "bankBin": {
-            "type": "string"
-          },
-          "maskedAccountNumber": {
-            "type": "string",
-            "nullable": true
-          },
-          "accountName": {
-            "type": "string",
-            "nullable": true
-          },
-          "webhookUrl": {
-            "type": "string"
-          },
-          "receiverRevisionId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          }
-        },
-        "required": [
-          "channelId",
-          "facilityId",
-          "receiverOwnerId",
-          "version",
-          "status",
-          "credentialsConfigured",
-          "bankBin",
-          "maskedAccountNumber",
-          "accountName",
-          "webhookUrl",
-          "receiverRevisionId"
         ]
       },
       "VersionCommand": {
@@ -2289,29 +1878,7 @@
           "amountReceived",
           "expiresAt"
         ],
-        "description": "Private payer/current counter operator projection. Receiver bank details/QR remain null until signed native create has matched the Owner-selected BIN and confirmed account. Unknown-create recovery can return only the trusted payOS checkout URL. GET reads local state; refresh schedules bounded reconciliation."
-      },
-      "NativePayosWebhook": {
-        "type": "object",
-        "required": [
-          "data",
-          "signature"
-        ],
-        "properties": {
-          "data": {
-            "type": "object"
-          },
-          "signature": {
-            "type": "string",
-            "pattern": "^[a-fA-F0-9]{64}$"
-          },
-          "code": {
-            "type": "string"
-          },
-          "success": {
-            "type": "boolean"
-          }
-        }
+        "description": "Private payer/current counter operator projection. Receiver bank details/QR remain null until signed native create has matched the Owner-selected BIN and confirmed account. GET reads local state; refresh schedules bounded reconciliation."
       },
       "BankResponsibility": {
         "type": "object",
@@ -2549,8 +2116,7 @@
           "provider": {
             "type": "string",
             "enum": [
-              "SEPAY",
-              "PAYOS"
+              "SEPAY"
             ]
           },
           "bankBin": {

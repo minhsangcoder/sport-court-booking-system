@@ -166,7 +166,7 @@ export async function api<T>(path: string, options: RequestInit = {}, retry = tr
   return (body as Envelope<T>).data
 }
 export async function privateImage(path: string, signal: AbortSignal): Promise<Blob> {
-  if (!/^\/(?:transfers\/evidence\/[^/?]+|payments\/peer-acquisitions\/[^/?]+\/qr)$/.test(path))
+  if (!/^\/payments\/peer-acquisitions\/[^/?]+\/qr$/.test(path))
     throw new Error('Đường dẫn ảnh riêng tư không hợp lệ.')
   const generation = authGeneration
   const response = await fetch(`/api/v1${path}`, {

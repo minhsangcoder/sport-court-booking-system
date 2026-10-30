@@ -20,7 +20,6 @@ import {
   Building2,
   Check,
   CheckCircle2,
-  Clock,
   Copy,
   RefreshCw,
   ShieldCheck,
@@ -32,7 +31,7 @@ const states: Record<string, string> = {
   READY: 'Chờ chuyển khoản',
   PARTIAL: 'Đã nhận một phần, chưa đủ tiền',
   VERIFIED: 'Đã xác minh đủ tiền vào cơ sở',
-  EXPIRED: 'Đã hết thời hạn thanh toán',
+  EXPIRED: 'QR không còn hiệu lực',
   REVIEW: 'Cần cơ sở đối soát giao dịch',
 }
 
@@ -98,7 +97,7 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
             ready = ['CONFIRMED', 'CHECKED_IN', 'COMPLETED'].includes(group.state)
             if (['CANCELLED', 'EXPIRED'].includes(group.state)) {
               setApplicationNotice(
-                'Nhóm đã hủy hoặc hết hạn. Tiền không áp dụng được sẽ được cơ sở đối soát và hoàn lại.',
+                'Nhóm đã hủy hoặc hết hạn nên không được dùng sân. Khoản góp đã ghi nhận không được hoàn lại.',
               )
               return false
             }
@@ -235,6 +234,7 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
           </div>
 
           {/* Bank Transfer Details Box */}
+          {session.state !== 'EXPIRED' && (
           <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:p-5">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider text-slate-600">
               <Building2 className="size-4 text-emerald-600" />
@@ -317,6 +317,7 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
               </div>
             </dl>
           </div>
+          )}
 
           {/* QR Code Container */}
           {showQr && (
@@ -361,20 +362,7 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
             <>
               {!session.qrCode && (
                 <div role="status" className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-                  QR đang được khôi phục. Bạn có thể mở đơn đã tạo trên payOS để xem QR và thanh toán.
-                </div>
-              )}
-              {session.checkoutUrl?.startsWith('https://pay.payos.vn/') && (
-                <div className="text-center">
-                  <a
-                    href={session.checkoutUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline"
-                  >
-                    <span>Mở trang thanh toán payOS</span>
-                    <ArrowRight className="size-3" />
-                  </a>
+                  QR đang được khôi phục. Vui lòng chờ trong giây lát rồi tải lại.
                 </div>
               )}
             </>
@@ -409,7 +397,9 @@ function Instructions({ payment, onApplied, resultHref }: InstructionProps) {
             <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800">
               <AlertCircle className="size-4 shrink-0 mt-0.5 text-amber-600" />
               <p>
-                Không chuyển thêm theo QR cũ. Nếu đã chuyển, liên hệ cơ sở đối soát; tiền không áp dụng sẽ được ghi khoản cần hoàn.
+                {session.state === 'EXPIRED' && payment.purpose === 'GROUP_CONTRIBUTION'
+                  ? 'QR này đã hết hạn hoặc người tổ chức đã thanh toán thay phần của bạn. Đừng chuyển khoản; nếu đã chuyển, hãy liên hệ cơ sở để đối soát.'
+                  : 'Không chuyển thêm theo QR cũ. Nếu đã chuyển, liên hệ cơ sở đối soát; tiền không áp dụng sẽ được ghi khoản cần hoàn.'}
               </p>
             </div>
           )}

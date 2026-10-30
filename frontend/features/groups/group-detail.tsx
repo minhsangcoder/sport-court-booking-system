@@ -1,12 +1,15 @@
 'use client'
 
+import { PageBanner } from '@/components/page-banner'
 import { Button } from '@/components/ui/button'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { Countdown } from '@/features/booking/countdown'
 import { RefundPolicyNotice } from '@/features/booking/refund-policy-notice'
 import type { Payment } from '@/features/booking/types'
 import type { Court, Facility } from '@/features/facility/types'
+import { CourtLines } from '@/features/home/home-art'
 import { money } from '@/features/schedule/types'
+import { amberNotice, bannerLink, card, primaryPill, statePill } from '@/features/transfers/transfer-styles'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth-context'
 import { useApi } from '@/lib/use-api'
@@ -20,7 +23,7 @@ import { GroupExtras } from './group-extras'
 import { useHiddenGroups } from './hidden-groups'
 import { GroupPaymentTracking } from './payment-tracking'
 import { GroupPaymentSetup } from './payment-setup'
-import { type Group, groupStates } from './types'
+import { type ContributionClaim, type Group, groupStates } from './types'
 
 export function GroupDetail({ id }: { id: string }) {
   return (
@@ -46,10 +49,19 @@ function Loaded({ id }: { id: string }) {
   const facility = useApi<Facility>(r.data ? `/facilities/${r.data.booking.facilityId}` : null)
   const courts = useApi<Court[]>(r.data ? `/facilities/${r.data.booking.facilityId}/courts` : null)
 
+  const claimPath =
+    r.data?.state === 'GROUP_PENDING' && r.data.allocationsLocked && r.data.members.length
+      ? `/payments/group-claims?bookingId=${id}&${r.data.members.map((m) => `memberId=${m.id}`).join('&')}`
+      : null
+  const claims = useApi<ContributionClaim[]>(claimPath)
+
   const groupState = r.data?.state
   const bookingState = r.data?.booking.status
 
-  usePolling(() => r.reload(), {
+  usePolling(() => {
+    r.reload()
+    if (claimPath) claims.reload()
+  }, {
     enabled: Boolean(
       groupState &&
       bookingState &&
@@ -153,7 +165,43 @@ function Loaded({ id }: { id: string }) {
   const locked = g.members.some((m) => m.amountPaid > 0 || Boolean(m.paymentRequestedAt))
 
   return (
-    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 sm:py-10">
+    <>
+      <PageBanner
+        eyebrow={
+          <Link className={bannerLink} href="/customer/groups">
+            Nhóm đặt sân
+          </Link>
+        }
+        title={g.name}
+        description={`${facility.data?.name || 'Cơ sở'} · ${courts.data?.find((c) => c.id === g.booking.courtId)?.name || 'Sân'}`}
+        icon="shuttle"
+        actions={
+          <>
+            <span className={statePill}>{groupStates[g.state]}</span>
+            {!hidden ? (
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                title="Xóa nhóm khỏi danh sách của tôi"
+                className="inline-flex h-10 items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-rose-500/30"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Xóa nhóm</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRestoreGroup}
+                className="inline-flex h-10 items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/20"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Khôi phục nhóm</span>
+              </button>
+            )}
+          </>
+        }
+      />
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 sm:py-10">
       {/* Delete confirmation dialog */}
       <DeleteGroupDialog
         isOpen={showDeleteModal}
@@ -162,21 +210,11 @@ function Loaded({ id }: { id: string }) {
         groupName={g.name}
       />
 
-      {/* Breadcrumb */}
-      <div className="flex items-center justify-between">
-        <Link
-          className="text-sm text-slate-500 hover:text-slate-900 transition"
-          href="/customer/groups"
-        >
-          Nhóm đặt sân / {g.name}
-        </Link>
-      </div>
-
       {/* Hidden banner if group is currently hidden */}
       {hidden && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-200 text-sm text-amber-900 animate-in fade-in">
+        <div className={`${amberNotice} flex flex-wrap items-center justify-between gap-3`}>
           <div className="flex items-center gap-2">
-            <EyeOff className="h-4 w-4 text-amber-700 shrink-0" />
+            <EyeOff className="h-4 w-4 shrink-0 text-amber-700" />
             <span>
               Nhóm này hiện đang <strong>bị ẩn khỏi danh sách cá nhân</strong> của bạn.
             </span>
@@ -194,81 +232,62 @@ function Loaded({ id }: { id: string }) {
         </div>
       )}
 
-      {/* Header with Title and Actions */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900">{g.name}</h1>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className="rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-emerald-700 border border-emerald-100">
-            {groupStates[g.state]}
-          </span>
-
-          {/* Delete from my personal groups button */}
-          {!hidden ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeleteModal(true)}
-              className="gap-1.5 rounded-full border-slate-200 text-xs font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition"
-              title="Xóa nhóm khỏi danh sách của tôi"
-            >
-              <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-rose-600" />
-              <span>Xóa nhóm</span>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRestoreGroup}
-              className="gap-1.5 rounded-full border-slate-200 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Khôi phục nhóm</span>
-            </Button>
+      {/* Facility & Match Information */}
+      <section className={`${card} home-rise p-5 sm:p-6`}>
+        <CourtLines className="pointer-events-none absolute -right-20 -top-12 -z-10 w-80 rotate-[-6deg] text-emerald-600/[0.05]" />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+              {facility.data?.name || 'Cơ sở'} ·{' '}
+              {courts.data?.find((c) => c.id === g.booking.courtId)?.name || 'Sân'}
+            </h2>
+            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+              {new Date(g.booking.startsAt).toLocaleString('vi-VN', {
+                timeZone: g.booking.priceSnapshot.timezone,
+              })}{' '}
+              →{' '}
+              {new Date(g.booking.endsAt).toLocaleTimeString('vi-VN', {
+                timeZone: g.booking.priceSnapshot.timezone,
+              })}
+            </p>
+          </div>
+          {pending && (
+            <Countdown
+              expiresAt={g.deadline}
+              className="inline-flex items-center rounded-full border border-amber-200 px-4 py-1.5 text-sm font-bold"
+            />
           )}
         </div>
-      </div>
 
-      {/* Facility & Match Information */}
-      <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
-        <h2 className="text-xl font-bold text-slate-900">
-          {facility.data?.name || 'Cơ sở'} ·{' '}
-          {courts.data?.find((c) => c.id === g.booking.courtId)?.name || 'Sân'}
-        </h2>
-        <p className="mt-2 text-sm text-slate-500">
-          {new Date(g.booking.startsAt).toLocaleString('vi-VN', {
-            timeZone: g.booking.priceSnapshot.timezone,
-          })}{' '}
-          →{' '}
-          {new Date(g.booking.endsAt).toLocaleTimeString('vi-VN', {
-            timeZone: g.booking.priceSnapshot.timezone,
-          })}
-        </p>
-
-        {pending && (
-          <div className="mt-4">
-            <Countdown expiresAt={g.deadline} />
+        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+              Tiến độ đóng góp
+            </p>
+            <p className="font-extrabold text-slate-900 dark:text-white">
+              Đã đóng <span className="text-emerald-700 dark:text-emerald-400">{money(g.totalPaid)}</span>{' '}
+              / {money(total)}
+            </p>
           </div>
-        )}
-
-        <p className="mt-5 font-bold text-slate-900">
-          Đã đóng {money(g.totalPaid)} / {money(total)}
-        </p>
-        <progress
-          className="mt-3 h-3 w-full accent-emerald-600"
-          value={g.totalPaid}
-          max={total}
-          aria-label="Tiến độ thanh toán nhóm"
-        />
-        <p className="mt-3 text-sm text-slate-500">
-          {g.allocationsLocked
-            ? 'Danh sách đã chốt; mỗi người thanh toán phần được phân bổ.'
-            : 'Chờ thành viên tham gia và người tổ chức chia tiền.'}
-        </p>
+          <div
+            role="progressbar"
+            aria-label="Tiến độ thanh toán nhóm"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={g.totalPaid}
+            className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+          >
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+              style={{ width: `${total > 0 ? Math.min(100, (g.totalPaid / total) * 100) : 0}%` }}
+            />
+          </div>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            {g.allocationsLocked
+              ? 'Danh sách đã chốt; mỗi người thanh toán phần được phân bổ.'
+              : 'Chờ thành viên tham gia và người tổ chức chia tiền.'}
+          </p>
+        </div>
       </section>
 
       {/* Owner Pending Actions */}
@@ -277,20 +296,36 @@ function Loaded({ id }: { id: string }) {
       {(error || r.error) && (
         <p
           role="alert"
-          className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700 border border-red-100"
+          className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700"
         >
           {error || r.error}
         </p>
       )}
 
+      {pending && (
+        <p role="note" className={amberNotice}>
+          <strong>Đóng đủ trước hạn:</strong> nếu đến hạn góp tiền mà nhóm chưa đủ 100% tiền sân, nhóm
+          mất lượt đặt và <strong>toàn bộ tiền đã đóng không được hoàn lại</strong>.
+        </p>
+      )}
       {/* Payment Tracking */}
       <RefundPolicyNotice />
-      <GroupPaymentTracking group={g} userId={user?.id} busy={busy} pay={pay} reload={r.reload} />
+      <GroupPaymentTracking
+        group={g}
+        userId={user?.id}
+        busy={busy}
+        pay={pay}
+        reload={() => {
+          r.reload()
+          if (claimPath) claims.reload()
+        }}
+        claims={claims.data ?? []}
+      />
 
       {/* Member leave button */}
       {!owner && pending && (
         <Button
-          className="mt-5 rounded-full"
+          className="rounded-full"
           variant="outline"
           disabled={busy || locked}
           onClick={() => act('leave')}
@@ -302,7 +337,7 @@ function Loaded({ id }: { id: string }) {
       {/* Confirmed checkin link */}
       {g.state === 'CONFIRMED' && owner && (
         <Link
-          className="mt-6 block rounded-2xl bg-emerald-600 p-4 text-center font-bold text-white shadow-xs hover:bg-emerald-700"
+          className={`${primaryPill} flex h-12 w-full`}
           href={`/customer/bookings/${id}`}
         >
           Mở lượt đặt và mã xác nhận vào sân
@@ -311,10 +346,10 @@ function Loaded({ id }: { id: string }) {
 
       {/* Expired state notice with prominent Delete Action */}
       {g.state === 'GROUP_EXPIRED' && (
-        <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl bg-amber-50/90 p-5 border border-amber-200 text-sm text-amber-900">
-          <p className="leading-relaxed">
-            Sân đã được giải phóng. Khoản đóng góp đã nhận được lưu để đối soát và xem xét hoàn tiền
-            theo chính sách được duyệt.
+        <div className={`${amberNotice} flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center`}>
+          <p>
+            Nhóm không đóng đủ tiền trước hạn nên đã mất lượt đặt và sân được giải phóng. Khoản đã đóng{' '}
+            {g.totalPaid > 0 && <strong>{money(g.totalPaid)} </strong>}không được hoàn lại.
           </p>
           {!hidden && (
             <Button
@@ -346,5 +381,6 @@ function Loaded({ id }: { id: string }) {
         </div>
       )}
     </div>
+    </>
   )
 }

@@ -256,7 +256,6 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
       PAYMENT_WEBHOOK_ORIGIN: ${PAYMENT_WEBHOOK_ORIGIN:-}
       PAYMENT_SECRET_KEYS: ${PAYMENT_SECRET_KEYS:-}
-      PAYOS_COLLECTION_CREATE_ENABLED: ${PAYOS_COLLECTION_CREATE_ENABLED:-false}
       DEMO_PAYMENT_CALLBACK_URL: http://payment-service:8085/api/v1/payments/providers/demo/callback
     depends_on:
       postgres:
@@ -286,10 +285,6 @@ services:
       TRANSFER_DB_URL: jdbc:postgresql://postgres:5432/transfer_db
       SPORTHUB_EVENTS_OUTBOX_ENABLED: 'true'
       TRANSFER_ACQUISITION_SECONDS: ${TRANSFER_ACQUISITION_SECONDS:-600}
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      MINIO_PEER_EVIDENCE_BUCKET: ${MINIO_PEER_EVIDENCE_BUCKET:-sporthub-peer-evidence}
     depends_on:
       postgres:
         condition: service_healthy

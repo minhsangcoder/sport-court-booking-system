@@ -1,6 +1,6 @@
-"""Isolated native payOS HTTP fixture plus genuine BFF/Gateway/services/PostgreSQL/Rabbit.
+"""Peer resale system E2E: isolated SePay QR image fixture plus genuine BFF/Gateway/services/PostgreSQL/Rabbit.
 
-No .env, real payOS credentials, bank API or user service/database is read.
+No .env, real bank credentials, bank API or user service/database is read.
 Only the initial synthetic Admin role is seeded; all business state uses APIs.
 """
 import importlib.util

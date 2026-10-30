@@ -216,7 +216,7 @@ def main():
                     'CORS_ALLOWED_ORIGIN':f'http://127.0.0.1:{ports["frontend"]}',
                     'GATEWAY_RATE_LIMIT_REPLENISH_RATE':'200', 'GATEWAY_RATE_LIMIT_BURST_CAPACITY':'400'})
         if REAL_PAYMENTS_TEST:
-            env.update({'SPORTHUB_MONEY_MODE':'REAL', 'SPORTHUB_COLLECTION_PROVIDER':'SEPAY', 'SEPAY_COLLECTION_CREATE_ENABLED':'true', 'PAYOS_COLLECTION_CREATE_ENABLED':'false',
+            env.update({'SPORTHUB_MONEY_MODE':'REAL', 'SPORTHUB_COLLECTION_PROVIDER':'SEPAY', 'SEPAY_COLLECTION_CREATE_ENABLED':'true',
                         'PAYMENT_TEST_PROVIDER_ALLOWED':'true',
                         'PAYMENT_SECRET_KEYS':'synthetic:'+base64.b64encode(os.urandom(32)).decode(),
                         'PAYMENT_WEBHOOK_ORIGIN':f'http://127.0.0.1:{ports["gateway"]}',

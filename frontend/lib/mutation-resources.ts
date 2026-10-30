@@ -7,13 +7,6 @@ export function mutationResources(path: string, method: string): string[] | null
   )
     return []
   if (/^\/transfers\/conversations\/[^/]+\/messages$/.test(url)) return [url]
-  if (/^\/transfers\/acquisitions\/[^/]+\/evidence$/.test(url)) return [url]
-  if (
-    /^\/transfers\/acquisitions\/[^/]+\/(?:returns(?:\/[^/]+\/acknowledge)?|money-no-claim|report-late-payment)$/.test(
-      url,
-    )
-  )
-    return ['/transfers', '/payments/bank-profile']
   if (/^\/transfers\//.test(url) || url === '/transfers')
     return ['/transfers', '/bookings', '/payments/bank-profile']
   if (/^\/payments\/(?:bank-destinations|bookings\/[^/]+\/guest-bank-destinations)$/.test(url))

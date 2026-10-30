@@ -3,8 +3,10 @@ import type { TransferFinanceTerms } from './types'
 export function TransferFinanceNotice({ terms }: { terms: TransferFinanceTerms }) {
   if (terms.protocol === 'PEER_RESALE_V1')
     return (
-      <section className="my-5 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm">
-        <h2 className="font-bold">Chuyển nhượng trực tiếp giữa hai khách</h2>
+      <section className="my-5 space-y-3 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-5 text-sm leading-relaxed text-emerald-950/85 shadow-sm sm:p-6 dark:border-emerald-500/20 dark:from-emerald-500/10 dark:to-teal-500/5 dark:text-emerald-100/85">
+        <h2 className="text-base font-extrabold tracking-tight text-emerald-950 dark:text-emerald-200">
+          Chuyển nhượng trực tiếp giữa hai khách
+        </h2>
         <p>
           Người mua trả <strong>{demoVnd(terms.amount)}</strong> trực tiếp vào tài khoản người bán
           đã chốt. Không có phí chuyển nhượng hoặc khoản cơ sở trả người bán.
@@ -22,13 +24,13 @@ export function TransferFinanceNotice({ terms }: { terms: TransferFinanceTerms }
     )
   if (terms.mode !== 'DEMO' && terms.mode !== 'REAL')
     return (
-      <p className="my-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+      <p className="my-5 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-sm text-amber-950/85">
         Đây là điều khoản giao dịch cũ, chỉ phục vụ lịch sử. Tin đăng mới sử dụng chuyển nhượng trực
         tiếp, không có phí cơ sở.
       </p>
     )
   return (
-    <section className="my-5 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm">
+    <section className="my-5 space-y-3 rounded-3xl border border-emerald-200/80 bg-emerald-50/70 p-5 text-sm sm:p-6">
       <h2 className="font-bold">Điều khoản giao dịch cũ · chỉ xem lịch sử</h2>
       <p>
         Bên nhận thanh toán:{' '}

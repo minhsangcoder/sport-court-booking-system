@@ -59,56 +59,10 @@ public final class PeerResaleContract {
           String termsHash)
       implements Input {}
 
-  public record Declaration(
-      @PositiveOrZero(message = "Phiên bản phải là số không âm.") long version,
-      @NotBlank(message = "Thiếu mã điều khoản.")
-          @Pattern(regexp = "[a-f0-9]{64}", message = "Mã điều khoản không hợp lệ.")
-          String termsHash,
-      @NotBlank(message = "Cần nhập mã giao dịch.")
-          @Pattern(
-              regexp = "[^\\p{Cntrl}]{1,120}",
-              message = "Mã giao dịch cần từ 1 đến 120 ký tự, không chứa ký tự điều khiển.")
-          String bankTransactionReference,
-      @NotNull(message = "Cần ảnh chứng từ.")
-          @Size(min = 1, max = 3, message = "Cần từ 1 đến 3 ảnh chứng từ.")
-          List<@NotNull(message = "Mã ảnh không hợp lệ.") UUID> evidenceIds)
-      implements Input {}
-
   public record MessageInput(
       @NotBlank(message = "Cần nội dung tin nhắn.")
           @Size(max = 2000, message = "Tin nhắn tối đa 2000 ký tự.")
           String text)
-      implements Input {}
-
-  public record Presence(
-      @NotBlank(message = "Cần chọn bên có mặt.")
-          @Pattern(
-              regexp = "SELLER|BUYER",
-              message = "Bên có mặt phải là người bán hoặc người mua.")
-          String party,
-      @NotBlank(message = "Cần ghi lý do có mặt.")
-          @Size(max = 500, message = "Lý do tối đa 500 ký tự.")
-          String reason)
-      implements Input {}
-
-  public record Resolution(
-      @PositiveOrZero(message = "Phiên bản phải là số không âm.") long version,
-      @NotBlank(message = "Cần chọn kết luận quyền sân.")
-          @Pattern(
-              regexp = "AWARD_BUYER|SELLER_RETAINS|BUYER_FRAUD",
-              message = "Kết luận quyền sân không hợp lệ.")
-          String outcome,
-      @NotBlank(message = "Cần ghi lý do phân xử.")
-          @Size(max = 1000, message = "Lý do tối đa 1000 ký tự.")
-          String reason,
-      @NotNull(message = "Cần danh sách chứng cứ.")
-          @Size(max = 20, message = "Chỉ chọn tối đa 20 chứng cứ.")
-          List<@NotNull(message = "Mã chứng cứ không hợp lệ.") UUID> evidenceIds)
-      implements Input {}
-
-  public record FraudCorrection(
-      @NotBlank @Size(max = 1000) String reason,
-      @NotNull @Size(min = 1, max = 20) List<@NotNull UUID> evidenceIds)
       implements Input {}
 
   public interface Input {
@@ -138,13 +92,4 @@ public final class PeerResaleContract {
 
   public record Message(long cursor, UUID id, UUID senderId, String text, Instant createdAt) {}
 
-  public record Evidence(
-      UUID id,
-      UUID acquisitionId,
-      UUID uploaderId,
-      String contentType,
-      long size,
-      String sha256,
-      String state,
-      Instant createdAt) {}
 }

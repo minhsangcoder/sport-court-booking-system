@@ -1,0 +1,698 @@
+[
+ {
+  "provinceCode": "01",
+  "name": "Ba Đình",
+  "wards": [
+   {
+    "code": "00004",
+    "name": "Ba Đình"
+   },
+   {
+    "code": "00008",
+    "name": "Ngọc Hà"
+   },
+   {
+    "code": "00025",
+    "name": "Giảng Võ"
+   },
+   {
+    "code": "00097",
+    "name": "Hồng Hà"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Hoàn Kiếm",
+  "wards": [
+   {
+    "code": "00070",
+    "name": "Hoàn Kiếm"
+   },
+   {
+    "code": "00082",
+    "name": "Cửa Nam"
+   },
+   {
+    "code": "00097",
+    "name": "Hồng Hà"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Tây Hồ",
+  "wards": [
+   {
+    "code": "00103",
+    "name": "Tây Hồ"
+   },
+   {
+    "code": "00091",
+    "name": "Phú Thượng"
+   },
+   {
+    "code": "00097",
+    "name": "Hồng Hà"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Long Biên",
+  "wards": [
+   {
+    "code": "00118",
+    "name": "Bồ Đề"
+   },
+   {
+    "code": "00127",
+    "name": "Việt Hưng"
+   },
+   {
+    "code": "00136",
+    "name": "Phúc Lợi"
+   },
+   {
+    "code": "00145",
+    "name": "Long Biên"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Cầu Giấy",
+  "wards": [
+   {
+    "code": "00166",
+    "name": "Cầu Giấy"
+   },
+   {
+    "code": "00160",
+    "name": "Nghĩa Đô"
+   },
+   {
+    "code": "00175",
+    "name": "Yên Hòa"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Đống Đa",
+  "wards": [
+   {
+    "code": "00190",
+    "name": "Ô Chợ Dừa"
+   },
+   {
+    "code": "00199",
+    "name": "Láng"
+   },
+   {
+    "code": "00226",
+    "name": "Văn Miếu - Quốc Tử Giám"
+   },
+   {
+    "code": "00229",
+    "name": "Kim Liên"
+   },
+   {
+    "code": "00235",
+    "name": "Đống Đa"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Hai Bà Trưng",
+  "wards": [
+   {
+    "code": "00256",
+    "name": "Hai Bà Trưng"
+   },
+   {
+    "code": "00283",
+    "name": "Vĩnh Tuy"
+   },
+   {
+    "code": "00292",
+    "name": "Bạch Mai"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Hoàng Mai",
+  "wards": [
+   {
+    "code": "00301",
+    "name": "Vĩnh Hưng"
+   },
+   {
+    "code": "00316",
+    "name": "Định Công"
+   },
+   {
+    "code": "00322",
+    "name": "Tương Mai"
+   },
+   {
+    "code": "00328",
+    "name": "Lĩnh Nam"
+   },
+   {
+    "code": "00331",
+    "name": "Hoàng Mai"
+   },
+   {
+    "code": "00337",
+    "name": "Hoàng Liệt"
+   },
+   {
+    "code": "00340",
+    "name": "Yên Sở"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Thanh Xuân",
+  "wards": [
+   {
+    "code": "00352",
+    "name": "Phương Liệt"
+   },
+   {
+    "code": "00364",
+    "name": "Khương Đình"
+   },
+   {
+    "code": "00367",
+    "name": "Thanh Xuân"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Nam Từ Liêm",
+  "wards": [
+   {
+    "code": "00592",
+    "name": "Từ Liêm"
+   },
+   {
+    "code": "00622",
+    "name": "Xuân Phương"
+   },
+   {
+    "code": "00634",
+    "name": "Tây Mỗ"
+   },
+   {
+    "code": "00637",
+    "name": "Đại Mỗ"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Bắc Từ Liêm",
+  "wards": [
+   {
+    "code": "00598",
+    "name": "Thượng Cát"
+   },
+   {
+    "code": "00602",
+    "name": "Đông Ngạc"
+   },
+   {
+    "code": "00611",
+    "name": "Xuân Đỉnh"
+   },
+   {
+    "code": "00613",
+    "name": "Tây Tựu"
+   },
+   {
+    "code": "00619",
+    "name": "Phú Diễn"
+   },
+   {
+    "code": "00622",
+    "name": "Xuân Phương"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Hà Đông",
+  "wards": [
+   {
+    "code": "09556",
+    "name": "Hà Đông"
+   },
+   {
+    "code": "09886",
+    "name": "Dương Nội"
+   },
+   {
+    "code": "09562",
+    "name": "Yên Nghĩa"
+   },
+   {
+    "code": "09568",
+    "name": "Phú Lương"
+   },
+   {
+    "code": "09552",
+    "name": "Kiến Hưng"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Sơn Tây",
+  "wards": [
+   {
+    "code": "09574",
+    "name": "Sơn Tây"
+   },
+   {
+    "code": "09604",
+    "name": "Tùng Thiện"
+   },
+   {
+    "code": "09616",
+    "name": "Đoài Phương"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Thanh Trì",
+  "wards": [
+   {
+    "code": "00640",
+    "name": "Thanh Trì"
+   },
+   {
+    "code": "00664",
+    "name": "Đại Thanh"
+   },
+   {
+    "code": "00679",
+    "name": "Ngọc Hồi"
+   },
+   {
+    "code": "00685",
+    "name": "Nam Phù"
+   },
+   {
+    "code": "00643",
+    "name": "Thanh Liệt"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Sóc Sơn",
+  "wards": [
+   {
+    "code": "00376",
+    "name": "Sóc Sơn"
+   },
+   {
+    "code": "00382",
+    "name": "Kim Anh"
+   },
+   {
+    "code": "00385",
+    "name": "Trung Giã"
+   },
+   {
+    "code": "00430",
+    "name": "Đa Phúc"
+   },
+   {
+    "code": "00433",
+    "name": "Nội Bài"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Đông Anh",
+  "wards": [
+   {
+    "code": "00454",
+    "name": "Đông Anh"
+   },
+   {
+    "code": "00466",
+    "name": "Phúc Thịnh"
+   },
+   {
+    "code": "00475",
+    "name": "Thư Lâm"
+   },
+   {
+    "code": "00493",
+    "name": "Thiên Lộc"
+   },
+   {
+    "code": "00508",
+    "name": "Vĩnh Thanh"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Gia Lâm",
+  "wards": [
+   {
+    "code": "00541",
+    "name": "Phù Đổng"
+   },
+   {
+    "code": "00562",
+    "name": "Thuận An"
+   },
+   {
+    "code": "00565",
+    "name": "Gia Lâm"
+   },
+   {
+    "code": "00577",
+    "name": "Bát Tràng"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Mê Linh",
+  "wards": [
+   {
+    "code": "08980",
+    "name": "Yên Lãng"
+   },
+   {
+    "code": "08995",
+    "name": "Tiến Thắng"
+   },
+   {
+    "code": "09022",
+    "name": "Mê Linh"
+   },
+   {
+    "code": "08974",
+    "name": "Quang Minh"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Ba Vì",
+  "wards": [
+   {
+    "code": "09619",
+    "name": "Quảng Oai"
+   },
+   {
+    "code": "09634",
+    "name": "Cổ Đô"
+   },
+   {
+    "code": "09661",
+    "name": "Minh Châu"
+   },
+   {
+    "code": "09664",
+    "name": "Vật Lại"
+   },
+   {
+    "code": "09676",
+    "name": "Bất Bạt"
+   },
+   {
+    "code": "09694",
+    "name": "Suối Hai"
+   },
+   {
+    "code": "09700",
+    "name": "Ba Vì"
+   },
+   {
+    "code": "09706",
+    "name": "Yên Bài"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Phúc Thọ",
+  "wards": [
+   {
+    "code": "09715",
+    "name": "Phúc Thọ"
+   },
+   {
+    "code": "09739",
+    "name": "Phúc Lộc"
+   },
+   {
+    "code": "09772",
+    "name": "Hát Môn"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Đan Phượng",
+  "wards": [
+   {
+    "code": "09784",
+    "name": "Đan Phượng"
+   },
+   {
+    "code": "09787",
+    "name": "Liên Minh"
+   },
+   {
+    "code": "09817",
+    "name": "Ô Diên"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Hoài Đức",
+  "wards": [
+   {
+    "code": "09832",
+    "name": "Hoài Đức"
+   },
+   {
+    "code": "09856",
+    "name": "Dương Hòa"
+   },
+   {
+    "code": "09871",
+    "name": "Sơn Đồng"
+   },
+   {
+    "code": "09877",
+    "name": "An Khánh"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Quốc Oai",
+  "wards": [
+   {
+    "code": "09895",
+    "name": "Quốc Oai"
+   },
+   {
+    "code": "09910",
+    "name": "Kiều Phú"
+   },
+   {
+    "code": "09931",
+    "name": "Hưng Đạo"
+   },
+   {
+    "code": "09952",
+    "name": "Phú Cát"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Thạch Thất",
+  "wards": [
+   {
+    "code": "09955",
+    "name": "Thạch Thất"
+   },
+   {
+    "code": "09982",
+    "name": "Hạ Bằng"
+   },
+   {
+    "code": "09988",
+    "name": "Hòa Lạc"
+   },
+   {
+    "code": "10003",
+    "name": "Tây Phương"
+   },
+   {
+    "code": "04930",
+    "name": "Yên Xuân"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Chương Mỹ",
+  "wards": [
+   {
+    "code": "10015",
+    "name": "Chương Mỹ"
+   },
+   {
+    "code": "10030",
+    "name": "Phú Nghĩa"
+   },
+   {
+    "code": "10045",
+    "name": "Xuân Mai"
+   },
+   {
+    "code": "10072",
+    "name": "Quảng Bị"
+   },
+   {
+    "code": "10081",
+    "name": "Trần Phú"
+   },
+   {
+    "code": "10096",
+    "name": "Hòa Phú"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Thanh Oai",
+  "wards": [
+   {
+    "code": "10114",
+    "name": "Thanh Oai"
+   },
+   {
+    "code": "10126",
+    "name": "Bình Minh"
+   },
+   {
+    "code": "10144",
+    "name": "Tam Hưng"
+   },
+   {
+    "code": "10180",
+    "name": "Dân Hòa"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Thường Tín",
+  "wards": [
+   {
+    "code": "10183",
+    "name": "Thường Tín"
+   },
+   {
+    "code": "10210",
+    "name": "Hồng Vân"
+   },
+   {
+    "code": "10231",
+    "name": "Thượng Phúc"
+   },
+   {
+    "code": "10237",
+    "name": "Chương Dương"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Phú Xuyên",
+  "wards": [
+   {
+    "code": "10273",
+    "name": "Phú Xuyên"
+   },
+   {
+    "code": "10279",
+    "name": "Phượng Dực"
+   },
+   {
+    "code": "10330",
+    "name": "Chuyên Mỹ"
+   },
+   {
+    "code": "10342",
+    "name": "Đại Xuyên"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Ứng Hòa",
+  "wards": [
+   {
+    "code": "10354",
+    "name": "Vân Đình"
+   },
+   {
+    "code": "10369",
+    "name": "Ứng Thiên"
+   },
+   {
+    "code": "10402",
+    "name": "Ứng Hòa"
+   },
+   {
+    "code": "10417",
+    "name": "Hòa Xá"
+   }
+  ]
+ },
+ {
+  "provinceCode": "01",
+  "name": "Mỹ Đức",
+  "wards": [
+   {
+    "code": "10441",
+    "name": "Mỹ Đức"
+   },
+   {
+    "code": "10459",
+    "name": "Phúc Sơn"
+   },
+   {
+    "code": "10465",
+    "name": "Hồng Sơn"
+   },
+   {
+    "code": "10489",
+    "name": "Hương Sơn"
+   }
+  ]
+ }
+]

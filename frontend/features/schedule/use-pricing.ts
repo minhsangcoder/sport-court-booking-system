@@ -56,7 +56,8 @@ export function usePricing() {
       setBusy(false)
     }
   }
-  const selectClass = 'rounded-lg border bg-white p-3'
+  const selectClass =
+    'h-11 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 text-sm font-medium text-slate-800 transition-all hover:border-slate-300 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
 
   return {
     facility,

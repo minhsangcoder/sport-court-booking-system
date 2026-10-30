@@ -20,14 +20,21 @@ export function CounterSlots({ courtId, owner = false }: { courtId: string; owne
   return (
     <RequireAuth roles={[owner ? 'OWNER' : 'STAFF']}>
       {(owned.loading || access.loading) && (
-        <p role="status" className="p-8">
-          Đang kiểm tra quyền đặt tại quầy…
-        </p>
+        <div className="flex min-h-[40vh] items-center justify-center p-8">
+          <p role="status" className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+            Đang kiểm tra quyền đặt tại quầy…
+          </p>
+        </div>
       )}
       {(owned.error || access.error) && (
-        <p role="alert" className="p-8 text-red-700">
-          {owned.error || access.error}
-        </p>
+        <div className="mx-auto max-w-4xl p-6">
+          <p
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-medium text-red-700 shadow-2xs dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+          >
+            {owned.error || access.error}
+          </p>
+        </div>
       )}
       {facilityId &&
         !owned.loading &&
@@ -35,14 +42,23 @@ export function CounterSlots({ courtId, owner = false }: { courtId: string; owne
         !owned.error &&
         !access.error &&
         !allowed && (
-          <p role="alert" className="p-8">
-            Bạn chưa có quyền đặt tại quầy ở cơ sở này.
-          </p>
+          <div className="mx-auto max-w-4xl p-6">
+            <p
+              role="alert"
+              className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-medium text-amber-800 shadow-2xs dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
+            >
+              Bạn chưa có quyền đặt tại quầy ở cơ sở này.
+            </p>
+          </div>
         )}
       {facilityId && allowed ? (
         <AvailabilityPage facilityId={facilityId} courtId={courtId} counter />
       ) : !facilityId ? (
-        <p className="p-8">Thiếu cơ sở. Quay lại màn hình vận hành.</p>
+        <div className="mx-auto max-w-4xl p-6">
+          <p className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm font-medium text-slate-600 shadow-2xs">
+            Thiếu cơ sở. Quay lại màn hình vận hành.
+          </p>
+        </div>
       ) : null}
     </RequireAuth>
   )

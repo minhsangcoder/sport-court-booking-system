@@ -33,7 +33,7 @@ class PeerPartyHttpTest {
                     commands,
                     identity,
                     mock(com.sporthub.transfer.service.PeerBookingClient.class),
-                    mock(com.sporthub.transfer.service.PeerEvidenceAccess.class)))
+                    mock(com.sporthub.transfer.service.PeerPartyAccess.class)))
             .setMessageConverters(new MappingJackson2HttpMessageConverter(json))
             .setControllerAdvice(new GlobalExceptionHandler())
             .addFilters(new TransferPrivacyFilter())

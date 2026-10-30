@@ -7,7 +7,7 @@ import java.util.*;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
-/** Records refund review requests; never selects or executes a disputed refund policy. */
+/** Contributions forfeit at expiry; only money that was never applied goes to reconciliation. */
 @Component
 public class GroupExpiration {
   private final BookingRepository repo;
@@ -28,12 +28,17 @@ public class GroupExpiration {
                     + " state='GROUP_PENDING'",
                 booking.id())
         == 0) return;
-    for (var row :
+    var forfeited =
         repo.jdbc()
-            .queryForList("SELECT * FROM group_contributions WHERE group_id=?", booking.id()))
-      requestReview(
-          booking.id(), (UUID) row.get("payment_id"), (UUID) row.get("payer_id"), "GROUP_TIMEOUT");
-    repo.history(booking.id(), null, "GROUP_EXPIRED", Map.of("refundPolicy", "BLOCKED_RULE"));
+            .queryForObject(
+                "SELECT coalesce(sum(amount),0) FROM group_contributions WHERE group_id=?",
+                java.math.BigDecimal.class,
+                booking.id());
+    repo.history(
+        booking.id(),
+        null,
+        "GROUP_EXPIRED",
+        Map.of("contributionPolicy", "FORFEITED", "forfeitedAmount", forfeited));
   }
 
   public void requestReview(UUID booking, UUID payment, UUID payer, String reason) {

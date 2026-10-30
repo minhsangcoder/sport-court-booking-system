@@ -3,22 +3,18 @@ package com.sporthub.payment.service;
 import com.fasterxml.jackson.databind.*;
 import com.sporthub.common.event.*;
 import com.sporthub.common.security.Signatures;
-import com.sporthub.payment.provider.PayosClient;
 import com.sporthub.payment.repository.PaymentRepository;
 import com.sporthub.payment.security.PaymentSecretVault;
 import com.sporthub.payment.web.PaymentDtos.Payment;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.*;
 
-/**
- * Shared credit accounting; adapters authenticate payOS queries or SePay webhooks before applying.
- */
+/** Shared credit accounting; the SePay adapter authenticates webhooks before applying credits. */
 @Service
 public class PayosCollectionProcessor {
   record Credit(
@@ -56,66 +52,11 @@ public class PayosCollectionProcessor {
     tx = new TransactionTemplate(manager);
   }
 
-  public void applyQuery(UUID payment, JsonNode data) {
-    if (TransactionSynchronizationManager.isActualTransactionActive())
-      throw new IllegalStateException("Verified query processing must start outside transaction");
-    var order = repo.find(payment);
-    var session =
-        repo.jdbc().queryForMap("SELECT * FROM payos_qr_sessions WHERE payment_id=?", payment);
-    var receiver = channels.context((UUID) session.get("receiver_revision_id"));
-    if (!order.provider().equals("PAYOS")
-        || data.path("orderCode").longValue() != ((Number) session.get("order_code")).longValue()
-        || order.amount().compareTo(data.path("amount").decimalValue()) != 0
-        || !Objects.equals(
-            session.get("native_link_id"),
-            data.path("id").asText(data.path("paymentLinkId").asText())))
-      throw new PayosClient.Failure("BINDING_MISMATCH");
-    JsonNode transactions = data.path("transactions");
-    if (!transactions.isArray()
-        && !(transactions.isObject()
-            && transactions.isEmpty()
-            && data.path("amountPaid").decimalValue().signum() == 0))
-      throw new PayosClient.Failure("TRANSACTIONS_UNPROVEN");
-    var credits = new ArrayList<Credit>();
-    var references = new HashSet<String>();
-    BigDecimal sum = BigDecimal.ZERO;
-    for (var entry : transactions) {
-      String reference = entry.path("reference").asText();
-      BigDecimal amount = entry.path("amount").decimalValue();
-      if (reference.isBlank()
-          || reference.length() > 120
-          || reference.chars().anyMatch(Character::isISOControl)
-          || !references.add(reference)
-          || amount.signum() <= 0
-          || amount.stripTrailingZeros().scale() > 0
-          || !receiver.accountNumber().equals(entry.path("accountNumber").asText())
-          || entry.hasNonNull("currency") && !"VND".equals(entry.path("currency").asText()))
-        throw new PayosClient.Failure("TRANSACTIONS_UNPROVEN");
-      Instant time = bankTime(entry.path("transactionDateTime").asText());
-      String fingerprint =
-          Signatures.sha256(
-              payment
-                  + "|"
-                  + reference
-                  + "|"
-                  + amount.toBigIntegerExact()
-                  + "|"
-                  + receiver.receiverHash()
-                  + "|"
-                  + time);
-      credits.add(new Credit(reference, amount, time, fingerprint, entry));
-      sum = sum.add(amount);
-    }
-    if (!data.has("amountPaid") || sum.compareTo(data.path("amountPaid").decimalValue()) != 0)
-      throw new PayosClient.Failure("TRANSACTIONS_UNPROVEN");
-    applyVerified(order, session, credits);
-  }
-
   void applyVerified(
       com.sporthub.payment.web.PaymentDtos.Payment order,
       Map<String, Object> session,
       List<Credit> credits) {
-    if (!Set.of("PAYOS", "SEPAY").contains(order.provider()))
+    if (!"SEPAY".equals(order.provider()))
       throw new IllegalArgumentException("Unsupported native collection provider");
     UUID payment = order.id();
     var receiver = channels.context((UUID) session.get("receiver_revision_id"));
@@ -135,7 +76,7 @@ public class PayosCollectionProcessor {
             if (!old.isEmpty()) {
               if (!payment.equals(old.getFirst().get("payment_id"))
                   || !credit.fingerprint().equals(old.getFirst().get("fingerprint")))
-                throw new PayosClient.Failure("TRANSACTION_CONFLICT");
+                throw new CollectionFailure("TRANSACTION_CONFLICT");
               continue;
             }
             UUID creditId = UUID.randomUUID();
@@ -352,27 +293,6 @@ public class PayosCollectionProcessor {
       return json.readTree(value.toString());
     } catch (Exception ex) {
       throw new IllegalStateException("Invalid stored REAL terms");
-    }
-  }
-
-  static Instant bankTime(String value) {
-    try {
-      return Instant.parse(value);
-    } catch (java.time.DateTimeException ignored) {
-    }
-    try {
-      return OffsetDateTime.parse(value).toInstant();
-    } catch (java.time.DateTimeException ignored) {
-    }
-    try {
-      return LocalDateTime.parse(
-              value,
-              DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss")
-                  .withResolverStyle(java.time.format.ResolverStyle.STRICT))
-          .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
-          .toInstant();
-    } catch (java.time.DateTimeException ex) {
-      throw new PayosClient.Failure("TRANSACTIONS_UNPROVEN");
     }
   }
 }

@@ -1,12 +1,11 @@
 'use client'
-import { useState } from 'react'
 import { useApi } from '@/lib/use-api'
 import { Button } from '@/components/ui/button'
+import { outlinePill, primaryPill } from './transfer-styles'
 import { money } from '@/features/schedule/types'
-import { EvidencePreview, PrivateImage } from './private-image'
-import { PeerEvidencePicker } from './peer-evidence'
+import { PrivateImage } from './private-image'
 import { usePeerCommand } from './use-peer-command'
-import type { PeerAttempt, PeerDeclaration } from './peer-types'
+import type { PeerAttempt } from './peer-types'
 
 type Instruction = {
   amount: string
@@ -33,20 +32,15 @@ export function PeerPayment({
       ? `/payments/peer-acquisitions/${a.id}/instruction`
       : null,
   )
-  const declaration = useApi<PeerDeclaration>(
-    ['PAYMENT_DECLARED', 'DISPUTED', 'COMPLETED'].includes(a.phase)
-      ? `/transfers/acquisitions/${a.id}/declaration`
-      : null,
-  )
-  const [evidence, setEvidence] = useState<string[]>([])
-  const [reference, setReference] = useState('')
   const command = usePeerCommand()
   const input = { version: a.version, termsHash: a.termsHash }
   const run = (action: string) =>
     void command.run(`/transfers/acquisitions/${a.id}/${action}`, input, reload)
   return (
-    <section className="space-y-4 rounded-xl border p-5">
-      <h2 className="text-lg font-bold">Thanh toán trực tiếp vào tài khoản người bán</h2>
+    <section className="relative isolate overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 space-y-4 p-5 sm:p-7">
+      <h2 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
+        Thanh toán trực tiếp vào tài khoản người bán
+      </h2>
       {a.phase === 'WAITING_PAYMENT' && remaining > 0 && (
         <>
           {instruction.data && (
@@ -59,7 +53,7 @@ export function PeerPayment({
                 {money(Number(instruction.data.amount), 'VND')} · Nội dung:{' '}
                 {instruction.data.description}
               </p>
-              <div className="mx-auto max-w-72">
+              <div className="mx-auto max-w-72 rounded-2xl bg-white p-3 shadow-lg ring-4 ring-emerald-100">
                 <PrivateImage
                   path={`/payments/peer-acquisitions/${a.id}/qr`}
                   alt="QR SePay chuyển tiền đúng giá cho người bán"
@@ -80,46 +74,19 @@ export function PeerPayment({
             không dùng lại mã cũ sau khi hết hạn.
           </p>
           {buyer && (
-            <form
-              className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault()
-                void command.run(
-                  `/transfers/acquisitions/${a.id}/declare-payment`,
-                  { ...input, bankTransactionReference: reference.trim(), evidenceIds: evidence },
-                  reload,
-                )
-              }}
-            >
-              <PeerEvidencePicker
-                acquisitionId={a.id}
-                userId={userId}
-                value={evidence}
-                onChange={setEvidence}
-                disabled={command.busy || command.blocked}
-              />
-              <label className="grid gap-2 text-sm">
-                Mã giao dịch ngân hàng
-                <input
-                  className="rounded-lg border p-3"
-                  value={reference}
-                  onChange={(event) => setReference(event.target.value)}
-                  required
-                  maxLength={120}
-                  disabled={command.busy || command.blocked}
-                />
-              </label>
+            <div className="flex flex-wrap gap-2.5">
               <Button
-                type="submit"
-                disabled={
-                  command.busy || command.blocked || !reference.trim() || evidence.length < 1
-                }
+                className={primaryPill}
+                disabled={command.busy || command.blocked}
+                onClick={() => {
+                  if (window.confirm('Bạn đã chuyển đủ tiền cho người bán?')) run('declare-payment')
+                }}
               >
-                Tôi đã chuyển tiền, gửi chứng từ
+                Tôi đã chuyển tiền
               </Button>
               <Button
-                type="button"
                 variant="outline"
+                className={outlinePill}
                 disabled={command.busy || command.blocked}
                 onClick={() => {
                   if (
@@ -132,71 +99,60 @@ export function PeerPayment({
               >
                 Hủy lượt giữ chưa thanh toán
               </Button>
-            </form>
+            </div>
           )}
         </>
       )}
-      {declaration.data && (
-        <div className="space-y-2 text-sm">
-          <p>
-            Người mua khai mã giao dịch: <strong>{declaration.data.reference}</strong>. Đây là lời
-            khai, chưa phải xác minh ngân hàng.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {declaration.data.evidenceIds.map((id) => (
-              <EvidencePreview key={id} id={id} />
-            ))}
-          </div>
-        </div>
-      )}
-      {declaration.error && <p role="alert">{declaration.error}</p>}
       {a.phase === 'PAYMENT_DECLARED' &&
         (buyer ? (
-          <>
-            <p>
-              Đang chờ người bán kiểm tra tiền thực nhận. Lượt giữ không tự hết sau 5 phút khi đã
-              khai đúng hạn.
-            </p>
-            <Button
-              variant="outline"
-              disabled={command.busy || command.blocked}
-              onClick={() => run('open-dispute')}
-            >
-              Khiếu nại chưa được bàn giao
-            </Button>
-          </>
+          <p>
+            Đang chờ người bán kiểm tra tiền. Sân chỉ thuộc về bạn khi người bán bấm đã nhận; nếu người
+            bán báo chưa nhận hoặc chưa xác nhận trước giờ chơi, sân vẫn thuộc người bán và hai bên tự
+            giải quyết với nhau qua chủ sân.
+          </p>
         ) : (
           <div className="space-y-3">
             <p>
-              Kiểm tra đủ {money(Number(a.amount), a.currency)} trong tài khoản của bạn trước khi
-              xác nhận.
+              Người mua báo đã chuyển tiền. Kiểm tra đủ {money(Number(a.amount), a.currency)} trong tài
+              khoản của bạn trước khi xác nhận.
             </p>
-            <Button
-              disabled={command.busy || command.blocked}
-              onClick={() => {
-                if (
-                  window.confirm(
-                    'Bạn đã nhận đủ tiền? Xác nhận sẽ bàn giao quyền sân và đổi mã vào sân cho người mua.',
+            <div className="flex flex-wrap gap-2.5">
+              <Button
+                className={primaryPill}
+                disabled={command.busy || command.blocked}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'Bạn đã nhận đủ tiền? Xác nhận sẽ bàn giao quyền sân và đổi mã vào sân cho người mua.',
+                    )
                   )
-                )
-                  run('confirm-receipt')
-              }}
-            >
-              Đã nhận đủ tiền, bàn giao sân
-            </Button>
-            <Button
-              variant="outline"
-              disabled={command.busy || command.blocked}
-              onClick={() => run('deny-receipt')}
-            >
-              Chưa nhận đủ tiền, gửi Owner phân xử quyền sân
-            </Button>
+                    run('confirm-receipt')
+                }}
+              >
+                Đã nhận đủ tiền, bàn giao sân
+              </Button>
+              <Button
+                variant="outline"
+                className={outlinePill}
+                disabled={command.busy || command.blocked}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      'Báo chưa nhận tiền sẽ kết thúc phiên này; sân vẫn thuộc bạn và tin được mở lại. Tiếp tục?',
+                    )
+                  )
+                    run('deny-receipt')
+                }}
+              >
+                Chưa nhận được tiền
+              </Button>
+            </div>
           </div>
         ))}
       {a.phase === 'DISPUTED' && (
-        <p className="rounded bg-amber-50 p-3">
-          Quyền sân đang đóng băng. Đến cơ sở để Owner hoặc nhân viên được phép ghi nhận có mặt;
-          nhắn tin không tính có mặt. Owner chỉ quyết định quyền dùng sân.
+        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-3.5">
+          Phiên này được mở theo quy trình cũ. Sân sẽ thuộc người bán khi đến giờ chơi; hai bên tự giải
+          quyết với nhau qua chủ sân.
         </p>
       )}
       {command.error && (

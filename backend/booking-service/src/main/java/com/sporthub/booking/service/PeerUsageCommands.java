@@ -103,11 +103,8 @@ public class PeerUsageCommands {
             "PEER_DECLARE",
             "PEER_CANCEL",
             "PEER_CONFIRM",
-            "PEER_OPEN_DISPUTE",
-            "PEER_MONEY_REPORT",
-            "PEER_RETURN_DECLARE",
-            "PEER_RETURN_ACK",
-            "PEER_MONEY_NO_CLAIM")
+            "PEER_DENY",
+            "PEER_OPEN_DISPUTE")
         .contains(action)) throw new IllegalArgumentException("Loại lệnh phiên mua không hợp lệ.");
     var before = store.attempt(id);
     return tx.execute(

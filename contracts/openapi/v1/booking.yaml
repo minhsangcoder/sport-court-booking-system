@@ -1566,6 +1566,24 @@
               "default": "NAME"
             },
             "description": "Distance requires both origin coordinates."
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Former district name, matched without diacritics. Only Hanoi has a mapping for now."
+          },
+          {
+            "name": "ward",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Current ward or commune name, matched without diacritics."
           }
         ],
         "responses": {
@@ -5133,195 +5151,6 @@
           "courts",
           "transactions",
           "peer"
-        ]
-      },
-      "ManualDisbursementCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "version": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "bankTransactionReference": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120
-          }
-        },
-        "required": [
-          "version",
-          "bankTransactionReference"
-        ]
-      },
-      "ManualReviewCommand": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "version": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "action": {
-            "type": "string",
-            "enum": [
-              "REVIEW",
-              "TAKE_OVER",
-              "RELEASE"
-            ]
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 500
-          },
-          "confirmedNotTransferred": {
-            "type": "boolean",
-            "description": "Required true for RELEASE after checking the bank; never implied by timeout."
-          }
-        },
-        "required": [
-          "version",
-          "action",
-          "reason"
-        ]
-      },
-      "ManualDisbursement": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "obligationId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "version": {
-            "type": "integer"
-          },
-          "state": {
-            "type": "string",
-            "enum": [
-              "PREPARED",
-              "REVIEW",
-              "MANUALLY_RECORDED",
-              "RELEASED"
-            ]
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "SELLER_PAYOUT",
-              "POLICY_REFUND",
-              "TECHNICAL_REFUND"
-            ]
-          },
-          "amount": {
-            "type": "string",
-            "pattern": "^[0-9]+$"
-          },
-          "destinationRevisionId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "bankBin": {
-            "type": "string"
-          },
-          "accountNumber": {
-            "type": "string"
-          },
-          "accountName": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 25,
-            "pattern": "^[A-Z0-9 ]{1,25}$"
-          },
-          "claimedBy": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "confirmationMethod": {
-            "type": "string",
-            "enum": [
-              "MANUALLY_RECORDED"
-            ]
-          },
-          "bankTransactionReference": {
-            "type": "string"
-          },
-          "confirmedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "operationId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "obligationVersion": {
-            "type": "integer"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "REAL"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "warning": {
-            "type": "string"
-          },
-          "bankName": {
-            "type": "string"
-          },
-          "qrPayload": {
-            "type": "string"
-          },
-          "qrImageDataUrl": {
-            "type": "string",
-            "description": "Private locally encoded PNG data URL. No external Generate API or account URL."
-          },
-          "receiptId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "confirmationLabel": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "obligationId",
-          "version",
-          "state",
-          "kind",
-          "amount",
-          "destinationRevisionId",
-          "claimedBy",
-          "operationId",
-          "obligationVersion",
-          "mode",
-          "createdAt"
-        ],
-        "description": "Only current claimed operator sees private bank/QR fields while PREPARED. REVIEW/released/recorded responses hide QR. Successful immutable outgoing receipt is MANUALLY_RECORDED, never BANK_VERIFIED."
-      },
-      "PrepareDisbursement": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "version": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "required": [
-          "version"
         ]
       },
       "RefundDestinationCommand": {

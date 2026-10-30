@@ -13,6 +13,8 @@ import { useEffect, useState } from 'react'
 import { PageBanner } from '@/components/page-banner'
 import { CourtCard } from './court-card'
 import type { DiscoveryResult } from './types'
+
+type FormerDistrict = { name: string; wards: { code: string; name: string }[] }
 const SearchMap = dynamic(() => import('./search-map').then((module) => module.SearchMap), {
   ssr: false,
   loading: () => (
@@ -25,6 +27,8 @@ const fields = [
   'q',
   'sportCategoryId',
   'provinceCode',
+  'district',
+  'ward',
   'date',
   'opensAfter',
   'closesBefore',
@@ -63,6 +67,26 @@ export function SearchPage({ initial, today }: { initial: Record<string, string>
   const pastDate = Boolean(/^\d{4}-\d{2}-\d{2}$/.test(filters.date) && filters.date < today)
   if (pastDate) filters.date = today
   const [categoryId, setCategoryId] = useState(filters.sportCategoryId)
+  const [provinceCode, setProvinceCode] = useState(filters.provinceCode)
+  const [district, setDistrict] = useState(filters.district)
+  const [ward, setWard] = useState(filters.ward)
+  const [provinceWards, setProvinceWards] = useState<{ code: string; name: string }[]>([])
+  const districts = useApi<FormerDistrict[]>(
+    provinceCode ? `/facilities/areas?provinceCode=${provinceCode}` : null,
+  )
+  const currentDistrict = provinceCode ? districts.data?.find((d) => d.name === district) : undefined
+  const wardOptions = currentDistrict?.wards ?? (provinceCode ? provinceWards : [])
+  useEffect(() => {
+    if (!provinceCode) return
+    let active = true
+    // The nationwide ward list is large, so it loads only once a province is chosen.
+    import('@/features/facility/administrative-divisions').then(({ provinceByCode }) => {
+      if (active) setProvinceWards(provinceByCode(provinceCode)?.wards ?? [])
+    })
+    return () => {
+      active = false
+    }
+  }, [provinceCode])
   const [position, setPosition] = useState({
     latitude: filters.latitude,
     longitude: filters.longitude,
@@ -134,7 +158,7 @@ export function SearchPage({ initial, today }: { initial: Record<string, string>
                 Tên cơ sở hoặc khu vực
                 <Input
                   name="q"
-                  placeholder="Tên cơ sở hoặc khu vực…"
+                  placeholder="Tên sân, phường/xã, quận/huyện…"
                   maxLength={180}
                   className="h-9 bg-white text-slate-900 border-slate-300"
                   defaultValue={filters.q}
@@ -182,6 +206,8 @@ export function SearchPage({ initial, today }: { initial: Record<string, string>
                 className="w-full"
                 open={Boolean(
                   initial.provinceCode ||
+                  initial.district ||
+                  initial.ward ||
                   initial.opensAfter ||
                   initial.minPrice ||
                   initial.latitude,
@@ -196,13 +222,67 @@ export function SearchPage({ initial, today }: { initial: Record<string, string>
                     Tỉnh / thành phố
                     <select
                       name="provinceCode"
-                      defaultValue={filters.provinceCode}
+                      value={provinceCode}
+                      onChange={(event) => {
+                        setProvinceCode(event.target.value)
+                        setProvinceWards([])
+                        setDistrict('')
+                        setWard('')
+                      }}
                       className={selectStyle}
                     >
                       <option value="">Tất cả tỉnh / thành phố</option>
                       {provinces.map((province) => (
                         <option key={province.code} value={province.code}>
                           {province.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1.5 text-xs font-medium text-slate-300">
+                    Quận / huyện (trước sáp nhập)
+                    <select
+                      name="district"
+                      value={district}
+                      disabled={!districts.data?.length}
+                      onChange={(event) => {
+                        setDistrict(event.target.value)
+                        setWard('')
+                      }}
+                      className={`${selectStyle} disabled:bg-slate-200 disabled:text-slate-500`}
+                    >
+                      <option value="">
+                        {!provinceCode
+                          ? 'Chọn tỉnh / thành phố trước'
+                          : districts.data?.length
+                            ? 'Tất cả quận / huyện'
+                            : 'Chưa có dữ liệu quận / huyện'}
+                      </option>
+                      {districts.data?.map((item) => (
+                        <option key={item.name} value={item.name}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1.5 text-xs font-medium text-slate-300">
+                    Phường / xã
+                    <select
+                      name="ward"
+                      value={ward}
+                      disabled={!wardOptions.length}
+                      onChange={(event) => setWard(event.target.value)}
+                      className={`${selectStyle} disabled:bg-slate-200 disabled:text-slate-500`}
+                    >
+                      <option value="">
+                        {provinceCode ? 'Tất cả phường / xã' : 'Chọn tỉnh / thành phố trước'}
+                      </option>
+                      {ward && !wardOptions.some((item) => item.name === ward) && (
+                        <option value={ward}>{ward}</option>
+                      )}
+                      {wardOptions.map((item) => (
+                        <option key={item.code} value={item.name}>
+                          {item.name}
                         </option>
                       ))}
                     </select>

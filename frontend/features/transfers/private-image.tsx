@@ -7,15 +7,6 @@ export function PrivateImage(props: { path: string; alt: string; className?: str
   const { user } = useAuth()
   return <ImageContent key={`${user?.id}:${props.path}`} {...props} />
 }
-export function EvidencePreview({ id }: { id: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary className="cursor-pointer underline">Xem chứng từ</summary>
-      {open && <PrivateImage path={`/transfers/evidence/${id}`} alt="Ảnh chứng từ riêng tư" />}
-    </details>
-  )
-}
 function ImageContent({ path, alt, className }: { path: string; alt: string; className?: string }) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')

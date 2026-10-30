@@ -207,11 +207,11 @@ function Loaded({ id }: { id: string }) {
                   </h3>
                   <p className="mt-2.5 text-sm leading-relaxed text-amber-950/80 dark:text-amber-100/80">
                     Theo chính sách cơ sở,{' '}
-                    <strong>người đặt trực tiếp không áp dụng hoàn tiền khi tự hủy</strong>. Quý khách
-                    có thể đăng chuyển nhượng để sang nhượng lại cho người khác trên hệ thống. Với
-                    chuyển nhượng trực tiếp thành công, bạn nhận 100% giá chuyển nhượng đã chốt từ
-                    người mua; nếu không chuyển nhượng được và không đến sân, bạn mất toàn bộ tiền
-                    đã trả.
+                    <strong>người đặt trực tiếp không áp dụng hoàn tiền khi tự hủy</strong>. Quý
+                    khách có thể đăng chuyển nhượng để sang nhượng lại cho người khác trên hệ thống.
+                    Với chuyển nhượng trực tiếp thành công, bạn nhận 100% giá chuyển nhượng đã chốt
+                    từ người mua; nếu không chuyển nhượng được và không đến sân, bạn mất toàn bộ
+                    tiền đã trả.
                   </p>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
                     {b.priceSnapshot.moneyClass !== 'REAL' && (

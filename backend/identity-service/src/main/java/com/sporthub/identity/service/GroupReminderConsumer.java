@@ -41,15 +41,16 @@ public class GroupReminderConsumer {
         var rows=jdbc.queryForList("SELECT email,phone,email_verified,phone_verified FROM users WHERE id=?",recipient);
         if(rows.isEmpty())throw new AmqpRejectAndDontRequeueException("Reminder recipient does not exist");
         var user=rows.getFirst();String contact=Boolean.TRUE.equals(user.get("email_verified"))?(String)user.get("email"):Boolean.TRUE.equals(user.get("phone_verified"))?(String)user.get("phone"):null;
-        if(contact==null)throw new AmqpRejectAndDontRequeueException("Reminder recipient has no verified contact");
         if(jdbc.update("INSERT INTO event_inbox(consumer,event_id) VALUES('group-payment-reminder',?) ON CONFLICT DO NOTHING",eventId)==0)return;
         String formattedAmount=NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi-VN")).format(amount)+" VND";
         String formattedDeadline=DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm z",Locale.forLanguageTag("vi-VN")).withZone(timezone).format(deadline);
-        String text="Bạn còn "+formattedAmount+" cần thanh toán cho nhóm "+group+". Hạn thanh toán: "+formattedDeadline+".\n"
+        String name=body.path("groupName").asText("đặt sân");
+        String text="Bạn còn "+formattedAmount+" cần thanh toán cho nhóm "+name+". Hạn thanh toán: "+formattedDeadline+".\n"
             +"Số tiền được ghi nhận lúc người tổ chức gửi nhắc; mở nhóm để xem trạng thái mới nhất.\n"
             +properties.frontendBaseUrl().replaceAll("/+$","")+"/customer/groups/"+group;
-        jdbc.update("INSERT INTO identity_notifications(id,user_id,recipient,subject,body,source_key) VALUES(?,?,?,?,?,?) ON CONFLICT(source_key) WHERE source_key IS NOT NULL DO NOTHING",
-            UUID.randomUUID(),recipient,contact,"SportHub — Nhắc thanh toán nhóm",text,"group-reminder:"+eventId);
+        // Without a verified contact the reminder still reaches the in-app inbox; nothing is mailed.
+        jdbc.update("INSERT INTO identity_notifications(id,user_id,recipient,subject,body,source_key,link_path,state) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(source_key) WHERE source_key IS NOT NULL DO NOTHING",
+            UUID.randomUUID(),recipient,contact,"SportHub — Nhắc thanh toán nhóm",text,"group-reminder:"+eventId,"/customer/groups/"+group,contact==null?"IN_APP_ONLY":"PENDING");
     }
     @Configuration static class Messaging {
         @Bean org.springframework.amqp.core.Queue groupRemindersQueue(){return QueueBuilder.durable(QUEUE).deadLetterExchange("sporthub.dlx").deadLetterRoutingKey("dead-letter").build();}

@@ -6,25 +6,21 @@ const load = name => JSON.parse(readFileSync(new URL(`../../../contracts/openapi
 const transfer = load('transfer')
 
 test('peer commands cannot choose payer, holder, recipient or a bank-verified outcome', () => {
-  for (const name of ['PeerCommand', 'PeerDeclaration', 'PeerPresence', 'PeerResolution', 'PeerMoneyReport', 'PeerMoneyReturnInput', 'PeerMoneyNoClaim']) {
+  for (const name of ['PeerCommand']) {
     const schema = transfer.components.schemas[name]
     assert.equal(schema.additionalProperties, false)
     for (const forbidden of ['holderId', 'buyerId', 'sellerId', 'bankAccount', 'confirmationMethod']) {
       assert.equal(forbidden in schema.properties, false)
     }
   }
-  assert.equal(transfer.components.schemas.PeerDeclaration.properties.evidenceIds.minItems, 1)
-  assert.equal(transfer.components.schemas.PeerDeclaration.properties.evidenceIds.maxItems, 3)
-  assert.equal(transfer.components.schemas.PeerDeclaration.properties.bankTransactionReference.maxLength, 120)
+  assert.equal(transfer.paths['/transfers/acquisitions/{id}/declare-payment'].post.requestBody.content['application/json'].schema.$ref, '#/components/schemas/PeerCommand')
+  assert.equal(transfer.paths['/transfers/acquisitions/{id}/open-dispute'], undefined)
   assert.equal(transfer.components.schemas.PeerAttempt.properties.confirmationMethod.enum.includes('BANK_VERIFIED'), false)
-  for (const field of ['moneyDisposition', 'returnAmount', 'refundAmount', 'recipientId']) {
-    assert.equal(field in transfer.components.schemas.PeerResolution.properties, false)
-  }
 })
 
-test('peer money and evidence commands are private and safely replayed', () => {
+test('peer party commands are private and safely replayed', () => {
   for (const [path, item] of Object.entries(transfer.paths)) {
-    if (!/declare-payment|confirm-receipt|deny-receipt|open-dispute|conversations|evidence|\/cases|report-late-payment|\/returns|money-no-claim|\/money$|\/release$|\/declaration$/.test(path)) continue
+    if (!/declare-payment|confirm-receipt|deny-receipt|conversations|\/release$/.test(path)) continue
     for (const [method, operation] of Object.entries(item)) {
       assert.deepEqual(operation.security, [{ bearerAuth: [] }], path)
       if (method === 'post') assert.ok(operation.parameters.some(p => p.name === 'Idempotency-Key' && p.required), path)

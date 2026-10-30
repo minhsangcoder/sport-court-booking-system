@@ -55,7 +55,7 @@ public class BookingRealFunds {
         || !"payment-service".equals(event.path("producer").asText())
         || !Set.of("payment.bank.credit", "payment.funds.unapplied").contains(type)
         || !"REAL".equals(p.path("moneyClass").asText())
-        || !Set.of("PAYOS", "SEPAY").contains(p.path("provider").asText())
+        || !"SEPAY".equals(p.path("provider").asText())
         || !"BANK_VERIFIED".equals(p.path("confirmationMethod").asText())
         || !"VND".equals(p.path("currency").asText()))
       throw new AmqpRejectAndDontRequeueException("Invalid REAL funds proof");

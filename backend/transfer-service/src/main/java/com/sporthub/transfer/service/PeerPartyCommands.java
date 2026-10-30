@@ -12,8 +12,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PeerPartyCommands {
-  private final PeerEvidenceAccess access;
-  private final PeerEvidence evidence;
+  private final PeerPartyAccess access;
   private final PeerPartyCommandStore commands;
   private final PeerBookingClient booking;
   private final PeerTransferProjection projection;
@@ -21,15 +20,13 @@ public class PeerPartyCommands {
   private final Clock clock;
 
   public PeerPartyCommands(
-      PeerEvidenceAccess access,
-      PeerEvidence evidence,
+      PeerPartyAccess access,
       PeerPartyCommandStore commands,
       PeerBookingClient booking,
       PeerTransferProjection projection,
       ObjectMapper json,
       Clock clock) {
     this.access = access;
-    this.evidence = evidence;
     this.commands = commands;
     this.booking = booking;
     this.projection = projection;
@@ -37,42 +34,34 @@ public class PeerPartyCommands {
     this.clock = clock;
   }
 
-  public JsonNode declare(UUID id, PeerResaleContract.Declaration input, String key, Caller actor) {
+  public JsonNode declare(UUID id, PeerResaleContract.Command input, String key, Caller actor) {
     var context = access.participant(id, actor);
     if (!actor.id().equals(context.acquisition().buyerId()))
-      throw new ForbiddenException("Chỉ người mua được khai đã chuyển tiền.");
-    String fingerprint = fingerprint(id, "PEER_DECLARE", input, key);
-    var command = commands.find(id, actor.id(), "PEER_DECLARE", key, fingerprint);
-    if (command == null) {
-      var current = projection.acquisition(id).path("attempt");
-      if (!"WAITING_PAYMENT".equals(current.path("phase").asText())
-          || current.path("version").asLong() != input.version()
-          || !context
-              .acquisition()
-              .financeTerms()
-              .path("termsHash")
-              .asText()
-              .equals(input.termsHash()))
-        throw new ConflictException(
-            "Phiên bản hoặc trạng thái đã thay đổi. Vui lòng tải lại trước khi khai thanh toán.");
-      evidence.requireReady(id, actor.id(), input.evidenceIds());
-      if (!clock.instant().isBefore(context.acquisition().expiresAt()))
-        throw new ConflictException(
-            "Phiên đã hết hạn. Hãy dùng mục báo tiền chuyển muộn, không chuyển thêm từ QR cũ.");
-      var receipt =
-          PeerEvidenceReceipt.create(
-              id,
-              actor.id(),
-              input.termsHash(),
-              input.bankTransactionReference(),
-              input.evidenceIds(),
-              clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
-      var payload = json.createObjectNode().put("target", "declare");
-      payload.set("input", json.valueToTree(input));
-      payload.set("receipt", json.valueToTree(receipt));
-      command = commands.stage(id, actor.id(), "PEER_DECLARE", key, fingerprint, payload, receipt);
-    }
-    return execute(command);
+      throw new ForbiddenException("Chỉ người mua được báo đã chuyển tiền.");
+    return simple(
+        id,
+        "PEER_DECLARE",
+        "declare",
+        input,
+        null,
+        key,
+        actor,
+        () -> {
+          var current = projection.acquisition(id).path("attempt");
+          if (!"WAITING_PAYMENT".equals(current.path("phase").asText())
+              || current.path("version").asLong() != input.version()
+              || !context
+                  .acquisition()
+                  .financeTerms()
+                  .path("termsHash")
+                  .asText()
+                  .equals(input.termsHash()))
+            throw new ConflictException(
+                "Phiên bản hoặc trạng thái đã thay đổi. Vui lòng tải lại trước khi báo đã chuyển.");
+          if (!clock.instant().isBefore(context.acquisition().expiresAt()))
+            throw new ConflictException(
+                "Phiên đã hết hạn. Không chuyển thêm từ QR cũ; nếu đã chuyển, hãy liên hệ người bán.");
+        });
   }
 
   public JsonNode confirm(UUID id, PeerResaleContract.Command input, String key, Caller actor) {
@@ -92,30 +81,8 @@ public class PeerPartyCommands {
   public JsonNode deny(UUID id, PeerResaleContract.Command input, String key, Caller actor) {
     var context = access.participant(id, actor);
     if (!actor.id().equals(context.listing().sellerId()))
-      throw new ForbiddenException("Chỉ người bán được khai chưa nhận được tiền.");
-    return simple(
-        id,
-        "PEER_OPEN_DISPUTE",
-        "dispute",
-        input,
-        "Người bán khai chưa nhận đủ tiền, cần Owner xem bằng chứng và phân xử quyền sân.",
-        key,
-        actor);
-  }
-
-  public JsonNode dispute(UUID id, PeerResaleContract.Command input, String key, Caller actor) {
-    var context = access.participant(id, actor);
-    if (!actor.id().equals(context.acquisition().buyerId()))
-      throw new ForbiddenException("Chỉ người mua được gửi khiếu nại chưa được bàn giao.");
-    return simple(
-        id,
-        "PEER_OPEN_DISPUTE",
-        "dispute",
-        input,
-        "Người mua yêu cầu Owner xem bằng chứng và phân xử quyền sân do chưa được xác nhận nhận"
-            + " tiền.",
-        key,
-        actor);
+      throw new ForbiddenException("Chỉ người bán được báo chưa nhận được tiền.");
+    return simple(id, "PEER_DENY", "deny", input, null, key, actor);
   }
 
   private JsonNode simple(
@@ -126,14 +93,28 @@ public class PeerPartyCommands {
       String reason,
       String key,
       Caller actor) {
+    return simple(id, action, target, input, reason, key, actor, () -> {});
+  }
+
+  private JsonNode simple(
+      UUID id,
+      String action,
+      String target,
+      PeerResaleContract.Command input,
+      String reason,
+      String key,
+      Caller actor,
+      Runnable beforeStage) {
     if (input == null) throw new IllegalArgumentException("Cần phiên bản và điều khoản phiên mua.");
     var payload = json.createObjectNode().put("target", target);
     payload.set("input", json.valueToTree(input));
     if (reason != null) payload.put("reason", reason);
     String fingerprint = fingerprint(id, action, payload, key);
     var command = commands.find(id, actor.id(), action, key, fingerprint);
-    if (command == null)
-      command = commands.stage(id, actor.id(), action, key, fingerprint, payload, null);
+    if (command == null) {
+      beforeStage.run();
+      command = commands.stage(id, actor.id(), action, key, fingerprint, payload);
+    }
     return execute(command);
   }
 

@@ -2,7 +2,6 @@ package com.sporthub.transfer.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sporthub.common.exception.*;
-import com.sporthub.common.money.PeerEvidenceReceipt;
 import com.sporthub.common.security.Signatures;
 import com.sporthub.transfer.repository.TransferRepository;
 import java.sql.Timestamp;
@@ -33,14 +32,12 @@ public class PeerPartyCommandStore {
   private final TransferRepository repo;
   private final Clock clock;
   private final TransactionTemplate tx;
-  private final PeerMoneyProjection money;
 
   public PeerPartyCommandStore(
       TransferRepository repo, Clock clock, PlatformTransactionManager manager) {
     this.repo = repo;
     this.clock = clock;
     tx = new TransactionTemplate(manager);
-    money = new PeerMoneyProjection(repo);
   }
 
   public Command find(UUID acquisition, UUID actor, String action, String key, String fingerprint) {
@@ -65,8 +62,7 @@ public class PeerPartyCommandStore {
       String action,
       String key,
       String fingerprint,
-      JsonNode payload,
-      PeerEvidenceReceipt receipt) {
+      JsonNode payload) {
     try {
       return tx.execute(
           status -> {
@@ -74,22 +70,6 @@ public class PeerPartyCommandStore {
             repo.lock(acquisition);
             var old = find(acquisition, actor, action, key, fingerprint);
             if (old != null) return old;
-            if (receipt != null) {
-              receipt.validate();
-              if (!acquisition.equals(receipt.acquisitionId()) || !actor.equals(receipt.buyerId()))
-                throw new ForbiddenException("Chứng từ không thuộc người mua này.");
-              repo.jdbc()
-                  .update(
-                      "INSERT INTO"
-                          + " peer_payment_claims(acquisition_id,buyer_id,bank_reference,evidence_ids,fingerprint,created_at)"
-                          + " VALUES(?,?,?,?,?,?)",
-                      acquisition,
-                      actor,
-                      receipt.bankTransactionReference(),
-                      receipt.evidenceIds().toArray(UUID[]::new),
-                      receipt.fingerprint(),
-                      Timestamp.from(receipt.createdAt()));
-            }
             var now = Timestamp.from(clock.instant());
             repo.jdbc()
                 .update(
@@ -128,21 +108,8 @@ public class PeerPartyCommandStore {
                   "COMPLETED".equals(result.path("phase").asText())
                       && "COUNTERPARTY_ACKNOWLEDGED"
                           .equals(result.path("confirmationMethod").asText());
+              case "PEER_DENY" -> "ABORTED_A_RETAINS".equals(result.path("phase").asText());
               case "PEER_OPEN_DISPUTE" -> "DISPUTED".equals(result.path("phase").asText());
-              case "PEER_MONEY_REPORT",
-                  "PEER_RETURN_DECLARE",
-                  "PEER_RETURN_ACK",
-                  "PEER_MONEY_NO_CLAIM" ->
-                  Set.of(
-                          "WAITING_PAYMENT",
-                          "PAYMENT_DECLARED",
-                          "DISPUTED",
-                          "HANDOFF_PENDING",
-                          "COMPLETED",
-                          "EXPIRED",
-                          "ABORTED_A_RETAINS",
-                          "TIMED_OUT_A_RETAINS")
-                      .contains(result.path("phase").asText());
               default -> false;
             };
     if (!valid)
@@ -169,7 +136,6 @@ public class PeerPartyCommandStore {
                 "PEER_COMMAND_RECONCILIATION_REQUIRED",
                 "Kết quả lệnh cần được đối chiếu lại với quyết định quyền sân.",
                 Map.of());
-          money.apply(command);
           repo.jdbc()
               .update(
                   "UPDATE peer_transfer_commands SET state='COMPLETED',result=?::jsonb,updated_at=?"
@@ -219,7 +185,7 @@ public class PeerPartyCommandStore {
         .jdbc()
         .queryForList(
             "SELECT * FROM peer_transfer_commands WHERE state='PENDING' AND action"
-                + " IN('PEER_DECLARE','PEER_CANCEL','PEER_CONFIRM','PEER_OPEN_DISPUTE','PEER_MONEY_REPORT','PEER_RETURN_DECLARE','PEER_RETURN_ACK','PEER_MONEY_NO_CLAIM')"
+                + " IN('PEER_DECLARE','PEER_CANCEL','PEER_CONFIRM','PEER_DENY','PEER_OPEN_DISPUTE')"
                 + " ORDER BY updated_at,actor_id LIMIT 50")
         .stream()
         .map(this::read)

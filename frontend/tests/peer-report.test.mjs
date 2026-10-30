@@ -70,7 +70,7 @@ test('peer report labels declarations and usage decisions separately and paginat
   const tree = Report({ model }),
     rendered = text(tree)
   assert.match(rendered, /Số lượt chuyển nhượng thành công trong kỳ/)
-  assert.match(rendered, /Hồ sơ đang tranh chấp \/ chờ xác nhận quyền sân/)
+  assert.match(rendered, /Phiên đang chờ người bán xác nhận/)
   assert.equal(Report({ model: { ...model, report: { mode: 'DEMO' } } }), null)
   assert.match(
     text(Report({ model: { ...model, report: { mode: 'REAL', peer: null } } })),

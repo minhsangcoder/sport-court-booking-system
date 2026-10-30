@@ -55,7 +55,7 @@ class DiscoveryRefactorTest {
   private void seed(int courts) {
     when(dependencies.categories())
         .thenReturn(json.valueToTree(List.of(Map.of("id", category, "name", "Sport"))));
-    when(dependencies.facilities(any(), any(), any()))
+    when(dependencies.facilities(any(), any(), any(), any(), any()))
         .thenReturn(
             json.valueToTree(
                 List.of(

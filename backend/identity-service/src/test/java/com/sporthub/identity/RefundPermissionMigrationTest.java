@@ -29,7 +29,7 @@ class RefundPermissionMigrationTest {
                     """,invitation,profile,facility,user,user);
             var latest = Flyway.configure().dataSource(source).load();
             latest.migrate(); latest.validate();
-            assertThat(latest.info().current().getVersion().toString()).isEqualTo("15");
+            assertThat(latest.info().current().getVersion().toString()).isEqualTo("16");
             assertThat(jdbc.queryForList("SELECT permission FROM staff_permissions WHERE binding_id=?",String.class,binding)).containsExactly("BOOKING_READ");
             assertThat(jdbc.queryForObject("SELECT permissions=ARRAY['BOOKING_READ']::text[] AND state='PENDING' FROM staff_invitations WHERE id=?",Boolean.class,invitation)).isTrue();
             jdbc.update("INSERT INTO staff_permissions(binding_id,permission) VALUES(?,'BOOKING_REFUND')",binding);

@@ -18,7 +18,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 class SepayCollectionFlowTest {
   static final String KEY = "sepay-webhook-private-key-0123456789";
-  final RealCollectionFlowTest f = new RealCollectionFlowTest();
+  final RealCollectionFixture f = new RealCollectionFixture();
   SepayChannels channels;
   SepayChannels.Channel channel;
   SepaySessions sessions;
@@ -28,12 +28,12 @@ class SepayCollectionFlowTest {
 
   @BeforeAll
   static void start() {
-    RealCollectionFlowTest.start();
+    RealCollectionFixture.start();
   }
 
   @AfterAll
   static void stop() {
-    RealCollectionFlowTest.stop();
+    RealCollectionFixture.stop();
   }
 
   @BeforeEach
@@ -57,7 +57,7 @@ class SepayCollectionFlowTest {
         channels.configure(
             f.facility,
             new SepayChannels.Input(
-                f.channel.version(), "970436", "000123456789", "FACILITY OWNER", KEY),
+                0, "970436", "000123456789", "FACILITY OWNER", KEY),
             "sepay-setup",
             f.owner,
             "token");
@@ -81,7 +81,6 @@ class SepayCollectionFlowTest {
             new PaymentObligations(f.repo),
             f.payable,
             f.channels,
-            f.recovery,
             f.json,
             f.clock,
             manager,
@@ -155,6 +154,13 @@ class SepayCollectionFlowTest {
     assertThat(f.repo.find(original.id()).status()).isEqualTo("EXPIRED");
     assertThat(replacement.payerId()).isEqualTo(organizer.id());
     assertThat(orders.create(input, "organizer", organizer, "organizer").id()).isEqualTo(replacement.id());
+    var identity = org.mockito.Mockito.mock(com.sporthub.common.security.RemoteIdentity.class);
+    when(identity.current(any())).thenReturn(f.customer);
+    var claims = new com.sporthub.payment.web.GroupContributionClaimController(f.repo, identity, f.clock)
+        .claims(f.booking, java.util.List.of(memberId), new org.springframework.mock.web.MockHttpServletRequest())
+        .getData();
+    assertThat(claims).containsExactly(
+        new com.sporthub.payment.web.GroupContributionClaimController.Claim(memberId, false));
     assertThatThrownBy(() -> orders.create(input, "member-retry", f.customer, "member"))
         .isInstanceOf(com.sporthub.common.exception.ConflictException.class);
     receive(webhook(replacement, 9001, 100000));
@@ -199,7 +205,6 @@ class SepayCollectionFlowTest {
                 p.id());
     assertThat(memo).matches("SC[0-9]{1,18}");
     verify(images, times(1)).fetch(eq("970436"), eq("000123456789"), eq(p.amount()), eq(memo));
-    verify(f.provider, never()).create(any(), any());
     assertThat(f.json.writeValueAsString(channel))
         .doesNotContain(KEY, "000123456789", "webhookApiKey");
     assertThat(f.json.writeValueAsString(new SepayChannels.Input(0, "970436", "1", "OWNER", KEY)))

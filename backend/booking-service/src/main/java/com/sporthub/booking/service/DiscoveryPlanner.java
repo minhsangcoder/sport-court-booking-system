@@ -42,7 +42,7 @@ class DiscoveryPlanner {
     for (var category : dependencies.categories())
       names.put(UUID.fromString(category.path("id").asText()), category.path("name").asText());
     var facilities =
-        dependencies.facilities(input.q(), input.provinceCode(), input.sportCategoryId());
+        dependencies.facilities(input.q(), input.provinceCode(), input.sportCategoryId(), input.district(), input.ward());
     boolean truncated = facilities.size() >= 200,
         validVenueDate = false,
         limit = false,

@@ -5,18 +5,15 @@ import { readFileSync } from 'node:fs'
 const load = name => JSON.parse(readFileSync(new URL(`../../../contracts/openapi/v1/${name}.yaml`, import.meta.url), 'utf8'))
 const payment = load('payment')
 
-test('channel credentials are write-only and absent from every read projection', () => {
-  for (const key of ['clientId', 'apiKey', 'checksumKey']) {
-    assert.equal(payment.components.schemas.PaymentChannelInput.properties[key].writeOnly, true)
-    assert.equal(key in payment.components.schemas.PaymentChannel.properties, false)
-    assert.equal(JSON.stringify(load('facility').components.schemas).includes(`"${key}"`), false)
-  }
-  assert.equal(payment.components.schemas.PaymentChannel.properties.credentialsConfigured.type, 'boolean')
+test('channel webhook key is write-only and absent from every read projection', () => {
+  assert.equal(payment.components.schemas.SepayChannelInput.properties.webhookApiKey.writeOnly, true)
+  assert.equal('webhookApiKey' in payment.components.schemas.SepayChannel.properties, false)
+  assert.equal(JSON.stringify(load('facility').components.schemas).includes('"webhookApiKey"'), false)
 })
 
 test('native webhook is the only new public money command and description fits VA', () => {
-  assert.deepEqual(payment.paths['/payments/providers/payos/{channelId}/webhook'].post.security, [])
-  for (const path of ['/payments/facilities/{id}/channel', '/payments/{id}/refresh']) {
+  assert.deepEqual(payment.paths['/payments/providers/sepay/{channelId}/webhook'].post.security, [])
+  for (const path of ['/payments/facilities/{id}/sepay-channel', '/payments/{id}/refresh']) {
     for (const operation of Object.values(payment.paths[path])) assert.deepEqual(operation.security, [{ bearerAuth: [] }])
   }
   const description = payment.components.schemas.PaymentQrSession.properties.description
@@ -25,10 +22,7 @@ test('native webhook is the only new public money command and description fits V
   assert.doesNotMatch('SH 12345678', new RegExp(description.pattern))
 })
 
-test('manual completion cannot choose outcome, money or payee; fee has no default', () => {
-  const command = load('booking').components.schemas.ManualDisbursementCommand
-  assert.equal(command.additionalProperties, false)
-  assert.deepEqual(command.required, ['version', 'bankTransactionReference'])
+test('legacy facility transfer fee has no default', () => {
   const fee = load('transfer').components.schemas.FacilityTransferTerms.properties.feeBps
   assert.equal(fee.minimum, 0)
   assert.equal(fee.maximum, 10000)

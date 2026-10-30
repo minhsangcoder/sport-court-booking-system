@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.*;
 import com.sporthub.common.exception.*;
 import com.sporthub.common.money.*;
 import com.sporthub.common.security.RemoteIdentity.Caller;
-import com.sporthub.payment.provider.PayosClient;
 import com.sporthub.payment.repository.PaymentRepository;
 import com.sporthub.payment.web.PaymentDtos.*;
 import java.math.BigDecimal;
@@ -22,7 +21,6 @@ public class RealPaymentOrders {
   private final PaymentObligations obligations;
   private final PayableClient payable;
   private final PayosChannels channels;
-  private final PayosSessionRecovery recovery;
   private final ObjectMapper json;
   private final Clock clock;
   private final TransactionTemplate tx;
@@ -35,11 +33,10 @@ public class RealPaymentOrders {
       PaymentObligations obligations,
       PayableClient payable,
       PayosChannels channels,
-      PayosSessionRecovery recovery,
       ObjectMapper json,
       Clock clock,
       PlatformTransactionManager manager,
-      @Value("${SEPAY_COLLECTION_CREATE_ENABLED:${PAYOS_COLLECTION_CREATE_ENABLED:false}}")
+      @Value("${SEPAY_COLLECTION_CREATE_ENABLED:false}")
           boolean enabled,
       SepaySessions sepay,
       @Value("${SPORTHUB_COLLECTION_PROVIDER:SEPAY}") String provider) {
@@ -47,13 +44,12 @@ public class RealPaymentOrders {
     this.obligations = obligations;
     this.payable = payable;
     this.channels = channels;
-    this.recovery = recovery;
     this.json = json;
     this.clock = clock;
     tx = new TransactionTemplate(manager);
     this.enabled = enabled;
     this.sepay = sepay;
-    if (!Set.of("SEPAY", "PAYOS").contains(provider))
+    if (!"SEPAY".equals(provider))
       throw new IllegalStateException("Unsupported collection provider");
     this.provider = provider;
   }
@@ -199,7 +195,7 @@ public class RealPaymentOrders {
                       facility,
                       receiver.receiverOwnerId(),
                       code,
-                      provider.equals("SEPAY") ? "SC" + code : PayosClient.description(code),
+                      "SC" + code,
                       terms == null ? null : terms.toString(),
                       bill.path("operatorPayment").asBoolean(),
                       Timestamp.from(clock.instant()));
@@ -208,8 +204,7 @@ public class RealPaymentOrders {
               remember(input, key, caller, id);
               return created;
             });
-    if (payment.provider().equals("SEPAY")) sepay.initialize(payment.id());
-    else recovery.initialize(payment.id());
+    sepay.initialize(payment.id());
     return repo.find(payment.id());
   }
 

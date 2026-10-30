@@ -30,15 +30,3 @@ export type BankQrSession = {
   cashPaymentId?: string | null
   lastErrorCode: string | null
 }
-export type PayosChannel = {
-  channelId: string
-  facilityId: string
-  receiverRevisionId: string
-  version: number
-  status: string
-  credentialsConfigured: boolean
-  bankBin: string
-  maskedAccountNumber: string | null
-  accountName: string | null
-  webhookUrl: string
-}

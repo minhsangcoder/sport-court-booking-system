@@ -7,6 +7,8 @@ import { RequireAuth } from '@/features/auth/require-auth'
 import { money } from '@/features/schedule/types'
 import { type Listing, type Acquisition, transferStates } from './types'
 import { AdmissionNotice } from '@/features/booking/admission-notice'
+import { useAuth } from '@/lib/auth-context'
+import { MessagesSquare } from 'lucide-react'
 export function MyTransfers() {
   return (
     <RequireAuth roles={['CUSTOMER']}>
@@ -15,6 +17,7 @@ export function MyTransfers() {
   )
 }
 function Loaded() {
+  const { user } = useAuth()
   const [tab, setTab] = useState('listings')
   const listings = useApi<Listing[]>('/transfers/mine')
   const purchases = useApi<Acquisition[]>('/transfers/acquisitions')
@@ -41,7 +44,7 @@ function Loaded() {
         >
           {[
             ['listings', 'Tin đã đăng'],
-            ['purchases', 'Giao dịch tham gia'],
+            ['purchases', 'Giao dịch & trao đổi'],
           ].map(([value, label]) => (
             <button
               role="tab"
@@ -100,7 +103,15 @@ function Loaded() {
                 >
                   <span>
                     Giao dịch {a.id.slice(0, 8).toUpperCase()}
-                    <p className="mt-2 text-sm text-slate-500">{transferStates[a.state]}</p>
+                    <span
+                      className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-bold ${a.buyerId === user?.id ? 'bg-sky-50 text-sky-700' : 'bg-emerald-50 text-emerald-700'}`}
+                    >
+                      {a.buyerId === user?.id ? 'Bạn mua' : 'Bạn bán'}
+                    </span>
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-500">
+                      {transferStates[a.state]} · <MessagesSquare className="size-3.5" /> Mở trao
+                      đổi
+                    </p>
                   </span>
                   <strong className="text-emerald-700">{money(a.amount, a.currency)}</strong>
                 </Link>

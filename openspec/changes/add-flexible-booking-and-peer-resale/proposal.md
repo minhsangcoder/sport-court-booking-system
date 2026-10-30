@@ -103,3 +103,42 @@ Quyết định của người dùng ngày 29–30/10/2026. Mục này thay mọ
 - Popup “Thanh toán tại quầy”: bỏ dòng “{tên khách} · Quyền sử dụng thuộc khách; nhân viên chỉ thực hiện thu tiền.”; khối “Chuyển khoản cho cơ sở” bỏ dòng “Quyền sử dụng sân được cấp sau khi máy chủ xác minh đủ tiền và hoàn tất áp dụng.”
 - Trang đăng nhập: bỏ khối “Tài khoản thử nghiệm nhanh (1-chạm)” và thông báo điền tài khoản; tài khoản demo vẫn đăng nhập bằng cách nhập thủ công.
 - Trang chi tiết lượt đặt (Đã xác nhận): thiết kế lại theo PageBanner, token và hiệu ứng `home-rise` của trang chủ, giữ đủ mọi thành phần và nội dung cũ (breadcrumb, trạng thái, số tiền, thông tin sân/giờ/địa chỉ/chỉ đường, các dòng giá, chuyển nhượng, tùy chọn khi không thể tham gia, thanh toán/hủy giữ chỗ, mã thủ công, QR, lịch sử). Mã thủ công và QR nằm ở cột phải dính khi cuộn trên màn hình rộng.
+
+
+## 34. Giao diện chuyển nhượng, lối vào chat của người bán và gỡ payOS (2026-10-30)
+
+**Giao diện.** Trang đăng/sửa tin chuyển nhượng, chi tiết tin (người bán và người mua) và phiên mua trực tiếp dùng PageBanner, card, nút pill và hiệu ứng `home-rise` của trang chủ (module dùng chung `features/transfers/transfer-styles.ts`), giữ đủ thành phần và nội dung. Form tài khoản nhận tiền dùng kiểu card chung (cả trang hồ sơ ngân hàng). Chat hiển thị bong bóng hai phía.
+
+**Chat A–B.** Mỗi phiên mua có một phòng chat riêng cho đúng người bán A và người mua B; backend đã cho cả hai đọc/gửi. Người bán nay có lối vào trực tiếp: trang tin của A hiển thị “Phiên trao đổi với người mua” với nút mở phòng chat; tab “Giao dịch & trao đổi” ghi rõ “Bạn bán”/“Bạn mua”. Không có chat tự do giữa hai tài khoản bất kỳ ngoài phiên mua.
+
+**Gỡ payOS.** Thu tiền chỉ qua SePay. Xóa client/chữ ký/webhook/khôi phục phiên/cấu hình kênh payOS và API `/payments/facilities/{id}/channel*`, `/payments/providers/payos/*`; RealPaymentOrders chỉ chấp nhận provider SEPAY; booking chỉ nhận chứng từ SEPAY hoặc CASH. Giữ bảng `payos_*` và `PayosChannels`/`PayosCollectionProcessor` vì SePay dùng chung để lưu kênh nhận tiền và ghi nhận tín dụng ngân hàng; dữ liệu không đổi. Quyết định của người dùng (30/10/2026): **giữ nguyên** code phí chuyển nhượng kiểu cũ (LEGACY_OWNER) và tiền DEMO để vẫn đọc được lịch sử, báo cáo, đối soát và không làm gãy bộ test. Không gỡ các phần này trừ khi người dùng yêu cầu lại.
+
+## 35. Thông báo trong ứng dụng, chống trả trùng khi trả thay, mất tiền khi nhóm hết hạn (2026-10-30)
+
+**Thông báo.** Lời nhắc thanh toán nhóm tới thành viên qua chuông thông báo trong ứng dụng và email (hoặc SĐT) đã xác minh. Không có liên hệ đã xác minh thì vẫn vào hộp thư trong ứng dụng, không gửi ra ngoài. Hộp thư dùng lại `identity_notifications` (identity migration V16) qua API `/users/me/notifications`; mỗi người chỉ đọc được thông báo của mình.
+
+**Chống trả trùng.** Khi người tổ chức bấm "Thanh toán thay", QR của thành viên hết hiệu lực; trang QR của thành viên ẩn cả mã QR lẫn thông tin tài khoản nhận. API `/payments/group-claims` cho biết QR đang mở của từng phần góp: thành viên không còn nút thanh toán khi người tổ chức đang trả thay, và người tổ chức thấy khi thành viên đang mở QR. Thay QR vẫn bị từ chối nếu thành viên đã chuyển một phần tiền. Chuyển khoản theo QR cũ đã lưu trước đó không thể chặn từ hệ thống; khoản này vẫn được ghi nhận để đối soát và không tính hai lần.
+
+**Hết hạn nhóm.** Đến hạn góp tiền mà nhóm chưa đủ 100%: nhóm mất lượt đặt, sân được giải phóng và các khoản góp đã được áp dụng không được hoàn. Không tạo yêu cầu hoàn `booking.group.refund.requested` hay nghĩa vụ hoàn cho các khoản này, và bỏ nguồn khóa ngân hàng `REAL_GROUP_TIMEOUT_REFUND` (giải quyết phần hoàn góp nhóm của điểm mở 33.4). Tiền chưa từng được áp dụng vào phần góp (chuyển sau hạn, chuyển trùng, sai số tiền, chuyển thiếu một phần) vẫn đi theo đối soát kỹ thuật như cũ. Nghĩa vụ đã tạo trước thay đổi này giữ nguyên.
+
+**Giao diện.** Trang chi tiết nhóm và khối thành viên dùng PageBanner, card, nút pill và hiệu ứng `home-rise` của trang chủ, giữ đủ thành phần.
+
+## 36. Chuyển nhượng trực tiếp không nộp chứng từ (2026-10-30)
+
+Thay các quy định về chứng từ, tranh chấp và Owner phân xử của những mục trước đối với phiên mới.
+
+**Luồng.** A đăng tin → B lấy slot và chuyển tiền vào tài khoản A đã khai → B bấm "Tôi đã chuyển tiền" (không ảnh, không mã giao dịch) → A bấm "Đã nhận đủ tiền" thì sân thuộc B.
+
+**Mọi trường hợp khác, sân thuộc A.** A bấm "Chưa nhận được tiền": phiên kết thúc ngay, tin mở lại nếu còn hạn. A không xác nhận trước giờ chơi: sân thuộc A khi đến giờ chơi. SportHub không xử lý tiền hay phân xử; hai bên tự giải quyết offline qua chủ sân. Không còn mở tranh chấp, nộp chứng từ, báo tiền muộn hay khai trả lại trên giao diện; API `open-dispute` bị gỡ.
+
+**Lịch sử.** Giữ bảng và dữ liệu chứng từ, hồ sơ tiền và quyết định cũ. Phiên DISPUTED cũ không còn màn xử lý và sân thuộc A khi đến giờ chơi hoặc hết giờ (nếu đã ghi nhận có mặt). Bỏ trang Owner "Tranh chấp quyền sân" và trang Staff ghi nhận có mặt.
+
+## 37. Xóa code chứng từ, hồ sơ tiền và phân xử (2026-10-30)
+
+Xóa code và API chứng từ, hồ sơ tiền, phân xử của Owner ở backend. Không xóa bảng hay dữ liệu cũ: chỉ migration mới mới được đổi schema và không có yêu cầu hủy dữ liệu lịch sử; báo cáo và khóa ngân hàng vẫn đọc các bảng này.
+
+**Khóa đổi tài khoản ngân hàng được giữ nguyên** (quyết định của người dùng): để khi ra sân không phải kiểm tra lại việc người bán đã nhận tiền rồi đổi tài khoản nhằm nói với chủ sân là chưa nhận. Người bán bị khóa trong suốt phiên mua và, nếu còn giữ sân sau khi báo chưa nhận hoặc không xác nhận, đến khi lượt đặt kết thúc. Khoản trả lại đang chờ người mua xác nhận từ quy trình cũ vẫn khóa cả hai bên và không còn thao tác gỡ trên hệ thống; cần xử lý thủ công nếu phát sinh.
+
+## 38. Tìm sân theo quận/huyện cũ và phường/xã (2026-10-30)
+
+Địa chỉ chỉ lưu tỉnh và phường/xã hiện hành, nhưng người dùng vẫn tìm theo quận/huyện cũ. Trang tìm sân có thêm bộ lọc "Quận / huyện (trước sáp nhập)" và "Phường / xã". Ô tìm kiếm không phân biệt dấu và hiểu tên quận/huyện cũ trong câu, ví dụ "Quận Hà Đông", "nam tu liem". Một quận cũ khớp mọi phường mới nhận phần địa bàn của quận đó, nên một phường có thể thuộc nhiều quận cũ. Bảng đối chiếu hiện chỉ có Hà Nội (`legacy-districts.json`); tỉnh khác lọc theo phường/xã và từ khóa.

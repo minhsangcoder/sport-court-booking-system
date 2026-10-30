@@ -20,10 +20,7 @@ public class InternalPeerMarketController {
   private final PeerMarketStore market;
   private final PeerUsageActions usage;
   private final PeerQrAuthority qr;
-  private final PeerCaseReads cases;
   private final PeerUsageCommands commands;
-  private final PeerMoneyActions money;
-  private final com.sporthub.common.security.RemoteIdentity identity;
   private final ObjectMapper json;
   private final String secret;
 
@@ -33,10 +30,7 @@ public class InternalPeerMarketController {
       PeerMarketStore market,
       PeerUsageActions usage,
       PeerQrAuthority qr,
-      PeerCaseReads cases,
       PeerUsageCommands commands,
-      PeerMoneyActions money,
-      com.sporthub.common.security.RemoteIdentity identity,
       ObjectMapper json,
       @Value("${SERVICE_CALL_SECRET:}") String secret) {
     this.listings = listings;
@@ -44,10 +38,7 @@ public class InternalPeerMarketController {
     this.market = market;
     this.usage = usage;
     this.qr = qr;
-    this.cases = cases;
     this.commands = commands;
-    this.money = money;
-    this.identity = identity;
     this.json = json;
     this.secret = secret;
   }
@@ -102,51 +93,16 @@ public class InternalPeerMarketController {
     return ApiResponse.success(
         switch (action) {
           case "read" -> usage.read(id, actor);
-          case "declaration" -> usage.declaration(id, actor);
           case "cancel" ->
               usage.cancel(
                   id,
                   json.treeToValue(value.path("command"), PeerResaleContract.Command.class),
                   key,
                   actor);
-          case "case" -> cases.partyDetail(id, actor);
-          case "money" ->
-              money.read(
-                  id,
-                  actor,
-                  value.path("command").hasNonNull("afterReturn")
-                      ? UUID.fromString(value.path("command").path("afterReturn").asText())
-                      : null,
-                  value.path("command").path("size").asInt(100));
-          case "money-report" ->
-              money.report(
-                  id,
-                  json.treeToValue(value.path("command"), PeerMoneyContract.Report.class),
-                  key,
-                  actor);
-          case "return-declare" ->
-              money.declareReturn(
-                  id,
-                  json.treeToValue(value.path("command"), PeerMoneyContract.ReturnCommand.class),
-                  key,
-                  actor);
-          case "return-ack" ->
-              money.acknowledge(
-                  id,
-                  json.treeToValue(value.path("command"), PeerMoneyContract.Acknowledge.class),
-                  key,
-                  actor);
-          case "money-no-claim" ->
-              money.noClaim(
-                  id,
-                  json.treeToValue(value.path("command"), PeerMoneyContract.NoClaim.class),
-                  key,
-                  actor);
           case "declare" ->
               usage.declare(
                   id,
-                  json.treeToValue(value.path("command"), PeerResaleContract.Declaration.class),
-                  json.treeToValue(value.path("receipt"), PeerEvidenceReceipt.class),
+                  json.treeToValue(value.path("command"), PeerResaleContract.Command.class),
                   key,
                   actor);
           case "confirm" ->
@@ -155,11 +111,10 @@ public class InternalPeerMarketController {
                   json.treeToValue(value.path("command"), PeerResaleContract.Command.class),
                   key,
                   actor);
-          case "dispute" ->
-              usage.dispute(
+          case "deny" ->
+              usage.deny(
                   id,
                   json.treeToValue(value.path("command"), PeerResaleContract.Command.class),
-                  value.path("reason").asText(),
                   key,
                   actor);
           default -> throw new IllegalArgumentException("Lệnh phiên mua không hợp lệ.");
@@ -209,18 +164,4 @@ public class InternalPeerMarketController {
         request.getHeader("X-Service-Signature"));
   }
 
-  @GetMapping("/acquisitions/{id}/case-access")
-  public ApiResponse<java.util.Map<String, Object>> caseAccess(
-      @PathVariable UUID id, HttpServletRequest request) {
-    verify(request, "");
-    return ApiResponse.success(
-        cases.evidenceAccess(id, identity.current(request), request.getHeader("Authorization")));
-  }
-
-  @GetMapping("/acquisitions/{id}/evidence-retention")
-  public ApiResponse<java.util.Map<String, Object>> retention(
-      @PathVariable UUID id, HttpServletRequest request) {
-    verify(request, "");
-    return ApiResponse.success(cases.retention(id));
-  }
 }

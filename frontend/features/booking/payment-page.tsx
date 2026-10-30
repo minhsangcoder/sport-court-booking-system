@@ -144,7 +144,7 @@ function Loaded({ id }: { id: string }) {
         </div>
       </div>
     )
-  if (['SEPAY', 'PAYOS'].includes(p.provider))
+  if (p.provider === 'SEPAY')
     return (
       <div className="relative isolate min-h-[85vh] py-8 sm:py-12">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">

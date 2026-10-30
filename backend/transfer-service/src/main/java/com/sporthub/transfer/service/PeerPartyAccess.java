@@ -9,13 +9,13 @@ import java.util.*;
 import org.springframework.stereotype.Component;
 
 @Component
-public class PeerEvidenceAccess {
+public class PeerPartyAccess {
   public record Context(Acquisition acquisition, TransferRepository.Row listing) {}
 
   private final TransferRepository repo;
   private final PeerBookingClient booking;
 
-  public PeerEvidenceAccess(TransferRepository repo, PeerBookingClient booking) {
+  public PeerPartyAccess(TransferRepository repo, PeerBookingClient booking) {
     this.repo = repo;
     this.booking = booking;
   }
@@ -23,7 +23,7 @@ public class PeerEvidenceAccess {
   public Context context(UUID id) {
     var acquisition = repo.acquisition(id);
     if (!PeerResaleContract.isPeer(acquisition.financeTerms()))
-      throw new ConflictException("Phiên này không dùng chứng cứ chuyển nhượng P2P.");
+      throw new ConflictException("Phiên này không phải chuyển nhượng P2P.");
     if (!Boolean.TRUE.equals(
         repo.jdbc()
             .queryForObject(
@@ -42,20 +42,6 @@ public class PeerEvidenceAccess {
     actor.requireRole("CUSTOMER");
     var context = context(id);
     if (!party(context, actor.id())) throw new ForbiddenException("Bạn không thuộc phiên mua này.");
-    return context;
-  }
-
-  public Context view(UUID id, Caller actor, String token) {
-    var context = context(id);
-    if (actor.hasRole("CUSTOMER") && party(context, actor.id())) return context;
-    actor.requireRole("OWNER");
-    var grant = booking.evidenceAccess(id, token);
-    if (!id.toString().equals(grant.path("acquisitionId").asText())
-        || !actor.id().toString().equals(grant.path("actorId").asText())
-        || !context.listing().facilityId().toString().equals(grant.path("facilityId").asText())
-        || !grant.path("canReadEvidence").isBoolean()
-        || !grant.path("canReadEvidence").booleanValue())
-      throw new ForbiddenException("Vụ việc không thuộc cơ sở do bạn sở hữu.");
     return context;
   }
 

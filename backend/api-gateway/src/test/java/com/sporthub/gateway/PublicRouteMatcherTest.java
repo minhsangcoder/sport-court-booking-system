@@ -12,9 +12,9 @@ class PublicRouteMatcherTest {
   @Test
   void onlyNativePayosPostWebhookIsPublic() {
     var properties = new GatewaySecurityProperties();
-    properties.setPublicPaths(List.of("/api/v1/payments/providers/payos/*/webhook"));
+    properties.setPublicPaths(List.of("/api/v1/payments/providers/sepay/*/webhook"));
     var matcher = new PublicRouteMatcher(properties);
-    String webhook = "/api/v1/payments/providers/payos/" + java.util.UUID.randomUUID() + "/webhook";
+    String webhook = "/api/v1/payments/providers/sepay/" + java.util.UUID.randomUUID() + "/webhook";
     assertThat(matcher.isPublic(webhook, org.springframework.http.HttpMethod.POST)).isTrue();
     assertThat(matcher.isPublic(webhook, org.springframework.http.HttpMethod.GET)).isFalse();
     assertThat(

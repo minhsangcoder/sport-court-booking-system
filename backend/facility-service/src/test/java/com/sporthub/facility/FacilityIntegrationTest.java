@@ -219,6 +219,17 @@ class FacilityIntegrationTest {
   var court=service.createCourt(f.id(),new CourtInput("SEARCH","Search court",sport.id(),null,true),owner);
   assertThat(service.search(name,null,sport.id())).isEmpty();jdbc.update("UPDATE facilities SET status='ACTIVE' WHERE id=?",f.id());
   assertThat(service.search(name,"01",sport.id())).extracting(FacilityView::id).containsExactly(f.id());
+  jdbc.update("UPDATE facilities SET province_code='01',province='Hà Nội',ward='Phường Tây Mỗ',ward_code='00634' WHERE id=?",f.id());
+  assertThat(service.search(name,"01",sport.id(),"Nam Từ Liêm",null)).extracting(FacilityView::id).contains(f.id());
+  assertThat(service.search(name,"01",sport.id(),"nam tu liem","Tây Mỗ")).extracting(FacilityView::id).contains(f.id());
+  assertThat(service.search(name,"01",sport.id(),"Bắc Từ Liêm",null)).isEmpty();
+  assertThat(service.search(name,"01",sport.id(),null,"Đại Mỗ")).isEmpty();
+  assertThat(service.search("quan nam tu liem","01",sport.id())).extracting(FacilityView::id).contains(f.id());
+  assertThat(service.search("Quận Nam Từ Liêm",null,sport.id())).extracting(FacilityView::id).contains(f.id());
+  assertThat(service.search("Quận Hà Đông","01",sport.id())).extracting(FacilityView::id).doesNotContain(f.id());
+  assertThat(service.search("phuong tay mo","01",sport.id())).extracting(FacilityView::id).contains(f.id());
+  assertThat(com.sporthub.facility.service.FacilityAreas.ofProvince("01")).hasSize(30);
+  assertThatThrownBy(()->service.search(name,"01",sport.id(),"Không có",null)).isInstanceOf(IllegalArgumentException.class);
   assertThat(service.search(name,"99",sport.id())).isEmpty();assertThat(service.search("%",null,null)).isEmpty();
   service.updateCourt(court.id(),new CourtInput("SEARCH","Search court",sport.id(),null,false),owner);assertThat(service.search(name,null,sport.id())).isEmpty();
   service.updateCourt(court.id(),new CourtInput("SEARCH","Search court",sport.id(),null,true),owner);jdbc.update("UPDATE sport_categories SET active=false WHERE id=?",sport.id());assertThat(service.search(name,null,sport.id())).extracting(FacilityView::id).containsExactly(f.id());

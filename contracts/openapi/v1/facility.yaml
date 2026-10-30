@@ -3,7 +3,7 @@
   "info": {
     "title": "SportHub Facility API",
     "version": "1.0.0",
-    "description": "Owner-scoped facility/court/media/maintenance operations, additional-facility review with retained private legal documents, and public discovery metadata. No implicit activation on CRUD. First-facility Owner application remains a separate pending capability. First-facility applicants may read/edit only their Identity-scoped application facility while DRAFT or supplement is open. Pending/rejected profiles are frozen. Prepared first facilities remain private until Identity commits APPROVED. Submit/review linked first facilities through Owner Application APIs. Facility/public projections never include payOS clientId/apiKey/checksumKey/ciphertext. Configure credentials only through write-only Payment channel API."
+    "description": "Owner-scoped facility/court/media/maintenance operations, additional-facility review with retained private legal documents, and public discovery metadata. No implicit activation on CRUD. First-facility Owner application remains a separate pending capability. First-facility applicants may read/edit only their Identity-scoped application facility while DRAFT or supplement is open. Pending/rejected profiles are frozen. Prepared first facilities remain private until Identity commits APPROVED. Submit/review linked first facilities through Owner Application APIs. Facility/public projections never include receiving-channel credentials, webhook keys or ciphertext. Configure credentials only through write-only Payment channel API."
   },
   "servers": [
     {
@@ -1273,6 +1273,24 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Former district name, matched without diacritics. Only Hanoi has a mapping for now."
+          },
+          {
+            "name": "ward",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "description": "Current ward or commune name, matched without diacritics."
           }
         ],
         "responses": {
@@ -3503,6 +3521,78 @@
           },
           "409": {
             "description": "Version conflict"
+          }
+        }
+      }
+    },
+    "/facilities/areas": {
+      "get": {
+        "operationId": "getFormerDistricts",
+        "security": [],
+        "parameters": [
+          {
+            "name": "provinceCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Former districts and the current wards that replaced them; empty when the province has no mapping",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "provinceCode",
+                          "name",
+                          "wards"
+                        ],
+                        "properties": {
+                          "provinceCode": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "wards": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "code",
+                                "name"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

@@ -25,8 +25,7 @@ abstract class PeerPartyCommandsFixture extends PeerEvidenceFixture {
     store = new PeerPartyCommandStore(repo, clock, manager);
     parties =
         new PeerPartyCommands(
-            new PeerEvidenceAccess(repo, authority),
-            evidence,
+            new PeerPartyAccess(repo, authority),
             store,
             authority,
             projection,
@@ -46,6 +45,7 @@ abstract class PeerPartyCommandsFixture extends PeerEvidenceFixture {
                   switch (target) {
                     case "declare" -> "PEER_DECLARE";
                     case "confirm" -> "PEER_CONFIRM";
+                    case "deny" -> "PEER_DENY";
                     default -> "PEER_OPEN_DISPUTE";
                   };
               String resultKey = actor + "|" + action + "|" + key;
@@ -58,10 +58,6 @@ abstract class PeerPartyCommandsFixture extends PeerEvidenceFixture {
                 throw new ActionPolicyException(409, "STALE", "Phiên đã thay đổi.", Map.of());
               switch (target) {
                 case "declare" -> {
-                  var receipt =
-                      json.treeToValue((JsonNode) call.getArgument(4), PeerEvidenceReceipt.class);
-                  receipt.validate();
-                  assertThat(receipt.buyerId()).isEqualTo(buyer.id());
                   if (!attempt.path("phase").asText().equals("WAITING_PAYMENT")
                       || !clock.instant().isBefore(repo.acquisition(id).expiresAt()))
                     throw new ActionPolicyException(409, "EXPIRED", "Đã hết hạn.", Map.of());
@@ -78,7 +74,10 @@ abstract class PeerPartyCommandsFixture extends PeerEvidenceFixture {
                       .put("phase", "COMPLETED")
                       .put("confirmationMethod", "COUNTERPARTY_ACKNOWLEDGED");
                 }
-                case "dispute" -> attempt.put("phase", "DISPUTED");
+                case "deny" -> {
+                  assertThat(actor).isEqualTo(seller.id());
+                  attempt.put("phase", "ABORTED_A_RETAINS");
+                }
                 default -> throw new IllegalArgumentException();
               }
               attempt.put("version", attempt.path("version").asLong() + 1);
@@ -96,14 +95,6 @@ abstract class PeerPartyCommandsFixture extends PeerEvidenceFixture {
                   call.getArgument(1) + "|" + call.getArgument(2) + "|" + call.getArgument(3),
                   json.createObjectNode().put("phase", "UNKNOWN"));
             });
-  }
-
-  PeerResaleContract.Declaration declaration(UUID bill) {
-    return new PeerResaleContract.Declaration(
-        0,
-        repo.acquisition(attempt).financeTerms().path("termsHash").asText(),
-        "BANK REF",
-        List.of(bill));
   }
 
   PeerResaleContract.Command command(long version) {

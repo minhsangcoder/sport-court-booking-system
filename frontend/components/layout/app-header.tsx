@@ -3,6 +3,7 @@ import { Briefcase, Building2, ChevronDown, LayoutGrid, Menu, ShieldCheck, X } f
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { DesktopNavigation } from './header-navigation'
+import { NotificationBell } from './notification-bell'
 import { useHeader } from './use-header'
 const HeaderAccountMenu = dynamic(() =>
   import('./header-account-menu').then((m) => m.HeaderAccountMenu),
@@ -92,6 +93,8 @@ export function AppHeader() {
               <span>Quản trị</span>
             </Link>
           )}
+
+          {ready && user && <NotificationBell />}
 
           {/* User Auth State */}
           {!ready ? (

@@ -102,7 +102,7 @@ function BankForm({
       ? [profile.data.destination]
       : []
   return (
-    <section className="my-4 space-y-3 rounded-xl border bg-slate-50 p-4 text-slate-900">
+    <section className="my-4 space-y-3 rounded-3xl border border-slate-200/90 bg-white p-5 text-slate-900 shadow-xl shadow-slate-900/5 sm:p-6 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
       <h3 className="font-semibold">
         Tài khoản nhận tiền {guestBookingId ? 'của khách vãng lai' : 'của bạn'}
       </h3>

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '@/lib/api'
 import { usePolling } from '@/lib/use-polling'
 import { Button } from '@/components/ui/button'
+import { outlinePill, primaryPill } from './transfer-styles'
 import { usePeerCommand } from './use-peer-command'
 import type { PeerMessage } from './peer-types'
 
@@ -77,8 +78,8 @@ export function PeerChat({ id, userId }: { id: string; userId: string }) {
     onTimeout: () => setStopped(true),
   })
   return (
-    <section className="space-y-3 rounded-xl border p-4">
-      <h2 className="text-lg font-bold">
+    <section className="relative isolate overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 space-y-3 p-5 sm:p-6">
+      <h2 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
         Trao đổi riêng với{' '}
         {messages.some((row) => row.senderId !== userId) ? 'đối phương' : 'bên còn lại'}
       </h2>
@@ -86,11 +87,15 @@ export function PeerChat({ id, userId }: { id: string; userId: string }) {
         Phòng chat còn sau khi lượt giữ kết thúc. Nhắn tin không kéo dài thời gian giữ sân. Chỉ hiển
         thị tối đa 500 tin gần nhất đã tải.
       </p>
-      <ol aria-label="Tin nhắn" aria-live="polite" className="max-h-80 space-y-3 overflow-y-auto">
+      <ol
+        aria-label="Tin nhắn"
+        aria-live="polite"
+        className="max-h-80 space-y-3 overflow-y-auto rounded-2xl bg-slate-50/80 p-3 dark:bg-slate-800/40"
+      >
         {messages.map((row) => (
           <li
             key={row.id}
-            className={`rounded-lg p-3 ${row.senderId === userId ? 'bg-emerald-50' : 'bg-slate-100'}`}
+            className={`max-w-[85%] rounded-2xl p-3 shadow-2xs ${row.senderId === userId ? 'ml-auto rounded-br-md bg-emerald-600 text-white [&_time]:text-emerald-100' : 'rounded-bl-md bg-white text-slate-800 dark:bg-slate-900 dark:text-slate-100'}`}
           >
             <strong className="text-xs">{row.senderId === userId ? 'Bạn' : 'Đối phương'}</strong>
             <p className="whitespace-pre-wrap break-words">{row.text}</p>
@@ -104,6 +109,7 @@ export function PeerChat({ id, userId }: { id: string; userId: string }) {
       {older && messages.length > 0 && messages.length < 500 && (
         <Button
           variant="outline"
+          className={outlinePill}
           type="button"
           onClick={() => loadManually(messages[0].cursor)}
           disabled={command.blocked || denied || loadingOlder}
@@ -114,6 +120,7 @@ export function PeerChat({ id, userId }: { id: string; userId: string }) {
       {(more || stopped) && (
         <Button
           variant="outline"
+          className={outlinePill}
           type="button"
           onClick={() => loadManually()}
           disabled={command.blocked || denied}
@@ -143,11 +150,15 @@ export function PeerChat({ id, userId }: { id: string; userId: string }) {
             required
             maxLength={2000}
             rows={3}
-            className="rounded-lg border p-3"
+            className="rounded-xl border border-slate-200 p-3 focus-visible:border-emerald-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/15"
             disabled={command.busy || command.blocked || denied}
           />
         </label>
-        <Button type="submit" disabled={command.busy || command.blocked || denied || !text.trim()}>
+        <Button
+          type="submit"
+          className={primaryPill}
+          disabled={command.busy || command.blocked || denied || !text.trim()}
+        >
           Gửi tin nhắn
         </Button>
       </form>

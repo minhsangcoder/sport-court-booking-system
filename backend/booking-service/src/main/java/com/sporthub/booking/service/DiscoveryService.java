@@ -23,7 +23,26 @@ public class DiscoveryService {
       Double latitude,
       Double longitude,
       Double radiusKm,
-      String sort) {}
+      String sort,
+      String district,
+      String ward) {
+    public Criteria(
+        String q,
+        String provinceCode,
+        UUID sportCategoryId,
+        String date,
+        String opensAfter,
+        String closesBefore,
+        BigDecimal minPrice,
+        BigDecimal maxPrice,
+        Double latitude,
+        Double longitude,
+        Double radiusKm,
+        String sort) {
+      this(q, provinceCode, sportCategoryId, date, opensAfter, closesBefore, minPrice, maxPrice,
+          latitude, longitude, radiusKm, sort, null, null);
+    }
+  }
 
   public record FacilitySummary(
       UUID id,

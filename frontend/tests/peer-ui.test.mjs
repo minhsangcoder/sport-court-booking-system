@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { moduleLoader, deferred, flush, hookDriver } from './support/load-module.mjs'
 
-test('chat and evidence mutations refresh their own resource without reloading calendars, reports or bank permissions', async () => {
+test('chat mutations refresh their own resource without reloading calendars, reports or bank permissions', async () => {
   const load = moduleLoader({ fetch: async () => Response.json({ data: {} }) })
   const { api } = load('lib/api.ts'),
     reads = load('lib/read-state.ts')
@@ -17,8 +17,6 @@ test('chat and evidence mutations refresh their own resource without reloading c
     first = reads.readVersion(chat)
   await api('/transfers/conversations/c/messages', { method: 'POST', body: '{"text":"hello"}' })
   assert.notEqual(reads.readVersion(chat), first)
-  assert.deepEqual(controls.map(reads.readVersion), before)
-  await api('/transfers/acquisitions/a/evidence', { method: 'POST', body: new FormData() })
   assert.deepEqual(controls.map(reads.readVersion), before)
   await api('/transfers/a/quote', { method: 'POST', body: '{}' })
   assert.deepEqual(controls.map(reads.readVersion), before)

@@ -24,11 +24,4 @@ class PeerResaleContractTest {
         .extracting(Enum::name)
         .doesNotContain("BANK_VERIFIED", "SUCCESS");
   }
-
-  @Test
-  void ownerResolutionOnlyControlsUsageNotMoney() {
-    assertThat(PeerResaleContract.Resolution.class.getRecordComponents())
-        .extracting(java.lang.reflect.RecordComponent::getName)
-        .containsExactly("version", "outcome", "reason", "evidenceIds");
-  }
 }

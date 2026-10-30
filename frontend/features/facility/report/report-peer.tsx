@@ -10,7 +10,7 @@ export function ReportPeer({ model }: { model: ReturnType<typeof useFacilityRepo
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         {[
           ['Số lượt chuyển nhượng thành công trong kỳ', peer.completedUsageCount == null ? 'Chưa có dữ liệu' : String(peer.completedUsageCount)],
-          ['Hồ sơ đang tranh chấp / chờ xác nhận quyền sân', String(peer.openUsageCases)],
+          ['Phiên đang chờ người bán xác nhận', String(peer.openUsageCases)],
         ].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-3"><dt>{label}</dt><dd className="mt-1 font-semibold">{value}</dd></div>)}
       </dl>
       <p className="text-xs text-slate-500">Lượt thành công tính theo ngày bàn giao. Hồ sơ quyền sân còn mở gồm cả hồ sơ từ kỳ trước.</p>

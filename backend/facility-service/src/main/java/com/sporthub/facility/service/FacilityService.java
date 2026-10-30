@@ -24,16 +24,26 @@ public class FacilityService {
  public UUID applicationId(UUID id){return jdbc.queryForList("SELECT application_id FROM first_facility_applications WHERE facility_id=?",UUID.class,id).stream().findFirst().orElse(null);}
  public Facility find(UUID id){return facilities.findById(id).orElseThrow(()->new ResourceNotFoundException("Facility not found"));}
  public List<FacilityView> search(String query){return search(query,null,null);}
- public List<FacilityView> search(String query,String provinceCode,UUID category){
-  var candidates=jdbc.queryForList("""
-   SELECT f.id FROM facilities f WHERE f.status='ACTIVE'
-    AND lower(concat_ws(' ',f.name,f.address_line,f.province,f.ward)) LIKE ?
+ public List<FacilityView> search(String query,String provinceCode,UUID category){return search(query,provinceCode,category,null,null);}
+ public List<FacilityView> search(String query,String provinceCode,UUID category,String district,String ward){
+  var args=new ArrayList<Object>();String text=FacilityAreas.plainSql("concat_ws(' ',f.name,f.address_line,f.province,f.ward)");
+  // Free text also understands former districts; the raw text still matches names such as "Ha Dong Sports".
+  String textFilter=text+" LIKE ?";args.add(pattern(FacilityAreas.plain(query)));
+  var named=query==null?Optional.<FacilityAreas.Match>empty():FacilityAreas.inText(provinceCode,query);
+  if(named.isPresent()){textFilter="("+textFilter+" OR ("+areaSql(named.get().district(),args)+" AND "+text+" LIKE ?))";args.add(pattern(named.get().remainder()));}
+  String areaFilter="";
+  if(district!=null&&!district.isBlank()){var area=FacilityAreas.find(provinceCode,district).orElseThrow(()->new IllegalArgumentException("Unknown former district"));areaFilter+=" AND "+areaSql(area,args);}
+  if(ward!=null&&!ward.isBlank()){areaFilter+=" AND "+FacilityAreas.wardSql()+"=?";args.add(FacilityAreas.plain(ward));}
+  args.addAll(Arrays.asList(provinceCode,provinceCode,category,category));
+  var candidates=jdbc.queryForList("SELECT f.id FROM facilities f WHERE f.status='ACTIVE' AND "+textFilter+areaFilter+"""
+
     AND (?::varchar IS NULL OR f.province_code=?::varchar)
     AND EXISTS(SELECT 1 FROM courts c JOIN sport_categories s ON s.id=c.sport_category_id
       WHERE c.facility_id=f.id AND c.enabled AND (?::uuid IS NULL OR c.sport_category_id=?::uuid))
    ORDER BY f.name,f.id LIMIT 200
-   """,UUID.class,pattern(query),provinceCode,provinceCode,category,category);var bindings=new HashMap<UUID,UUID>();for(var id:candidates){var app=applicationId(id);if(app!=null)bindings.put(id,app);}var committed=gate.approved(bindings.values());return candidates.stream().filter(id->!bindings.containsKey(id)||committed.contains(bindings.get(id))).map(id->view(find(id))).toList();
+   """,UUID.class,args.toArray());var bindings=new HashMap<UUID,UUID>();for(var id:candidates){var app=applicationId(id);if(app!=null)bindings.put(id,app);}var committed=gate.approved(bindings.values());return candidates.stream().filter(id->!bindings.containsKey(id)||committed.contains(bindings.get(id))).map(id->view(find(id))).toList();
  }
+ private String areaSql(FacilityAreas.District area,List<Object> args){var codes=area.wards().stream().map(FacilityAreas.Ward::code).toList();var names=area.wards().stream().map(w->FacilityAreas.plain(w.name())).toList();args.add(area.provinceCode());args.add("{"+String.join(",",codes)+"}");args.add("{"+String.join(",",names.stream().map(n->'"'+n+'"').toList())+"}");return "(f.province_code=? AND (f.ward_code=ANY(?::varchar[]) OR "+FacilityAreas.wardSql()+"=ANY(?::text[])))";}
  private String pattern(String value){if(value!=null && value.length()>180)throw new IllegalArgumentException("Search text must not exceed 180 characters");return "%"+(value==null?"":value.trim().toLowerCase(Locale.ROOT).replace("\\","\\\\").replace("%","\\%").replace("_","\\_"))+"%";}
  public Optional<FacilityView> publicIfAvailable(UUID id){var candidate=facilities.findById(id);if(candidate.isEmpty()||!candidate.get().getStatus().equals("ACTIVE"))return Optional.empty();var app=applicationId(id);if(app!=null&&!gate.approved(List.of(app)).contains(app))return Optional.empty();return Optional.of(view(candidate.get()));}
  public FacilityView publicDetail(UUID id){return publicIfAvailable(id).orElseThrow(()->new ResourceNotFoundException("Facility is not publicly available"));}

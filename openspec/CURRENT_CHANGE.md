@@ -4,7 +4,26 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: section 33 (2026-10-30): a booking is any continuous range from 30 minutes
+Latest business revision: section 38 (2026-10-30): court search filters by former district and current ward, and
+free text ignores diacritics and understands former district names (Hanoi mapping only).
+
+Earlier business revision: section 37 (2026-10-30): evidence, money-case and Owner adjudication code and APIs are
+deleted from the backend; their tables and data stay. Bank-account change locks are kept by user decision.
+
+Earlier business revision: section 36 (2026-10-30): peer resale has no evidence upload or Owner adjudication: B
+says "sent", A says "received" and the court moves to B; in every other case the court stays with A and the
+parties settle offline through the facility Owner. This replaces earlier evidence/dispute rules for new attempts.
+
+Earlier business revision: section 35 (2026-10-30): in-app notification inbox; a member cannot pay while the
+organizer's pay-on-behalf QR is open; applied group contributions are forfeited (no refund, no court) when the
+group misses its deadline; group detail uses the Home design.
+
+Earlier business revision: section 34 (2026-10-30): transfer screens use the Home design; sellers reach each
+buyer chat from their listing; payOS is removed (SePay only; payos_* tables stay as shared SePay storage).
+Legacy transfer fees and DEMO money stay in place by user decision (read history, keep tests green);
+do not remove them unless the user asks again.
+
+Earlier business revision: section 33 (2026-10-30): a booking is any continuous range from 30 minutes
 with no upper limit (replaces 60–240 minutes; no more orphan-gap warnings); search shows the Owner's
 hourly price; the facility manual payout/refund workflow is removed (UI, `/bookings/facility-finance/*`,
 booking migration V21; obligations/receipts stay read-only history); receipts whose CASH/BANK evidence Payment cannot return at report time

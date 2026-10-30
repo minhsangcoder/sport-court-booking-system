@@ -138,7 +138,7 @@ class LoadingPerformanceTest extends BookingIntegrationTest {
       when(discoveryDependencies.courts(fid)).thenReturn(courts);
     }
     when(discoveryDependencies.categories()).thenReturn(json.createArrayNode().add(json.createObjectNode().put("id", category.toString()).put("name", "Synthetic Sport")));
-    when(discoveryDependencies.facilities(eq(name), isNull(), isNull())).thenReturn(facilities);
+    when(discoveryDependencies.facilities(eq(name), isNull(), isNull(), isNull(), isNull())).thenReturn(facilities);
     when(dependencies.ownerFacility(eq(facilityId), eq(owner), anyString())).thenReturn(json.createObjectNode().put("id", facilityId.toString()).put("ownerId", owner.id().toString()).put("timezone", "Asia/Ho_Chi_Minh"));
     when(dependencies.ownerCourts(eq(facilityId), anyString())).thenReturn(json.createArrayNode().add(json.createObjectNode().put("id", courtId.toString()).put("name", "Court 0")));
     new TransactionTemplate(txManager).executeWithoutResult(tx -> {

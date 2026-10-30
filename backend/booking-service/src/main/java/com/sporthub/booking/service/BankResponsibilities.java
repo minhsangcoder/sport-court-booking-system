@@ -72,12 +72,6 @@ WITH actor AS (SELECT ?::uuid AS id, ?::timestamptz AS at), sources AS (
   SELECT 'FACILITY_DISBURSEMENT',o.id,NULL::timestamptz FROM facility_disbursement_obligations o,actor u
   WHERE o.payee_id=u.id AND o.state<>'MANUALLY_RECORDED'
   UNION
-  SELECT 'REAL_GROUP_TIMEOUT_REFUND',c.payment_id,NULL::timestamptz FROM group_contributions c
-  JOIN bookings b ON b.id=c.group_id JOIN booking_money_cohorts m ON m.booking_id=b.id,actor u
-  WHERE c.payer_id=u.id AND b.status IN('PENDING','EXPIRED') AND b.hold_expires_at<=u.at
-    AND c.amount>COALESCE((SELECT sum(o.amount) FROM facility_disbursement_obligations o
-      WHERE o.payment_id=c.payment_id AND o.state='MANUALLY_RECORDED' AND o.kind='TECHNICAL_REFUND'),0)
-  UNION
   SELECT 'LEGACY_GROUP_REFUND_REVIEW',c.payment_id,NULL::timestamptz FROM group_contributions c
   JOIN booking_groups g ON g.id=c.group_id JOIN bookings b ON b.id=g.id,actor u
   WHERE c.payer_id=u.id AND c.amount>0

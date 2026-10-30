@@ -22,7 +22,6 @@ const reasons: Record<string, string> = {
   PEER_ACKNOWLEDGED_RETURN: 'Khoản trả lại chờ người mua xác nhận',
   FACILITY_DISBURSEMENT: 'Khoản trả hoặc hoàn chưa hoàn tất',
   REAL_UNAPPLIED_FUNDS: 'Tiền đang chờ đối chiếu',
-  REAL_GROUP_TIMEOUT_REFUND: 'Khoản hoàn sân nhóm chưa hoàn tất',
   LEGACY_GROUP_REFUND_REVIEW: 'Khoản góp nhóm cũ đang chờ đối chiếu hoàn tiền',
   DEMO_SELLER_PAYOUT: 'Khoản trả mô phỏng chưa xong',
   DEMO_REFUND: 'Khoản hoàn mô phỏng chưa xong',

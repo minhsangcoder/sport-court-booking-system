@@ -40,7 +40,7 @@ class OwnerApplicationMigrationTest {
     String schema="owner_migration_"+UUID.randomUUID().toString().replace("-","");
     if(upgrade){var before=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).target("7").load();before.migrate();assertThat(before.info().current().getVersion().toString()).isEqualTo("7");}
     var latest=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).load();latest.migrate();latest.validate();
-    assertThat(latest.info().current().getVersion().toString()).isEqualTo("15");
+    assertThat(latest.info().current().getVersion().toString()).isEqualTo("16");
     try(var connection=DriverManager.getConnection(url,user,password);var statement=connection.createStatement();var results=statement.executeQuery("SELECT count(*) FROM "+schema+".flyway_schema_history WHERE NOT success")){results.next();assertThat(results.getInt(1)).isZero();}
    }
   }finally{if(temporary!=null)temporary.stop();}

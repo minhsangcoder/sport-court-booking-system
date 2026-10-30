@@ -584,7 +584,7 @@ class RealBookingIntegrationTest {
             .put("status", "SUCCESS")
             .put("canonical", true)
             .put("paidAt", now.toString())
-            .put("provider", "PAYOS")
+            .put("provider", "SEPAY")
             .put("moneyClass", "REAL")
             .put("confirmationMethod", "BANK_VERIFIED")
             .put("facilityId", facility.toString())
@@ -616,7 +616,7 @@ class RealBookingIntegrationTest {
   }
 
   @org.junit.jupiter.params.ParameterizedTest
-  @org.junit.jupiter.params.provider.ValueSource(strings = {"PAYOS", "SEPAY"})
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"SEPAY"})
   void canonicalRealReceiptConfirmsOnceAndRetainsCheckedInLifecycle(String provider) {
     var booking = pending();
     var outcome =

@@ -210,7 +210,7 @@ class BankProfileIntegrationTest extends RealBookingIntegrationTest {
   }
 
   @Test
-  void bankExpiredPaidGroupContributionRemainsRestrictedBeforeTheExpiryWorkerCreatesItsRefund() {
+  void bankProfileStaysFreeAfterAPaidGroupContributionIsForfeitedAtExpiry() {
     var hold =
         service.hold(
             new HoldInput(court, start, end, courtAmount), key(), customer, "token", false);
@@ -247,18 +247,17 @@ class BankProfileIntegrationTest extends RealBookingIntegrationTest {
     credit(group.booking(), payment, member.id(), share.amountDue().intValueExact());
     banks.activate(command(member.id(), 0, false));
     when(clock.instant()).thenReturn(group.deadline());
-    assertThat(banks.status(member.id(), true).responsibilities())
-        .extracting(Responsibility::kind)
-        .containsExactly("REAL_GROUP_TIMEOUT_REFUND");
     holds.expireCourt(court);
-    assertThat(banks.status(member.id(), true).canChange()).isFalse();
+    // The contribution is forfeited: no refund obligation exists and the bank profile stays free.
+    assertThat(banks.status(member.id(), true).responsibilities()).isEmpty();
+    assertThat(banks.status(member.id(), true).canChange()).isTrue();
     assertThat(
             repo.jdbc()
                 .queryForObject(
-                    "SELECT payee_id FROM facility_disbursement_obligations WHERE payment_id=?",
-                    UUID.class,
+                    "SELECT count(*) FROM facility_disbursement_obligations WHERE payment_id=?",
+                    Integer.class,
                     payment))
-        .isEqualTo(member.id());
+        .isZero();
   }
 
   @Test

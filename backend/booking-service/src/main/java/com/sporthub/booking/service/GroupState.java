@@ -123,6 +123,8 @@ final class GroupState {
               Map.of(
                   "groupId",
                   id,
+                  "groupName",
+                  group.name(),
                   "ownerId",
                   caller.id(),
                   "memberId",

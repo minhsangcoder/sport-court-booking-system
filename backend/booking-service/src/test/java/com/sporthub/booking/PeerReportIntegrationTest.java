@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 class PeerReportIntegrationTest extends PeerUsageIntegrationTest {
-  @Autowired PeerMoneyActions peerMoney;
 
   Sale reportSale() {
     courtAmount = new BigDecimal("120000");
@@ -95,50 +94,6 @@ class PeerReportIntegrationTest extends PeerUsageIntegrationTest {
     assertThat(finalReport.summary().money().afterRefund()).isEqualTo("40000");
     assertThat(finalReport.summary().money().policyRefunded()).isEqualTo("80000");
     assertThat(finalReport.peer().sellerAcknowledgedAmount()).isEqualTo("100000");
-  }
-
-  @Test
-  void peerReportOwnerDecisionAndDirectReturnNeverBecomeBankCashAndOldOpenCasesRemainVisible() {
-    var sale = reportSale();
-    dispute(sale);
-    when(clock.instant()).thenReturn(now.plusSeconds(10));
-    var disputed = report(LocalDate.parse("2026-10-23"), 0);
-    assertThat(disputed.peer().openUsageCases()).isEqualTo(1);
-    assertThat(disputed.peer().sellerAcknowledgedAmount()).isEqualTo("0");
-    adjudication.resolve(
-        sale.acquisition(),
-        new PeerResaleContract.Resolution(
-            2, "SELLER_RETAINS", "Chốt quyền sân, không xác nhận tiền", List.of(sale.bill())),
-        key(),
-        venueOwner(),
-        "token");
-    var returned =
-        new PeerMoneyContract.ReturnCommand(
-            UUID.randomUUID(),
-            new PeerMoneyContract.ReturnInput(
-                sale.hash(), new BigDecimal("40000"), "DIRECT-RETURN", List.of(sale.bill())));
-    peerMoney.declareReturn(sale.acquisition(), returned, key(), customer.id());
-    peerMoney.acknowledge(
-        sale.acquisition(),
-        new PeerMoneyContract.Acknowledge(returned.returnId(), 0, sale.hash()),
-        key(),
-        sale.buyer().id());
-    when(clock.instant()).thenReturn(now.plusSeconds(11));
-    var sameDay = report(LocalDate.parse("2026-10-23"), 0);
-    assertThat(sameDay.peer().openUsageCases()).isZero();
-    assertThat(sameDay.peer().openMoneyCases()).isEqualTo(1);
-    assertThat(sameDay.peer().returnDeclaredAmount()).isEqualTo("40000");
-    assertThat(sameDay.peer().returnAcknowledgedAmount()).isEqualTo("40000");
-    assertThat(sameDay.summary().money().afterRefund()).isEqualTo("120000");
-    assertThat(sameDay.summary().money().policyRefunded()).isEqualTo("0");
-    assertThat(sameDay.summary().money().technicalRefunded()).isEqualTo("0");
-    when(clock.instant()).thenReturn(now.plusSeconds(86410));
-    var nextDay = report(LocalDate.parse("2026-10-24"), 0);
-    assertThat(nextDay.peer().transactions().total()).isEqualTo(1);
-    assertThat(nextDay.peer().buyerDeclaredAmount()).isEqualTo("0");
-    assertThat(nextDay.peer().returnAcknowledgedAmount()).isEqualTo("0");
-    assertThat(nextDay.peer().openMoneyCases()).isEqualTo(1);
-    assertThat(report(LocalDate.parse("2026-10-24"), 1).peer().transactions().items()).isEmpty();
   }
 
   @Test
@@ -226,43 +181,4 @@ class PeerReportIntegrationTest extends PeerUsageIntegrationTest {
         .isEqualTo("UNAVAILABLE");
   }
 
-  @Test
-  void peerReportCountsOnlyRealCheckinAfterLateOwnerHandoffAndNeverExtendsTheSchedule() {
-    var sale = reportSale();
-    dispute(sale);
-    when(clock.instant()).thenReturn(start.minusSeconds(1));
-    adjudication.presence(
-        sale.acquisition(),
-        new PeerResaleContract.Presence("BUYER", "Đã có mặt tại cơ sở"),
-        key(),
-        venueOwner(),
-        "token");
-    when(clock.instant()).thenReturn(start.plusSeconds(600));
-    var frozen = report(LocalDate.parse("2026-10-23"), 0);
-    assertThat(frozen.summary().usedMinutes()).isEqualTo("0");
-    assertThat(frozen.summary().bookedMinutes()).isEqualTo("60");
-    adjudication.resolve(
-        sale.acquisition(),
-        new PeerResaleContract.Resolution(
-            3, "AWARD_BUYER", "B nhận thời gian còn lại", List.of(sale.bill())),
-        key(),
-        venueOwner(),
-        "token");
-    assertThat(report(LocalDate.parse("2026-10-23"), 0).summary().usedMinutes()).isEqualTo("0");
-    service.checkinByCode(
-        facility,
-        new com.sporthub.booking.web.BookingDtos.CodeInput(
-            repo.find(sale.original().id()).bookingCode()),
-        venueOwner(),
-        "token");
-    when(clock.instant()).thenReturn(start.plusSeconds(1200));
-    var playing = report(LocalDate.parse("2026-10-23"), 0);
-    assertThat(playing.summary().usedMinutes()).isEqualTo("10");
-    assertThat(playing.peer().ownerAwardedAmount()).isEqualTo("100000");
-    assertThat(playing.peer().sellerAcknowledgedAmount()).isEqualTo("0");
-    assertThat(playing.summary().money().bankCollected()).isEqualTo("120000");
-    when(clock.instant()).thenReturn(end.plusSeconds(600));
-    assertThat(report(LocalDate.parse("2026-10-23"), 0).summary().usedMinutes()).isEqualTo("50");
-    assertThat(repo.find(sale.original().id()).endsAt()).isEqualTo(end);
-  }
 }

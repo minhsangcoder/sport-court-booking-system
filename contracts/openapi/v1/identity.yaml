@@ -2072,6 +2072,135 @@
           }
         }
       }
+    },
+    "/users/me/notifications": {
+      "get": {
+        "operationId": "getMyNotifications",
+        "parameters": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest in-app notices of the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "unreadCount",
+                        "items"
+                      ],
+                      "properties": {
+                        "unreadCount": {
+                          "type": "integer"
+                        },
+                        "items": {
+                          "type": "array",
+                          "maxItems": 30,
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "subject",
+                              "body",
+                              "createdAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "subject": {
+                                "type": "string"
+                              },
+                              "body": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "readAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid session"
+          }
+        }
+      }
+    },
+    "/users/me/notifications/{id}/read": {
+      "post": {
+        "operationId": "markNotificationRead",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Marked read; idempotent and limited to the caller's notices"
+          },
+          "401": {
+            "description": "Invalid session"
+          }
+        }
+      }
+    },
+    "/users/me/notifications/read-all": {
+      "post": {
+        "operationId": "markAllNotificationsRead",
+        "parameters": [],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All of the caller's notices marked read"
+          },
+          "401": {
+            "description": "Invalid session"
+          }
+        }
+      }
     }
   },
   "components": {

@@ -38,12 +38,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 class PeerUsageIntegrationTest extends RealBookingIntegrationTest {
   @Autowired PeerUsageActions peer;
   @Autowired PeerUsageStore peerStore;
-  @Autowired PeerUsageAdjudication adjudication;
   @Autowired PeerUsageTimeouts timeouts;
   @Autowired PeerHandoffs peerHandoffs;
   @Autowired BookingBankProfiles bankProfiles;
-  @Autowired PeerCaseReads caseReads;
-  @MockBean PeerCaseEvidenceClient caseEvidence;
   @Autowired org.springframework.test.web.servlet.MockMvc http;
 
   record Sale(
@@ -89,8 +86,6 @@ class PeerUsageIntegrationTest extends RealBookingIntegrationTest {
     String key = key();
     assertThatThrownBy(() -> peer.cancel(sale.acquisition(), command, key(), customer.id()))
         .isInstanceOf(ForbiddenException.class);
-    assertThatThrownBy(() -> peer.declaration(sale.acquisition(), sale.buyer().id()))
-        .isInstanceOf(ResourceNotFoundException.class);
     var result = peer.cancel(sale.acquisition(), command, key, sale.buyer().id());
     assertThat(result.path("phase").asText()).isEqualTo("EXPIRED");
     assertThat(peer.cancel(sale.acquisition(), command, key, sale.buyer().id())).isEqualTo(result);
@@ -106,11 +101,73 @@ class PeerUsageIntegrationTest extends RealBookingIntegrationTest {
   }
 
   @Test
-  void peerBuyerCannotReleaseAnAcceptedDeclarationAndSellerCanReadItsReference() {
+  void peerSellerDenialEndsTheAttemptAndTheCourtStaysWithTheSeller() {
+    var sale = sale();
+    declare(sale);
+    var denied =
+        peer.deny(
+            sale.acquisition(),
+            new PeerResaleContract.Command(1, sale.hash()),
+            key(),
+            customer.id());
+    assertThat(denied.path("phase").asText()).isEqualTo("ABORTED_A_RETAINS");
+    assertThat(repo.find(sale.original().id()).currentHolderId()).isEqualTo(customer.id());
+    assertThat(
+            repo.jdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM peer_money_cases WHERE acquisition_id=?",
+                    Integer.class,
+                    sale.acquisition()))
+        .isZero();
+    assertThatThrownBy(
+            () ->
+                peer.confirm(
+                    sale.acquisition(),
+                    new PeerResaleContract.Command(2, sale.hash()),
+                    key(),
+                    customer.id()))
+        .isInstanceOf(ConflictException.class);
+    noFacilityResaleMoney();
+  }
+
+  @Test
+  void peerBankAccountStaysLockedAfterTheSellerDeniesReceiptUntilTheBookingEnds() {
+    var sale = sale();
+    bankProfiles.activate(
+        new BankProfileContract.Activation(
+            customer.id(), UUID.randomUUID(), "b".repeat(64), 0, false, key(), "c".repeat(64)));
+    declare(sale);
+    peer.deny(
+        sale.acquisition(),
+        new PeerResaleContract.Command(1, sale.hash()),
+        key(),
+        customer.id());
+    var seller = bankProfiles.status(customer.id(), true);
+    assertThat(seller.canChange()).isFalse();
+    assertThat(seller.responsibilities())
+        .extracting(BankProfileContract.Responsibility::kind)
+        .contains("BOOKING");
+  }
+
+  @Test
+  void peerOnlyTheSellerCanDenyReceipt() {
+    var sale = sale();
+    declare(sale);
+    assertThatThrownBy(
+            () ->
+                peer.deny(
+                    sale.acquisition(),
+                    new PeerResaleContract.Command(1, sale.hash()),
+                    key(),
+                    sale.buyer().id()))
+        .isInstanceOf(ForbiddenException.class);
+    assertThat(peerStore.attempt(sale.acquisition()).phase()).isEqualTo("PAYMENT_DECLARED");
+  }
+
+  @Test
+  void peerBuyerCannotReleaseAnAcceptedDeclaration() {
     var second = sale();
     declare(second);
-    assertThat(peer.declaration(second.acquisition(), customer.id()).path("evidenceIds"))
-        .hasSize(1);
     assertThatThrownBy(
             () ->
                 peer.cancel(
@@ -141,7 +198,6 @@ class PeerUsageIntegrationTest extends RealBookingIntegrationTest {
         .doesNotContain("PEER_DISPUTE", "PEER_ACQUISITION");
     when(clock.instant()).thenReturn(end);
     assertThat(bankProfiles.status(customer.id(), true).canChange()).isTrue();
-    assertThat(caseReads.retention(sale.acquisition()).get("canDiscardStaged")).isEqualTo(false);
     noFacilityResaleMoney();
   }
 
@@ -220,7 +276,6 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
                       Timestamp.from(now),
                       Timestamp.from(now));
             });
-    when(caseEvidence.ready(eq(acquisition), anyList())).thenReturn(Set.of(bill));
     when(dependencies.ownerFacility(eq(facility), any(), any()))
         .thenAnswer(
             call -> {
@@ -236,30 +291,33 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
   }
 
   JsonNode declare(Sale sale) {
-    var receipt =
-        PeerEvidenceReceipt.create(
-            sale.acquisition(),
-            sale.buyer().id(),
-            sale.hash(),
-            "BANK REF",
-            List.of(sale.bill()),
-            now);
     return peer.declare(
         sale.acquisition(),
-        new PeerResaleContract.Declaration(0, sale.hash(), "BANK REF", List.of(sale.bill())),
-        receipt,
+        new PeerResaleContract.Command(0, sale.hash()),
         key(),
         sale.buyer().id());
   }
 
+  /** Rebuilds a dispute left over from the old flow; nothing can open one any more. */
   JsonNode dispute(Sale sale) {
     declare(sale);
-    return peer.dispute(
-        sale.acquisition(),
-        new PeerResaleContract.Command(1, sale.hash()),
-        "Chưa xác nhận nhận tiền",
-        key(),
-        customer.id());
+    var now = clock.instant();
+    peerStore.phase(peerStore.attempt(sale.acquisition()), "DISPUTED", "BUYER_DECLARED", now);
+    repo.jdbc()
+        .update(
+            "INSERT INTO peer_money_cases(acquisition_id,facility_id,seller_id,buyer_id,state,reason,created_at,updated_at)"
+                + " VALUES(?,?,?,?,'OPEN','Hồ sơ cũ',?,?)",
+            sale.acquisition(),
+            facility,
+            customer.id(),
+            sale.buyer().id(),
+            Timestamp.from(now),
+            Timestamp.from(now));
+    repo.jdbc()
+        .update(
+            "UPDATE user_hold_claims SET phase='DISPUTED' WHERE source_id=? AND state='ACTIVE'",
+            sale.acquisition());
+    return peerStore.view(sale.acquisition());
   }
 
   void noFacilityResaleMoney() {
@@ -277,218 +335,10 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
           .isZero();
   }
 
-  @Test
-  void peerCaseEvidenceRequiresActualCaseAndCurrentOwnerAndRetainsOpenMoneyHistory() {
-    var sale = sale();
-    assertThat(caseReads.retention(sale.acquisition()).get("canDiscardStaged")).isEqualTo(false);
-    assertThatThrownBy(() -> caseReads.evidenceAccess(sale.acquisition(), venueOwner(), "token"))
-        .isInstanceOf(ForbiddenException.class);
-    dispute(sale);
-    assertThat(caseReads.evidenceAccess(sale.acquisition(), venueOwner(), "token"))
-        .containsEntry("actorId", owner)
-        .containsEntry("facilityId", facility)
-        .containsEntry("canReadEvidence", true);
-    assertThatThrownBy(
-            () ->
-                caseReads.evidenceAccess(
-                    sale.acquisition(),
-                    new Caller(UUID.randomUUID(), "Other owner", Set.of("OWNER"), Map.of()),
-                    "token"))
-        .isInstanceOf(ForbiddenException.class);
-    assertThatThrownBy(
-            () ->
-                caseReads.evidenceAccess(
-                    sale.acquisition(),
-                    new Caller(
-                        UUID.randomUUID(),
-                        "Staff",
-                        Set.of("STAFF"),
-                        Map.of(facility, Set.of("BOOKING_CHECK_IN"))),
-                    "token"))
-        .isInstanceOf(ForbiddenException.class);
-    adjudication.resolve(
-        sale.acquisition(),
-        new PeerResaleContract.Resolution(
-            2, "SELLER_RETAINS", "Chỉ quyết định quyền sân", List.of(sale.bill())),
-        key(),
-        venueOwner(),
-        "token");
-    assertThat(caseReads.retention(sale.acquisition()).get("canDiscardStaged")).isEqualTo(false);
-    repo.jdbc()
-        .update(
-            "UPDATE peer_money_cases SET state='CLOSED_NO_RETURN' WHERE acquisition_id=?",
-            sale.acquisition());
-    assertThat(caseReads.retention(sale.acquisition()).get("canDiscardStaged")).isEqualTo(true);
-    noFacilityResaleMoney();
-  }
-
-  @Test
-  void peerOwnerCaseHttpRequiresSignatureScopeAndSeparatesStaffPresenceFromUsageDecision()
-      throws Exception {
-    var sale = sale();
-    dispute(sale);
-    String base = "/api/v1/internal/bookings/peer/facilities/" + facility + "/cases";
-    String secret = "synthetic-service-key-over-thirty-two-characters";
-    var ownerActor = venueOwner();
-    when(identity.current(any())).thenReturn(ownerActor);
-    long time = java.time.Instant.now().getEpochSecond();
-    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(base))
-        .andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status()
-                .is4xxClientError());
-    http.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
-                    base + "?size=50")
-                .header("Authorization", "token")
-                .header("X-Service-Time", time)
-                .header(
-                    "X-Service-Signature",
-                    com.sporthub.common.security.ServiceCalls.sign(secret, "GET", base, time, "")))
-        .andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
-        .andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
-                    "$.data[0].id")
-                .value(sale.acquisition().toString()));
-    var detail = caseReads.detail(sale.acquisition(), facility, ownerActor, "token");
-    assertThat(detail.path("authority").asText()).isEqualTo("USAGE_ONLY");
-    assertThat(detail.path("declaration").path("reference").asText()).isEqualTo("BANK REF");
-    assertThat(detail.toString())
-        .doesNotContain("accountNumber", "checkinToken", "returnAmount", "moneyDisposition");
-    assertThat(caseReads.partyDetail(sale.acquisition(), sale.buyer().id()).path("attempt"))
-        .isEqualTo(detail.path("attempt"));
-    assertThatThrownBy(() -> caseReads.partyDetail(sale.acquisition(), UUID.randomUUID()))
-        .isInstanceOf(ForbiddenException.class);
-    assertThat(peerStore.views(List.of(sale.acquisition())))
-        .containsExactly(peerStore.view(sale.acquisition()));
-    var staff =
-        new Caller(
-            UUID.randomUUID(),
-            "Staff",
-            Set.of("STAFF"),
-            Map.of(facility, Set.of("BOOKING_CHECK_IN")));
-    when(identity.current(any())).thenReturn(staff);
-    String context = base + "/presence-context";
-    http.perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(context)
-                .header("Authorization", "token")
-                .header("X-Service-Time", time)
-                .header(
-                    "X-Service-Signature",
-                    com.sporthub.common.security.ServiceCalls.sign(
-                        secret, "GET", context, time, "")))
-        .andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
-        .andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
-                    "$.data[0].phase")
-                .value("DISPUTED"))
-        .andExpect(
-            org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
-                    "$.data[0].bankReference")
-                .doesNotExist());
-    assertThatThrownBy(() -> caseReads.detail(sale.acquisition(), facility, staff, "token"))
-        .isInstanceOf(ForbiddenException.class);
-    assertThatThrownBy(
-            () -> caseReads.detail(sale.acquisition(), UUID.randomUUID(), ownerActor, "token"))
-        .isInstanceOf(ForbiddenException.class);
-    noFacilityResaleMoney();
-  }
-
   private BankProfileContract.Decision firstBank(UUID user) {
     return bankProfiles.activate(
         new BankProfileContract.Activation(
             user, UUID.randomUUID(), "c".repeat(64), 0, false, key(), "d".repeat(64)));
-  }
-
-  @Test
-  void peerFinalOwnerDecisionReleasesOnlyDisputeBankSourceWhileMoneyHistoryStaysOpen() {
-    var sale = sale();
-    firstBank(customer.id());
-    var buyerBank = firstBank(sale.buyer().id());
-    dispute(sale);
-    assertThat(bankProfiles.status(sale.buyer().id(), true).responsibilities())
-        .extracting(BankProfileContract.Responsibility::kind)
-        .contains("PEER_DISPUTE");
-    adjudication.resolve(
-        sale.acquisition(),
-        new PeerResaleContract.Resolution(
-            2,
-            "SELLER_RETAINS",
-            "Giữ quyền sân cho A, không quyết định tiền của hai bên",
-            List.of(sale.bill())),
-        key(),
-        venueOwner(),
-        "token");
-    var sellerStatus = bankProfiles.status(customer.id(), true);
-    var buyerStatus = bankProfiles.status(sale.buyer().id(), true);
-    assertThat(sellerStatus.responsibilities())
-        .extracting(BankProfileContract.Responsibility::kind)
-        .contains("BOOKING")
-        .doesNotContain("PEER_DISPUTE", "PEER_ACQUISITION");
-    assertThat(sellerStatus.canChange()).isFalse();
-    assertThat(buyerStatus.canChange()).isTrue();
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT state FROM peer_money_cases WHERE acquisition_id=?",
-                    String.class,
-                    sale.acquisition()))
-        .isEqualTo("OPEN");
-    var replacement =
-        bankProfiles.activate(
-            new BankProfileContract.Activation(
-                sale.buyer().id(),
-                UUID.randomUUID(),
-                "e".repeat(64),
-                buyerBank.version(),
-                true,
-                key(),
-                "f".repeat(64)));
-    assertThat(replacement.version()).isEqualTo(2);
-    when(clock.instant()).thenReturn(end);
-    assertThat(bankProfiles.status(customer.id(), true).canChange()).isTrue();
-    // Acknowledgment, rather than a unilateral open claim, is a separate remaining responsibility.
-    repo.jdbc()
-        .update(
-            "INSERT INTO"
-                + " peer_return_obligations(return_id,acquisition_id,seller_id,buyer_id,amount,terms_hash,bank_reference,evidence_ids,state,created_at,updated_at)"
-                + " VALUES(?,?,?,?,80000,?,'A RETURN',?,'AWAITING_BUYER',?,?)",
-            UUID.randomUUID(),
-            sale.acquisition(),
-            customer.id(),
-            sale.buyer().id(),
-            sale.hash(),
-            new UUID[] {UUID.randomUUID()},
-            Timestamp.from(end),
-            Timestamp.from(end));
-    assertThat(bankProfiles.status(customer.id(), true).responsibilities())
-        .extracting(BankProfileContract.Responsibility::kind)
-        .containsExactly("PEER_ACKNOWLEDGED_RETURN");
-    assertThat(bankProfiles.status(sale.buyer().id(), true).canChange()).isFalse();
-    assertThatThrownBy(
-            () ->
-                repo.jdbc()
-                    .update(
-                        "UPDATE peer_return_obligations SET"
-                            + " state='WAIVED_BY_BOTH',version=1,finalized_at=?,updated_at=? WHERE"
-                            + " acquisition_id=?",
-                        Timestamp.from(end),
-                        Timestamp.from(end),
-                        sale.acquisition()))
-        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
-    repo.jdbc()
-        .update(
-            "UPDATE peer_return_obligations SET"
-                + " state='BUYER_ACKNOWLEDGED',acknowledged_by=?,version=1,finalized_at=?,updated_at=?"
-                + " WHERE acquisition_id=?",
-            sale.buyer().id(),
-            Timestamp.from(end),
-            Timestamp.from(end),
-            sale.acquisition());
-    assertThat(bankProfiles.status(customer.id(), true).canChange()).isTrue();
-    assertThat(bankProfiles.status(sale.buyer().id(), true).canChange()).isTrue();
-    noFacilityResaleMoney();
   }
 
   @Test
@@ -596,31 +446,6 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
   }
 
   @Test
-  void peerOwnerCanAwardOnlyRemainingTimeWhenABuyerWasRecordedOnTime() {
-    var sale = sale();
-    dispute(sale);
-    when(clock.instant()).thenReturn(start.minusSeconds(1));
-    adjudication.presence(
-        sale.acquisition(),
-        new PeerResaleContract.Presence("BUYER", "Khách đã có mặt tại quầy"),
-        key(),
-        venueOwner(),
-        "token");
-    when(clock.instant()).thenReturn(start.plusSeconds(1200));
-    var input =
-        new PeerResaleContract.Resolution(
-            3,
-            "AWARD_BUYER",
-            "Chấp nhận quyền sử dụng phần thời gian còn lại",
-            List.of(sale.bill()));
-    var result = adjudication.resolve(sale.acquisition(), input, key(), venueOwner(), "token");
-    assertThat(result.path("phase").asText()).isEqualTo("COMPLETED");
-    assertThat(result.path("confirmationMethod").asText()).isEqualTo("OWNER_ADJUDICATED");
-    assertThat(repo.find(sale.original().id()).endsAt()).isEqualTo(end);
-    noFacilityResaleMoney();
-  }
-
-  @Test
   void peerBothAbsentDefaultKeepsAWithoutStrikeCheckinOrOwnerRefund() {
     var sale = sale();
     dispute(sale);
@@ -644,44 +469,6 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
                     String.class,
                     sale.acquisition()))
         .isEqualTo("OPEN");
-    noFacilityResaleMoney();
-  }
-
-  @Test
-  void peerFraudFindingIsOwnerOnlyAndReplayCreatesExactlyOneThirtyDayMarketBan() {
-    var sale = sale();
-    dispute(sale);
-    var input =
-        new PeerResaleContract.Resolution(
-            2,
-            "BUYER_FRAUD",
-            "Đã đối chiếu và xác định cố ý khai chuyển khoản giả",
-            List.of(sale.bill()));
-    var staff =
-        new Caller(
-            UUID.randomUUID(),
-            "Staff",
-            Set.of("STAFF"),
-            Map.of(facility, Set.of("BOOKING_REFUND")));
-    assertThatThrownBy(() -> adjudication.resolve(sale.acquisition(), input, key(), staff, "token"))
-        .isInstanceOf(ForbiddenException.class);
-    var outsider = new Caller(UUID.randomUUID(), "Other Owner", Set.of("OWNER"), Map.of());
-    assertThatThrownBy(
-            () -> adjudication.resolve(sale.acquisition(), input, key(), outsider, "token"))
-        .isInstanceOf(ForbiddenException.class);
-    String request = key();
-    var result = adjudication.resolve(sale.acquisition(), input, request, venueOwner(), "token");
-    assertThat(adjudication.resolve(sale.acquisition(), input, request, venueOwner(), "token"))
-        .isEqualTo(result);
-    assertThat(peerStore.attempt(sale.acquisition()).phase()).isEqualTo("ABORTED_A_RETAINS");
-    var restriction =
-        repo.jdbc()
-            .queryForMap(
-                "SELECT * FROM user_admission_restrictions WHERE principal_id=?",
-                sale.buyer().id());
-    assertThat(restriction.get("strike_count")).isEqualTo(1);
-    assertThat(((Timestamp) restriction.get("market_blocked_until")).toInstant())
-        .isEqualTo(now.plusSeconds(30L * 86400));
     noFacilityResaleMoney();
   }
 
@@ -800,36 +587,6 @@ VALUES(?,?,'PEER_ACQUISITION',?,?,?,?,?,?,'WAITING_PAYMENT','ACTIVE',?,?)
     assertThat(peerStore.attempt(sale.acquisition()).phase()).isEqualTo("TIMED_OUT_A_RETAINS");
     assertThat(repo.find(sale.original().id()).currentHolderId()).isEqualTo(customer.id());
     noFacilityResaleMoney();
-  }
-
-  @Test
-  void peerPresenceRequiresTheCheckinGrantAndCannotBeAddedAfterTheCutoff() {
-    var sale = sale();
-    dispute(sale);
-    var input = new PeerResaleContract.Presence("BUYER", "Khách có mặt");
-    assertThatThrownBy(
-            () -> adjudication.presence(sale.acquisition(), input, key(), sale.buyer(), "token"))
-        .isInstanceOf(ForbiddenException.class);
-    var otherStaff =
-        new Caller(
-            UUID.randomUUID(),
-            "Staff",
-            Set.of("STAFF"),
-            Map.of(UUID.randomUUID(), Set.of("BOOKING_CHECK_IN")));
-    assertThatThrownBy(
-            () -> adjudication.presence(sale.acquisition(), input, key(), otherStaff, "token"))
-        .isInstanceOf(ForbiddenException.class);
-    when(clock.instant()).thenReturn(start.plusSeconds(1));
-    assertThatThrownBy(
-            () -> adjudication.presence(sale.acquisition(), input, key(), venueOwner(), "token"))
-        .isInstanceOf(ConflictException.class);
-    assertThat(
-            repo.jdbc()
-                .queryForObject(
-                    "SELECT count(*) FROM peer_attendance WHERE acquisition_id=?",
-                    Integer.class,
-                    sale.acquisition()))
-        .isZero();
   }
 
   @Test

@@ -14,6 +14,16 @@ import type { Listing, TransferFinanceTerms } from './types'
 import { BankDestinationForm } from '@/features/payments/bank-destination-form'
 import { useAuth } from '@/lib/auth-context'
 import { AdmissionNotice } from '@/features/booking/admission-notice'
+import { PageBanner } from '@/components/page-banner'
+import { CourtLines } from '@/features/home/home-art'
+import {
+  amberNotice,
+  bannerLink,
+  card,
+  fieldLabel,
+  outlinePill,
+  primaryPill,
+} from './transfer-styles'
 export function ListingForm({ bookingId, listingId }: { bookingId?: string; listingId?: string }) {
   const { user } = useAuth()
   return (
@@ -139,123 +149,143 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
   const currency = booking.data?.booking.currency ?? listing.data!.currency
   if (!real)
     return (
-      <div className="mx-auto max-w-xl space-y-5 px-5 py-10">
-        <Link
-          href={listingId ? `/transfers/${listingId}` : `/customer/bookings/${bookingId}`}
-          className="text-emerald-700 underline"
-        >
-          Quay lại chi tiết
-        </Link>
-        <h1 className="text-2xl font-bold">
-          Không thể tạo chuyển nhượng tiền thật từ giao dịch cũ
-        </h1>
-        <p>
-          Lượt đặt mô phỏng và giao dịch chuyển nhượng cũ được giữ trong lịch sử. Tin đăng mới chỉ
-          áp dụng cho lượt đặt đã thanh toán thật.
-        </p>
-        <p>
-          Với lượt đặt hợp lệ, người mua trả 100% giá đã chốt trực tiếp vào tài khoản người bán bằng
-          QR SePay, không có phí chuyển nhượng.
-        </p>
+      <div>
+        <PageBanner
+          icon="pickleball"
+          eyebrow={
+            <Link
+              href={listingId ? `/transfers/${listingId}` : `/customer/bookings/${bookingId}`}
+              className={bannerLink}
+            >
+              Quay lại chi tiết
+            </Link>
+          }
+          title="Không thể tạo chuyển nhượng tiền thật từ giao dịch cũ"
+        />
+        <div className="home-rise mx-auto max-w-3xl px-4 py-7 sm:px-6 sm:py-9">
+          <section
+            className={`${card} space-y-3 p-5 text-sm leading-relaxed text-slate-600 sm:p-7 dark:text-slate-300`}
+          >
+            <p>
+              Lượt đặt mô phỏng và giao dịch chuyển nhượng cũ được giữ trong lịch sử. Tin đăng mới
+              chỉ áp dụng cho lượt đặt đã thanh toán thật.
+            </p>
+            <p>
+              Với lượt đặt hợp lệ, người mua trả 100% giá đã chốt trực tiếp vào tài khoản người bán
+              bằng QR SePay, không có phí chuyển nhượng.
+            </p>
+          </section>
+        </div>
       </div>
     )
   return (
-    <div className="mx-auto max-w-xl px-5 py-10">
-      <Link
-        href={listingId ? `/transfers/${listingId}` : `/customer/bookings/${bookingId}`}
-        className="text-sm text-slate-500"
-      >
-        Quay lại chi tiết
-      </Link>
-      <h1 className="mt-6 text-3xl font-black">
-        {listingId ? 'Sửa tin chuyển nhượng' : 'Đăng lượt đặt lên chợ'}
-      </h1>
-      <p className="mt-4 text-slate-500">
-        Giá gốc: {money(amount, currency)}. Sân và lịch chơi được giữ nguyên.
-      </p>
-      <AdmissionNotice market />
-      {real && (
-        <BankDestinationForm
-          value={bankDestination}
-          onChange={(revision) => {
-            setBankDestination(revision)
+    <div>
+      <PageBanner
+        icon="pickleball"
+        eyebrow={
+          <Link
+            href={listingId ? `/transfers/${listingId}` : `/customer/bookings/${bookingId}`}
+            className={bannerLink}
+          >
+            Quay lại chi tiết
+          </Link>
+        }
+        title={listingId ? 'Sửa tin chuyển nhượng' : 'Đăng lượt đặt lên chợ'}
+        description={`Giá gốc: ${money(amount, currency)}. Sân và lịch chơi được giữ nguyên.`}
+      />
+      <div className="home-rise mx-auto max-w-3xl space-y-6 px-4 py-7 sm:px-6 sm:py-9">
+        <AdmissionNotice market />
+        {real && (
+          <BankDestinationForm
+            value={bankDestination}
+            onChange={(revision) => {
+              setBankDestination(revision)
+              setTerms(null)
+              setDraft(null)
+              setConsent(false)
+            }}
+            disabled={busy}
+          />
+        )}
+        <form
+          onSubmit={quote}
+          onChange={() => {
             setTerms(null)
-            setDraft(null)
             setConsent(false)
           }}
-          disabled={busy}
-        />
-      )}
-      <form
-        onSubmit={quote}
-        onChange={() => {
-          setTerms(null)
-          setConsent(false)
-        }}
-        className="mt-8 space-y-5"
-      >
-        <label className="grid gap-2 text-sm">
-          Giá chuyển nhượng ({currency})
-          <Input
-            name="price"
-            type="number"
-            min={1}
-            max={amount}
-            step={1}
-            required
-            defaultValue={listing.data?.price ?? amount}
-            disabled={busy}
-          />
-        </label>
-        <label className="grid gap-2 text-sm">
-          Hạn nhận lượt đặt
-          <Input
-            name="deadline"
-            type="datetime-local"
-            required
-            max={localInput(starts)}
-            defaultValue={localInput(listing.data?.deadline ?? starts)}
-            disabled={busy}
-          />
-        </label>
-        <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
-          Người mua chuyển khoản 100% giá đã chốt trực tiếp cho bạn qua QR SePay. Bạn xác nhận đã
-          nhận đủ tiền để bàn giao sân; không có phí chuyển nhượng.
-        </p>
-        <Button type="submit" variant="outline" disabled={busy}>
-          {busy ? 'Đang xử lý…' : 'Xem điều khoản'}
-        </Button>
-      </form>
-      {terms && (
-        <>
-          <TransferFinanceNotice terms={terms} />
-          <label className="flex items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(event) => setConsent(event.target.checked)}
-              disabled={busy}
-              className="mt-1"
-            />
-            Tôi đồng ý điều khoản, chia sẻ tài khoản đã chọn cho người mua và gửi ngân hàng, số tài
-            khoản, số tiền, nội dung tới SePay để tạo QR. Tôi tự kiểm tra tiền thực nhận trước khi
-            bàn giao.
-          </label>
-          <Button
-            type="button"
-            className="mt-5 h-12 w-full bg-emerald-600 text-white"
-            onClick={publish}
-            disabled={!consent || busy}
-          >
-            {busy ? 'Đang lưu…' : listingId ? 'Lưu thay đổi' : 'Đăng tin chuyển nhượng'}
+          className={`${card} space-y-5 p-5 sm:p-7 [animation-delay:60ms]`}
+        >
+          <CourtLines className="pointer-events-none absolute -right-20 -top-12 -z-10 w-80 -rotate-6 text-emerald-600/[0.05]" />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className={fieldLabel}>
+              Giá chuyển nhượng ({currency})
+              <Input
+                name="price"
+                type="number"
+                min={1}
+                max={amount}
+                step={1}
+                required
+                defaultValue={listing.data?.price ?? amount}
+                disabled={busy}
+                className="h-11 rounded-xl"
+              />
+            </label>
+            <label className={fieldLabel}>
+              Hạn nhận lượt đặt
+              <Input
+                name="deadline"
+                type="datetime-local"
+                required
+                max={localInput(starts)}
+                defaultValue={localInput(listing.data?.deadline ?? starts)}
+                disabled={busy}
+                className="h-11 rounded-xl"
+              />
+            </label>
+          </div>
+          <p className={amberNotice}>
+            Người mua chuyển khoản 100% giá đã chốt trực tiếp cho bạn qua QR SePay. Bạn xác nhận đã
+            nhận đủ tiền để bàn giao sân; không có phí chuyển nhượng.
+          </p>
+          <Button type="submit" variant="outline" disabled={busy} className={outlinePill}>
+            {busy ? 'Đang xử lý…' : 'Xem điều khoản'}
           </Button>
-        </>
-      )}
-      {error && (
-        <p role="alert" className="mt-5 text-red-700">
-          {error}
-        </p>
-      )}
+        </form>
+        {terms && (
+          <section className={`${card} space-y-5 p-5 sm:p-7`}>
+            <TransferFinanceNotice terms={terms} />
+            <label className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(event) => setConsent(event.target.checked)}
+                disabled={busy}
+                className="mt-1 size-4 accent-emerald-600"
+              />
+              Tôi đồng ý điều khoản, chia sẻ tài khoản đã chọn cho người mua và gửi ngân hàng, số
+              tài khoản, số tiền, nội dung tới SePay để tạo QR. Tôi tự kiểm tra tiền thực nhận trước
+              khi bàn giao.
+            </label>
+            <Button
+              type="button"
+              className={`${primaryPill} w-full`}
+              onClick={publish}
+              disabled={!consent || busy}
+            >
+              {busy ? 'Đang lưu…' : listingId ? 'Lưu thay đổi' : 'Đăng tin chuyển nhượng'}
+            </Button>
+          </section>
+        )}
+        {error && (
+          <p
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

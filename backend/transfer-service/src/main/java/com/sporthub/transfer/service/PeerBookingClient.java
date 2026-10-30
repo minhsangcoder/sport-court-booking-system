@@ -72,16 +72,6 @@ public class PeerBookingClient {
     return call(method, path, body, null);
   }
 
-  public JsonNode evidenceAccess(UUID id, String token) {
-    return call(
-        "GET", "/api/v1/internal/bookings/peer/acquisitions/" + id + "/case-access", "", token);
-  }
-
-  public JsonNode retention(UUID id) {
-    return call(
-        "GET", "/api/v1/internal/bookings/peer/acquisitions/" + id + "/evidence-retention", "");
-  }
-
   public JsonNode commandResult(UUID id, UUID actor, String action, String key) {
     return call(
         "POST",
@@ -95,35 +85,6 @@ public class PeerBookingClient {
 
   private JsonNode call(String method, String path, String body, String token) {
     return call(method, path, body, token, false);
-  }
-
-  public JsonNode cases(UUID facility, UUID after, int size, String token) {
-    return call(
-        "GET",
-        casePath(facility) + "?size=" + size + (after == null ? "" : "&after=" + after),
-        "",
-        token,
-        true);
-  }
-
-  public JsonNode presenceContext(UUID facility, String token) {
-    return call("GET", casePath(facility) + "/presence-context", "", token, true);
-  }
-
-  public JsonNode caseDetail(UUID facility, UUID id, String token) {
-    return call("GET", casePath(facility) + "/" + id, "", token, false);
-  }
-
-  public JsonNode caseCommand(
-      UUID facility, UUID id, String action, Object command, String key, String token) {
-    var body = json.createObjectNode().put("idempotencyKey", key);
-    body.set("command", json.valueToTree(command));
-    return call(
-        "POST", casePath(facility) + "/" + id + "/" + action, body.toString(), token, false);
-  }
-
-  private static String casePath(UUID facility) {
-    return "/api/v1/internal/bookings/peer/facilities/" + facility + "/cases";
   }
 
   private JsonNode call(String method, String path, String body, String token, boolean array) {

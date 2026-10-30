@@ -13,6 +13,7 @@ export type Member = {
   reminderEligible: boolean
   reminderBlockedReason: string | null
 }
+export type ContributionClaim = { memberId: string; paidByCaller: boolean }
 export type ReminderResult = {
   acceptedCount: number
   skippedCount: number

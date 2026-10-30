@@ -104,3 +104,26 @@ test('only the organizer sees the outstanding balance and can pay unpaid member 
   group.state = 'CONFIRMED'
   assert.doesNotMatch(render('owner'), /Thanh toán phần còn lại để nhận sân|>Thanh toán thay</)
 })
+
+test('a member whose share the organizer is paying gets no pay button, so nobody pays twice', () => {
+  const load = moduleLoader({}, {
+    react: React, 'react/jsx-runtime': jsx,
+    '@/components/ui/button': { Button: 'button' },
+  })
+  const Tracking = load('features/groups/payment-tracking.tsx').GroupPaymentTracking
+  const group = {
+    ownerId: 'owner', state: 'GROUP_PENDING', allocationsLocked: true, totalPaid: 0,
+    maxMembers: 2, booking: { amount: 100000, currency: 'VND', priceSnapshot: { timezone: 'Asia/Ho_Chi_Minh' } },
+    members: [
+      { id: 'a', userId: 'owner', displayName: 'Chủ nhóm', amountDue: 50000, amountPaid: 0, paymentState: 'WAITING_FOR_PAYMENT' },
+      { id: 'b', userId: 'member', displayName: 'Bạn chơi', amountDue: 50000, amountPaid: 0, paymentState: 'WAITING_FOR_PAYMENT', reminderEligible: true },
+    ],
+  }
+  const render = (userId, claims) => renderToStaticMarkup(jsx.jsx(Tracking, { group, userId, busy: false, pay() {}, reload() {}, claims }))
+  assert.match(render('member', []), />Đóng phần của tôi</)
+  const taken = render('member', [{ memberId: 'b', paidByCaller: false }])
+  assert.doesNotMatch(taken, />Đóng phần của tôi</)
+  assert.match(taken, /Người tổ chức đang thanh toán thay/)
+  assert.match(render('owner', [{ memberId: 'b', paidByCaller: true }]), />Mở lại QR thanh toán thay</)
+  assert.match(render('owner', [{ memberId: 'b', paidByCaller: false }]), /Thành viên đang mở QR/)
+})

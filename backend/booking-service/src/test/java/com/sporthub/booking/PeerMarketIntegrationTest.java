@@ -300,14 +300,9 @@ class PeerMarketIntegrationTest extends RealBookingIntegrationTest {
     var input = input(sale);
     var acquisition = acquisitions.acquire(input, key(), buyer);
     String hash = acquisition.path("attempt").path("termsHash").asText();
-    UUID evidence = UUID.randomUUID();
-    var receipt =
-        PeerEvidenceReceipt.create(
-            input.acquisitionId(), buyer.id(), hash, "BANK REF", List.of(evidence), now);
     actions.declare(
         input.acquisitionId(),
-        new PeerResaleContract.Declaration(0, hash, "BANK REF", List.of(evidence)),
-        receipt,
+        new PeerResaleContract.Command(0, hash),
         key(),
         buyer.id());
     assertThatThrownBy(

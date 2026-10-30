@@ -9,15 +9,20 @@ import { Countdown, useRemaining } from '@/features/booking/countdown'
 import { Button } from '@/components/ui/button'
 import { PeerPayment } from './peer-payment'
 import { finalPeerPhase, peerPhases, type PeerAttempt } from './peer-types'
+import { PageBanner } from '@/components/page-banner'
+import { ArrowLeftRight, MessagesSquare, RefreshCw } from 'lucide-react'
+import {
+  amberNotice,
+  bannerLink,
+  card,
+  emeraldNotice,
+  outlinePill,
+  primaryPill,
+  statePill,
+} from './transfer-styles'
 
 const Chat = dynamic(() => import('./peer-chat').then((module) => module.PeerChat), {
   loading: () => <p role="status">Đang mở phòng trao đổi…</p>,
-})
-const MoneyPanel = dynamic(() => import('./peer-money'), {
-  loading: () => <p role="status">Đang mở hồ sơ tiền…</p>,
-})
-const CasePanel = dynamic(() => import('./peer-case-panel'), {
-  loading: () => <p role="status">Đang mở hồ sơ quyền sân…</p>,
 })
 export default function PeerAcquisitionPage({ id }: { id: string }) {
   const { user } = useAuth()
@@ -26,8 +31,6 @@ export default function PeerAcquisitionPage({ id }: { id: string }) {
 function Loaded({ id, userId }: { id: string; userId: string }) {
   const read = useApi<PeerAttempt>(`/transfers/acquisitions/${id}/peer`)
   const [showChat, setShowChat] = useState(true)
-  const [showMoney, setShowMoney] = useState(false)
-  const [showCase, setShowCase] = useState(false)
   const [until] = useState(() => Date.now() + 30 * 60_000)
   const [timedOut, setTimedOut] = useState(false)
   const remaining = useRemaining(read.data?.payBy)
@@ -41,86 +44,112 @@ function Loaded({ id, userId }: { id: string; userId: string }) {
   })
   const a = read.data
   return (
-    <main className="mx-auto max-w-3xl space-y-5 px-5 py-8">
-      <Link href="/customer/transfers" className="text-sm text-emerald-700 underline">
-        Giao dịch tham gia
-      </Link>
-      <h1 className="text-2xl font-bold">Chuyển nhượng trực tiếp giữa hai khách</h1>
-      {read.loading && !a && <p role="status">Đang đối chiếu quyền sân…</p>}
-      {read.error && (
-        <p role="alert" className="text-red-700">
-          {read.error}
-        </p>
-      )}
-      {a && (
-        <>
-          <p role="status" className="rounded-lg bg-emerald-50 p-4 font-semibold">
-            {peerPhases[a.phase] ?? 'Đang đối chiếu trạng thái'}
+    <main>
+      <PageBanner
+        icon="shuttle"
+        eyebrow={
+          <Link href="/customer/transfers" className={bannerLink}>
+            Giao dịch & trao đổi
+          </Link>
+        }
+        title="Chuyển nhượng trực tiếp giữa hai khách"
+        actions={
+          a && (
+            <span className={statePill}>
+              {userId === a.sellerId ? 'Người bán (A)' : 'Người mua (B)'}
+            </span>
+          )
+        }
+      />
+      <div className="home-rise mx-auto max-w-3xl space-y-5 px-4 py-7 sm:px-6 sm:py-9">
+        {read.loading && !a && <p role="status">Đang đối chiếu quyền sân…</p>}
+        {read.error && (
+          <p
+            role="alert"
+            className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {read.error}
           </p>
-          <p className="text-sm">
-            Bạn là {userId === a.sellerId ? 'người bán (A)' : 'người mua (B)'}. Tiền chuyển trực
-            tiếp B → A; cơ sở và SportHub không thu phí chuyển nhượng.
+        )}
+        {a && (
+          <>
+            <p role="status" className={`${emeraldNotice} flex items-center gap-2.5`}>
+              <span className="relative flex size-2.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+              </span>
+              {peerPhases[a.phase] ?? 'Đang đối chiếu trạng thái'}
+            </p>
+            <p className="flex items-start gap-2.5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+              <ArrowLeftRight className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+              <span>
+                Bạn là {userId === a.sellerId ? 'người bán (A)' : 'người mua (B)'}. Tiền chuyển trực
+                tiếp B → A; cơ sở và SportHub không thu phí chuyển nhượng.
+              </span>
+            </p>
+            {a.phase === 'WAITING_PAYMENT' && (
+              <Countdown
+                expiresAt={a.payBy}
+                className="rounded-2xl border border-amber-200/80 px-4 py-3 text-sm font-bold"
+              />
+            )}
+            {a.phase === 'WAITING_PAYMENT' && remaining === 0 && (
+              <p className={amberNotice}>
+                Đã hết hạn báo chuyển tiền. Tin sẽ được mở lại; không chuyển từ QR cũ. Nếu đã chuyển,
+                hãy liên hệ người bán.
+              </p>
+            )}
+            {!blocked && (
+              <PeerPayment
+                key={`${id}:${a.termsHash}`}
+                attempt={a}
+                userId={userId}
+                reload={read.reload}
+                remaining={remaining ?? 0}
+              />
+            )}
+            {a.decision && (
+              <p className={`${card} p-4 text-sm sm:p-5`}>
+                Quyết định quyền sân:{' '}
+                {a.decision.decision === 'BUYER_RECEIVES'
+                  ? 'Người mua nhận quyền'
+                  : a.phase === 'COMPLETED'
+                    ? 'Đã bàn giao cho người mua'
+                    : 'Người bán giữ quyền'}{' '}
+                · {a.decision.reason}.
+                {a.phase !== 'COMPLETED' &&
+                  ' Nếu có khoản tiền chưa rõ, hai bên tự giải quyết với nhau và qua chủ sân; SportHub không xử lý khoản này.'}
+              </p>
+            )}
+            {a.phase === 'COMPLETED' && userId === a.buyerId && (
+              <Link href={`/customer/bookings/${a.bookingId}`} className={`${primaryPill} w-full`}>
+                Mở lượt đặt và mã vào sân của bạn
+              </Link>
+            )}
+            <div className="flex flex-wrap gap-2.5">
+              <Button
+                variant="outline"
+                className={outlinePill}
+                onClick={() => setShowChat((value) => !value)}
+              >
+                <MessagesSquare className="size-4" />
+                {showChat ? 'Thu gọn trao đổi' : 'Mở trao đổi'}
+              </Button>
+            </div>
+            {!blocked && showChat && <Chat id={a.conversationId} userId={userId} />}
+          </>
+        )}
+        {timedOut && (
+          <p className={amberNotice}>
+            Đã dừng tự theo dõi tại màn hình. Tải lại để xem trạng thái mới; không chuyển tiền lần
+            nữa khi chưa rõ kết quả.
           </p>
-          {a.phase === 'WAITING_PAYMENT' && <Countdown expiresAt={a.payBy} />}
-          {a.phase === 'WAITING_PAYMENT' && remaining === 0 && (
-            <p className="text-amber-900">
-              Đã hết hạn khai chuyển tiền. Đang đối chiếu để mở lại tin; không chuyển từ QR cũ. Nếu
-              đã chuyển, mở hồ sơ tiền để báo bổ sung.
-            </p>
-          )}
-          {!blocked && (
-            <PeerPayment
-              key={`${id}:${a.termsHash}`}
-              attempt={a}
-              userId={userId}
-              reload={read.reload}
-              remaining={remaining ?? 0}
-            />
-          )}
-          {a.decision && (
-            <p className="rounded border p-4">
-              Quyết định quyền sân:{' '}
-              {a.decision.decision === 'BUYER_RECEIVES'
-                ? 'Người mua nhận quyền'
-                : a.phase === 'COMPLETED'
-                  ? 'Đã bàn giao cho người mua'
-                  : 'Người bán giữ quyền'}{' '}
-              · {a.decision.reason}. Quyết định này không xác nhận tiền đã hoàn.
-            </p>
-          )}
-          {a.phase === 'COMPLETED' && userId === a.buyerId && (
-            <Link
-              href={`/customer/bookings/${a.bookingId}`}
-              className="block rounded-lg bg-emerald-600 p-3 text-center text-white"
-            >
-              Mở lượt đặt và mã vào sân của bạn
-            </Link>
-          )}
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={() => setShowChat((value) => !value)}>
-              {showChat ? 'Thu gọn trao đổi' : 'Mở trao đổi'}
-            </Button>
-            <Button variant="outline" onClick={() => setShowMoney((value) => !value)}>
-              Đối chiếu tiền / báo tiền muộn
-            </Button>
-            <Button variant="outline" onClick={() => setShowCase((value) => !value)}>
-              Xem hồ sơ quyền sân
-            </Button>
-          </div>
-          {!blocked && showChat && <Chat id={a.conversationId} userId={userId} />}
-          {!blocked && showMoney && <MoneyPanel attempt={a} userId={userId} />}
-          {!blocked && showCase && <CasePanel acquisitionId={id} />}
-        </>
-      )}
-      {timedOut && (
-        <p>
-          Đã dừng tự theo dõi tại màn hình. Tải lại để xem trạng thái mới; không chuyển tiền lần nữa
-          khi chưa rõ kết quả.
-        </p>
-      )}
-      <Button variant="outline" onClick={read.reload}>
-        Tải lại trạng thái quyền sân
-      </Button>
+        )}
+        <Button variant="outline" className={outlinePill} onClick={read.reload}>
+          <RefreshCw className="size-4" />
+          Tải lại trạng thái quyền sân
+        </Button>
+      </div>
     </main>
   )
 }

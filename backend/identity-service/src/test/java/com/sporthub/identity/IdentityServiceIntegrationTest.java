@@ -475,6 +475,20 @@ class IdentityServiceIntegrationTest {
         assertThat(jdbc.queryForMap("SELECT * FROM identity_notifications WHERE source_key=?",source)).containsEntry("state","SENT");groupReminders.apply(event);
         org.mockito.Mockito.verify(mailDelivery,org.mockito.Mockito.times(2)).sendNotification(eq(user.getEmail()),anyString(),anyString());
     }
+    @Test void groupReminderReachesInAppInboxWithoutVerifiedContactAndCanBeMarkedRead(){
+        var user=activate(uniqueEmail("reminder-inbox"));jdbc.update("UPDATE users SET email_verified=false,phone_verified=false WHERE id=?",user.getId());
+        var event=reminderEvent(user);((com.fasterxml.jackson.databind.node.ObjectNode)event.path("payload")).put("groupName","Nhóm 1");groupReminders.apply(event);
+        var row=jdbc.queryForMap("SELECT * FROM identity_notifications WHERE source_key=?","group-reminder:"+event.path("eventId").asText());
+        assertThat(row.get("state")).isEqualTo("IN_APP_ONLY");assertThat(row.get("recipient")).isNull();
+        var principal=new com.sporthub.identity.security.AuthenticatedUser(user.getId(),user.getEmail(),java.util.Set.of(),UUID.randomUUID());
+        var inbox=notifications.mine(principal).getData();
+        assertThat(inbox.unreadCount()).isEqualTo(1);assertThat(inbox.items().getFirst().body()).contains("nhóm Nhóm 1").doesNotContain("http");
+        assertThat(inbox.items().getFirst().link()).isEqualTo("/customer/groups/"+event.path("payload").path("groupId").asText());
+        var stranger=new com.sporthub.identity.security.AuthenticatedUser(UUID.randomUUID(),"x@sports.test",java.util.Set.of(),UUID.randomUUID());
+        notifications.read(inbox.items().getFirst().id(),stranger);assertThat(notifications.mine(principal).getData().unreadCount()).isEqualTo(1);
+        notifications.read(inbox.items().getFirst().id(),principal);assertThat(notifications.mine(principal).getData().unreadCount()).isZero();
+    }
+    @Autowired com.sporthub.identity.web.NotificationController notifications;
     @Test void malformedGroupReminderDoesNotCreateInboxOrNotice(){
         var user=activate(uniqueEmail("invalid-reminder"));var event=reminderEvent(user);((com.fasterxml.jackson.databind.node.ObjectNode)event.path("payload")).put("amount",-1);
         assertThatThrownBy(()->groupReminders.apply(event)).isInstanceOf(org.springframework.amqp.AmqpRejectAndDontRequeueException.class);

@@ -120,7 +120,7 @@ class UserHoldRateLimitFilterTest {
     assertThat(anonymous.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     var webhook =
         MockServerWebExchange.from(
-            MockServerHttpRequest.post("/api/v1/payments/providers/payos/one/webhook").build());
+            MockServerHttpRequest.post("/api/v1/payments/providers/sepay/one/webhook").build());
     var passed = new AtomicInteger();
     filter
         .filter(

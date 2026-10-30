@@ -54,7 +54,6 @@ export function facilityNavigation(applicationId?: string) {
             { suffix: '/staff', label: 'Nhân viên cơ sở', icon: Users },
             { suffix: '/documents', label: 'Tài liệu & Giấy phép', icon: FileText },
             { suffix: '/transfer-policy', label: 'Chính sách chuyển nhượng', icon: Repeat },
-            { suffix: '/peer-cases', label: 'Tranh chấp quyền sân', icon: CheckCircle2 },
             { suffix: '/payment-channel', label: 'Kênh nhận tiền', icon: Settings },
             { suffix: '/reports', label: 'Báo cáo & Doanh thu', icon: BarChart3 },
           ],

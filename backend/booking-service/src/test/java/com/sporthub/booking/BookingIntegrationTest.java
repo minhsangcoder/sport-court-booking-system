@@ -576,7 +576,7 @@ class BookingIntegrationTest {
         .thenReturn(
             json.valueToTree(
                 List.of(Map.of("id", category, "name", "Pickleball", "active", true))));
-    when(discoveryDependencies.facilities(any(), any(), any()))
+    when(discoveryDependencies.facilities(any(), any(), any(), any(), any()))
         .thenReturn(
             json.valueToTree(
                 List.of(
@@ -1532,9 +1532,10 @@ class BookingIntegrationTest {
     service.expireCourt(court);
     assertThat(groups.detail(g.id(), user).state()).isEqualTo("GROUP_EXPIRED");
     assertThat(repo.find(g.id()).status()).isEqualTo("EXPIRED");
-    verify(outbox)
+    verify(outbox, never())
         .record(
             any(), argThat(event -> event.eventType().equals("booking.group.refund.requested")));
+    assertThat(groups.detail(g.id(), user).totalPaid()).isEqualByComparingTo(member.amountDue());
     UUID id = g.id();
     assertThatThrownBy(() -> groups.payable(id, member.id(), other))
         .isInstanceOf(ConflictException.class);
@@ -2111,41 +2112,19 @@ class BookingIntegrationTest {
   }
 
   @Test
-  void expiryReviewFailureRollsBackGroupBookingReservationAndCanRetry() {
+  void expiryForfeitsTheContributionExactlyOnceWithoutRequestingARefund() {
     var a = customer();
     var g = reminderGroup(a);
     var m = recipient(g, a);
     UUID payment = UUID.randomUUID();
     consumer.apply(contribution(g, m, user, payment));
     when(clock.instant()).thenReturn(g.deadline());
-    doThrow(new IllegalStateException("Controlled review failure"))
-        .when(outbox)
-        .record(any(), any());
-    assertThatThrownBy(() -> service.expireCourt(court)).isInstanceOf(IllegalStateException.class);
-    assertThat(groups.detail(g.id(), user).state()).isEqualTo("GROUP_PENDING");
-    assertThat(repo.find(g.id()).status()).isEqualTo("PENDING");
-    assertThat(
-            repo.hold(
-                    repo.jdbc()
-                        .queryForObject(
-                            "SELECT reservation_id FROM bookings WHERE id=?", UUID.class, g.id()))
-                .state())
-        .isEqualTo("HOLD");
-    doNothing().when(outbox).record(any(), any());
     clearInvocations(outbox);
     service.expireCourt(court);
     service.expireCourt(court);
     assertThat(groups.detail(g.id(), user).state()).isEqualTo("GROUP_EXPIRED");
-    verify(outbox)
-        .record(
-            any(),
-            argThat(
-                e ->
-                    e.eventType().equals("booking.group.refund.requested")
-                        && json.valueToTree(e.payload())
-                            .path("payerId")
-                            .asText()
-                            .equals(user.id().toString())));
+    verify(outbox, never())
+        .record(any(), argThat(e -> e.eventType().equals("booking.group.refund.requested")));
     assertThat(
             repo.jdbc()
                 .queryForObject(
@@ -2319,31 +2298,6 @@ class BookingIntegrationTest {
         .hasMessageContaining("window is closed");
     assertThat(groups.detail(g.id(), user).state()).isEqualTo("GROUP_PENDING");
     assertThat(groups.detail(g.id(), user).totalPaid()).isZero();
-  }
-
-  @Test
-  void disabledOutboxCannotSilentlyLoseGroupFinancialReview() {
-    var a = customer();
-    var g = reminderGroup(a);
-    consumer.apply(contribution(g, recipient(g, a), a, UUID.randomUUID()));
-    @SuppressWarnings("unchecked")
-    var unavailable =
-        (org.springframework.beans.factory.ObjectProvider<ReliableOutbox>)
-            mock(org.springframework.beans.factory.ObjectProvider.class);
-    var expiration = new GroupExpiration(repo, unavailable, realFunds);
-    assertThatThrownBy(
-            () ->
-                new org.springframework.transaction.support.TransactionTemplate(txManager)
-                    .executeWithoutResult(
-                        tx -> {
-                          repo.lock(court);
-                          expiration.expire(g.booking());
-                        }))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("durable outbox");
-    assertThat(groups.detail(g.id(), user).state()).isEqualTo("GROUP_PENDING");
-    assertThat(groups.detail(g.id(), user).totalPaid())
-        .isEqualByComparingTo(recipient(g, a).amountDue());
   }
 
   @Test
@@ -3485,7 +3439,7 @@ class BookingIntegrationTest {
     when(discoveryDependencies.categories())
         .thenReturn(
             json.valueToTree(List.of(Map.of("id", category, "name", "Sport", "active", true))));
-    when(discoveryDependencies.facilities(any(), any(), any()))
+    when(discoveryDependencies.facilities(any(), any(), any(), any(), any()))
         .thenReturn(
             json.valueToTree(
                 List.of(
@@ -5387,7 +5341,7 @@ class BookingIntegrationTest {
         .thenReturn(
             json.valueToTree(
                 List.of(Map.of("id", category, "name", "Retired sport", "active", false))));
-    when(discoveryDependencies.facilities(any(), any(), any()))
+    when(discoveryDependencies.facilities(any(), any(), any(), any(), any()))
         .thenReturn(
             json.valueToTree(
                 List.of(

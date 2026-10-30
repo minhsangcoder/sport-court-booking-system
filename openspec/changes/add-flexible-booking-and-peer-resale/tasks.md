@@ -279,3 +279,44 @@ Hoàn tất mục 32: kiểm thử tích hợp mixed CASH/BANK, chống cộng t
 - [ ] 33.8 Kiểm tra trực quan trang chi tiết lượt đặt trên trình duyệt (desktop và điện thoại) với tài khoản được người dùng cho phép.
 
 Kết quả mục 33 (30/10/2026): toàn bộ backend 2.700 test case đã chạy đạt, 0 lỗi (401 bỏ qua là bộ đo hiệu năng/tương thích chỉ chạy khi bật cờ); 137 frontend tests và 21 OpenAPI contract checks đạt; typecheck/lint sạch; OpenSpec strict hợp lệ. Schedule migration V7 và booking migration V21 đã áp dụng trên DB local; 7 dịch vụ backend đã build lại và khởi động; API thật báo giá được 30 phút và 6 giờ. Chưa kiểm tra trực quan trang chi tiết lượt đặt (33.8).
+
+
+## 34. Giao diện chuyển nhượng, chat người bán và gỡ payOS (2026-10-30)
+
+- [x] 34.1 Thiết kế lại đăng/sửa tin, chi tiết tin, phiên mua, khối thanh toán/chứng từ/chat theo giao diện trang chủ; giữ đủ thành phần.
+- [x] 34.2 Lối vào chat cho người bán: khối “Phiên trao đổi với người mua” trên trang tin, nhãn vai trò trong “Giao dịch & trao đổi”.
+- [x] 34.3 Gỡ payOS: 8 lớp, API kênh/webhook payOS, route gateway, biến môi trường, nhánh frontend, path/schema hợp đồng; thay test payOS bằng fixture `RealCollectionFixture` cho SePay. Kết quả: payment 144, gateway 20, common 54 test đạt; 21 contract checks, 137 frontend tests đạt.
+- [x] 34.4 Không gỡ phí chuyển nhượng kiểu cũ và tiền DEMO: người dùng quyết định giữ nguyên để đọc lịch sử và không làm gãy test (30/10/2026).
+
+## 35. Thông báo, chống trả trùng và mất tiền khi nhóm hết hạn (2026-10-30)
+
+- [x] 35.1 Hộp thư trong ứng dụng: identity migration V16, `NotificationController`, chuông trên header; lời nhắc vẫn vào hộp thư khi không có liên hệ đã xác minh; nội dung dùng tên nhóm.
+- [x] 35.2 Chống trả trùng: API `/payments/group-claims`, ẩn nút của thành viên khi người tổ chức đang trả thay, ẩn thông tin chuyển khoản khi QR hết hiệu lực, không nhắc thành viên đang được trả thay.
+- [x] 35.3 Hết hạn nhóm: khoản góp đã áp dụng không được hoàn, không tạo yêu cầu/nghĩa vụ hoàn, bỏ nguồn khóa `REAL_GROUP_TIMEOUT_REFUND`; cập nhật văn bản và kiểm thử.
+- [x] 35.4 Thiết kế lại trang chi tiết nhóm theo giao diện trang chủ.
+- [x] 35.5 Sửa fixture `RealBookingIntegrationTest` còn dùng provider PAYOS sau mục 34.
+- [ ] 35.6 Kiểm tra trực quan trang nhóm và chuông thông báo trên trình duyệt.
+- [ ] 35.7 Quyết định có áp dụng mất tiền cho khoản chuyển thiếu một phần trước hạn (`EXPIRED_PARTIAL`) của nhóm hay không; hiện vẫn đi theo đối soát kỹ thuật.
+
+## 36. Chuyển nhượng trực tiếp không nộp chứng từ (2026-10-30)
+
+- [x] 36.1 `declare-payment` chỉ nhận version/termsHash; gỡ `PeerEvidenceReceipt` và `PeerResaleContract.Declaration`.
+- [x] 36.2 `deny-receipt` kết thúc phiên ngay với ABORTED_A_RETAINS; gỡ API `open-dispute`.
+- [x] 36.3 Frontend: gỡ ảnh/mã giao dịch, panel hồ sơ tiền và hồ sơ quyền sân, trang Owner tranh chấp, trang Staff ghi nhận có mặt.
+- [x] 36.4 Cập nhật contract và kiểm thử.
+- [ ] 36.5 Viết lại E2E `peer-resale-e2e.mjs`, `peer-resale-system-e2e.mjs`, `peer-system-faults.mjs` theo luồng mới.
+- [x] 36.6 Người dùng quyết định xóa hẳn code và API chứng từ, hồ sơ tiền, phân xử (30/10/2026); xem mục 37.
+
+## 37. Xóa code chứng từ, hồ sơ tiền và phân xử (2026-10-30)
+
+- [x] 37.1 Transfer: xóa dịch vụ, API và lưu trữ ảnh chứng từ, hồ sơ tiền, API Owner xử lý hồ sơ; bỏ phụ thuộc MinIO của transfer-service; đổi `PeerEvidenceAccess` thành `PeerPartyAccess`.
+- [x] 37.2 Booking: xóa `PeerCaseReads`, `PeerCaseEvidenceClient`, `PeerMoneyActions`, `PeerMoneyReads`, `PeerUsageAdjudication`, `MarketFraudRestrictions`, `InternalPeerCaseController`; Payment: xóa `PeerCaseRecipientController`; Common: xóa `PeerMoneyContract` và các record liên quan.
+- [x] 37.3 Giữ nguyên bảng, dữ liệu và migration cũ; giữ nguồn khóa đổi tài khoản ngân hàng trong `BankResponsibilities`; thêm kiểm thử A báo chưa nhận tiền vẫn bị khóa đổi tài khoản.
+- [x] 37.4 Gỡ path/schema khỏi contract OpenAPI và cập nhật kiểm thử.
+
+## 38. Tìm sân theo quận/huyện cũ và phường/xã (2026-10-30)
+
+- [x] 38.1 Facility: `FacilityAreas`, tham số `district`/`ward`, API `/facilities/areas`, tìm không dấu; Booking chuyển tiếp tham số; contract và kiểm thử.
+- [x] 38.2 Frontend: bộ lọc quận/huyện cũ và phường/xã theo tỉnh.
+- [ ] 38.3 Đối chiếu bảng quận/huyện cũ của Hà Nội với Nghị quyết 1656/NQ-UBTVQH15; bổ sung tỉnh khác nếu cần.
+- [ ] 38.4 Kiểm tra trực quan trang tìm sân trên trình duyệt.
