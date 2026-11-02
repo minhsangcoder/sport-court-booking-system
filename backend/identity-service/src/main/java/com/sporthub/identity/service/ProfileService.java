@@ -29,6 +29,7 @@ public class ProfileService {
     private final AuditService auditService;
     private final OtpCodeRepository otpRepository;
     private final UserSecurityLock securityLock;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public record ContactChallenge(UUID id, String channel, String recipient, Instant expiresAt,
                                    Instant resendAfter, boolean usable) {}
@@ -87,7 +88,13 @@ public class ProfileService {
         if(user.getStatus() != com.sporthub.identity.domain.AccountStatus.ACTIVE) throw new IdentityException(HttpStatus.FORBIDDEN,"IDENTITY-ACCOUNT-INACTIVE","Account is not active");
         UserProfile profile = user.getProfile();
         if (request.fullName() != null) profile.setFullName(request.fullName().trim());
-        if (request.avatarUrl() != null) profile.setAvatarUrl(blankToNull(request.avatarUrl()));
+        if (request.avatarUrl() != null) {
+            String avatarUrl = blankToNull(request.avatarUrl());
+            profile.setAvatarUrl(avatarUrl);
+            // Choosing another picture retires the uploaded photo instead of leaving it publicly reachable.
+            jdbc.update("DELETE FROM user_avatars WHERE user_id=? AND ?<>(? || id::text)", userId,
+                    avatarUrl == null ? "" : avatarUrl, AvatarService.URL_PREFIX);
+        }
         if (request.dateOfBirth() != null) profile.setDateOfBirth(request.dateOfBirth());
 
         if (request.email() != null) {

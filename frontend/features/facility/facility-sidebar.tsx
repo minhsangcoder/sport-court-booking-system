@@ -35,7 +35,7 @@ export function FacilitySidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200/80 bg-white transition-transform duration-200 lg:static lg:translate-x-0 dark:border-slate-800 dark:bg-slate-900 ${
+      className={`fixed inset-y-0 left-0 z-30 flex w-72 shrink-0 flex-col border-r border-slate-200/90 bg-white transition-transform duration-200 lg:sticky lg:top-6 lg:inset-auto lg:z-10 lg:max-h-[calc(100vh-3rem)] lg:w-64 lg:translate-x-0 lg:rounded-3xl lg:border lg:shadow-xl lg:shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
@@ -44,10 +44,10 @@ export function FacilitySidebar({
           <button
             type="button"
             onClick={() => setSwitcherOpen((prev) => !prev)}
-            className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2 text-left transition hover:border-slate-300 hover:bg-slate-100/70 dark:border-slate-700 dark:bg-slate-800"
+            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-2 text-left transition hover:border-slate-300 hover:bg-slate-100/70 dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white shadow-2xs">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-md">
                 <Building2 size={15} strokeWidth={1.75} />
               </div>
               <div className="min-w-0">
@@ -67,7 +67,7 @@ export function FacilitySidebar({
           </button>
 
           {switcherOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-50 dark:border-slate-800 dark:bg-slate-900">
+            <div className="absolute top-full left-0 mt-1.5 w-full rounded-2xl border border-slate-200 bg-white p-1.5 shadow-lg z-50 dark:border-slate-800 dark:bg-slate-900">
               <p className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 Cơ sở của bạn
               </p>
@@ -126,7 +126,7 @@ export function FacilitySidebar({
                 key={href}
                 href={`${href}?facilityId=${data.id}`}
                 onClick={() => setSidebarOpen(false)}
-                className="flex rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
+                className="flex rounded-full px-3 py-2 text-[13px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
               >
                 {label}
               </Link>
@@ -148,9 +148,9 @@ export function FacilitySidebar({
                     key={item.suffix}
                     href={itemHref}
                     onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-full px-3 py-2 text-[13px] font-medium transition-colors ${
                       active
-                        ? 'bg-emerald-700 text-white font-semibold shadow-2xs'
+                        ? 'bg-emerald-700 text-white font-semibold shadow-[0_8px_24px_-6px_rgba(16,185,129,0.55)]'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'
                     }`}
                   >
@@ -173,7 +173,7 @@ export function FacilitySidebar({
           href={`/facilities/${data.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="flex items-center justify-between rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <div className="flex items-center gap-2">
             <ExternalLink size={13} strokeWidth={1.75} className="text-emerald-700" />

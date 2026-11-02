@@ -29,8 +29,8 @@ const reasons: Record<string, string> = {
 }
 export function BankProfileStatus({ profile }: { profile: BankProfile }) {
   return (
-    <div className="space-y-2 text-sm" role="status">
-      <p>
+    <div className="space-y-3 text-sm" role="status">
+      <p className="text-slate-700 dark:text-slate-300">
         {profile.canRegisterFirst
           ? 'Bạn được khai tài khoản lần đầu, kể cả khi đang có lịch sân.'
           : profile.canChange
@@ -38,11 +38,11 @@ export function BankProfileStatus({ profile }: { profile: BankProfile }) {
             : 'Chưa thể thay, thêm tài khoản thay thế hoặc chọn tài khoản khác.'}
       </p>
       {profile.responsibilities.length > 0 && (
-        <ul className="list-inside list-disc text-amber-900">
+        <ul className="space-y-1.5 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-amber-950/85 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-100/85">
           {profile.responsibilities.map((item) => (
             <li key={`${item.kind}:${item.resourceId}`}>
               <Link
-                className="underline"
+                className="font-semibold underline underline-offset-2"
                 href={
                   item.kind.startsWith('PEER_')
                     ? `/customer/transfers/acquisitions/${item.resourceId}`
@@ -61,10 +61,11 @@ export function BankProfileStatus({ profile }: { profile: BankProfile }) {
           ))}
         </ul>
       )}
-      <p className="text-xs text-slate-600">
-        Phân xử xong quyền sân sẽ gỡ khóa do tranh chấp. Lịch sân và khoản trả/hoàn chưa hoàn tất
-        vẫn được kiểm tra riêng.
-      </p>
+      {profile.responsibilities.length > 0 && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Tài khoản được giữ nguyên đến khi các mục trên kết thúc.
+        </p>
+      )}
     </div>
   )
 }

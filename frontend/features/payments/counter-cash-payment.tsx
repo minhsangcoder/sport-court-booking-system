@@ -11,7 +11,15 @@ import { PaymentSynchronization } from '@/features/booking/payment-synchronizati
 
 function CheckCircleIcon() {
   return (
-    <svg className="size-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="size-6 text-emerald-600"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
       <polyline points="22 4 12 14.01 9 11.01" />
     </svg>
@@ -20,7 +28,15 @@ function CheckCircleIcon() {
 
 function ArrowRightIcon() {
   return (
-    <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="size-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="5" y1="12" x2="19" y2="12" />
       <polyline points="12 5 19 12 12 19" />
     </svg>
@@ -54,7 +70,7 @@ export function CounterCashPayment({
     }
   }
   return (
-    <div className="space-y-3 rounded-xl border border-emerald-200 p-4">
+    <div className="space-y-3 rounded-2xl border border-emerald-200 p-4">
       {!confirming ? (
         <Button onClick={() => setConfirming(true)}>Thanh toán bằng tiền mặt</Button>
       ) : (
@@ -130,8 +146,12 @@ export function CashPaymentResult({
           <CheckCircleIcon />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Đã ghi nhận thanh toán bằng tiền mặt</h2>
-          <p className="text-xs text-slate-500">Giao dịch thu tiền mặt tại quầy đã được tạo thành công</p>
+          <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
+            Đã ghi nhận thanh toán bằng tiền mặt
+          </h2>
+          <p className="text-xs text-slate-500">
+            Giao dịch thu tiền mặt tại quầy đã được tạo thành công
+          </p>
         </div>
       </div>
       <div className="rounded-2xl bg-slate-50/80 p-4 border border-slate-100">

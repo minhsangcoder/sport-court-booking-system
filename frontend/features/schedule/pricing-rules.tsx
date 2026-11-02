@@ -1,9 +1,9 @@
 'use client'
-import { Button } from '@/components/ui/button'
+import { card, dangerPill, outlinePill } from '@/features/facility/owner-ui'
 import { PricingHistory } from '@/features/schedule/pricing-history'
 import { money, weekdays } from '@/features/schedule/types'
 import type { usePricing } from '@/features/schedule/use-pricing'
-import { Building2, Calendar, Clock, Layers } from 'lucide-react'
+import { Building2, Calendar, Clock, Layers, PencilLine, PowerOff } from 'lucide-react'
 
 export function PricingRules({
   model,
@@ -17,28 +17,22 @@ export function PricingRules({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-          Danh sách quy tắc giá ({rules.data?.length ?? 0})
-        </h3>
-      </div>
+      <h3 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
+        Quy tắc giá ({rules.data?.length ?? 0})
+      </h3>
       {rules.data?.map((r) => (
         <article
           key={r.id}
-          className={`relative rounded-2xl border bg-white/90 p-5 shadow-xs transition-all duration-200 hover:shadow-md dark:bg-slate-900/90 ${
-            r.active
-              ? 'border-slate-200/90 dark:border-slate-800'
-              : 'border-slate-200/50 opacity-60 dark:border-slate-800/50'
-          }`}
+          className={`${card} p-5 transition hover:shadow-2xl ${r.active ? '' : 'opacity-60'}`}
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2.5">
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
                     r.active
-                      ? 'border border-emerald-500/30 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/60 dark:text-emerald-300'
-                      : 'border border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
+                      : 'border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
                   }`}
                 >
                   <span
@@ -46,71 +40,70 @@ export function PricingRules({
                   />
                   {r.active ? 'Đang áp dụng' : 'Đã ngừng'}
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-                  <Layers size={11} /> Ưu tiên {r.priority}
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <Layers size={12} /> Ưu tiên {r.priority}
                 </span>
               </div>
 
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                {r.label} ·{' '}
-                <span className="text-emerald-600 dark:text-emerald-400">
-                  {r.pricingUnit === 'HOURLY'
-                    ? r.pricePerHour == null
-                      ? 'Chưa có giá'
-                      : money(r.pricePerHour)
-                    : money(r.pricePerSlot)}
+              <h4 className="text-base font-bold text-slate-950 dark:text-white">{r.label}</h4>
+              <p className="text-2xl font-extrabold tracking-tight text-emerald-700 tabular-nums dark:text-emerald-400">
+                {r.pricingUnit === 'HOURLY'
+                  ? r.pricePerHour == null
+                    ? 'Chưa có giá'
+                    : money(r.pricePerHour)
+                  : money(r.pricePerSlot)}
+                <span className="ml-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
                   {r.pricingUnit === 'HOURLY' ? '/giờ' : '/khung lịch cũ'}
                 </span>
-              </h3>
+              </p>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-slate-600 dark:text-slate-400">
                 <span className="flex items-center gap-1.5">
-                  <Building2 size={13} className="text-slate-400" />
+                  <Building2 size={14} className="text-emerald-600" />
                   {r.courtId ? courts.data?.find((c) => c.id === r.courtId)?.name : 'Toàn cơ sở'}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Calendar size={13} className="text-slate-400" />
+                  <Calendar size={14} className="text-emerald-600" />
                   {r.specificDate || weekdays[(r.dayOfWeek || 1) - 1]}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Clock size={13} className="text-slate-400" />
+                  <Clock size={14} className="text-emerald-600" />
                   {r.startsAt}–{r.endsAt}
                 </span>
               </div>
 
-              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Hiệu lực: {r.effectiveFrom} → {r.effectiveTo || 'Không giới hạn'}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {r.active && (
-                <Button
+            {r.active && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   disabled={busy}
-                  className="rounded-xl border-slate-200 bg-white font-bold text-slate-700 shadow-2xs hover:bg-slate-50 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className={outlinePill}
                   onClick={() => {
                     setEditing(r)
                     setDateMode(Boolean(r.specificDate))
                     setDraft(null)
+                    document.getElementById('pricing-form')?.scrollIntoView({ behavior: 'smooth' })
                   }}
                 >
+                  <PencilLine className="size-4" />
                   Chỉnh sửa giá
-                </Button>
-              )}
-              {r.active && (
+                </button>
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => disable(r.id)}
-                  className="rounded-xl border border-red-200 bg-red-50/60 px-3.5 py-1.5 text-xs font-bold text-red-700 shadow-2xs transition-all hover:bg-red-100 hover:border-red-300 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300"
+                  className={dangerPill}
                 >
+                  <PowerOff className="size-4" />
                   Ngừng áp dụng
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">

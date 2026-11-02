@@ -157,7 +157,7 @@ export function DirectionsCard({
       </div>
 
       {/* 2. Address highlight bar */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 sm:p-5 transition">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 transition rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div className="flex items-start gap-3.5 min-w-0">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-xs text-emerald-600 ring-1 ring-emerald-100">
             <MapPin className="h-5 w-5 fill-emerald-100 text-emerald-600" />
@@ -195,7 +195,7 @@ export function DirectionsCard({
           href={googleMapsSearchUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-md backdrop-blur-xs transition hover:bg-white hover:text-emerald-700"
+          className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-md backdrop-blur-xs transition hover:bg-white hover:text-emerald-700"
         >
           <span>Mở bản đồ</span>
           <ExternalLink className="h-3.5 w-3.5 text-slate-400" />

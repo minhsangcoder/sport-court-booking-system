@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage, bannerPrimary } from '@/components/page-banner'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -27,18 +29,19 @@ export function OwnApplications() {
 function List() {
   const r = useApi<OwnerApplication[]>('/owner-applications')
   return (
-    <main className="mx-auto max-w-4xl px-5 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-black">Hồ sơ đăng ký chủ cơ sở</h1>
-        {(!r.data?.length || r.data.every((a) => a.state === 'REJECTED')) && (
-          <Link
-            className="rounded-full bg-emerald-600 px-5 py-3 text-sm text-white"
-            href="/owner/apply"
-          >
-            Đăng ký trở thành chủ cơ sở
-          </Link>
-        )}
-      </div>
+    <BannerPage
+      width="max-w-4xl"
+      title="Hồ sơ đăng ký chủ cơ sở"
+      actions={
+        <>
+          {(!r.data?.length || r.data.every((a) => a.state === 'REJECTED')) && (
+            <Link className={bannerPrimary} href="/owner/apply">
+              Đăng ký trở thành chủ cơ sở
+            </Link>
+          )}
+        </>
+      }
+    >
       {r.loading && (
         <p role="status" className="mt-6">
           Đang tải hồ sơ…
@@ -55,18 +58,18 @@ function List() {
             <span className="text-sm font-semibold text-emerald-700">
               {applicationLabels[a.state]}
             </span>
-            <h2 className="mt-3 text-xl font-bold">{a.businessName}</h2>
+            <h2 className="mt-3 text-lg font-extrabold tracking-tight">{a.businessName}</h2>
             <p className="mt-2 text-slate-500">{a.facilityName}</p>
             {a.reason && <p className="mt-3 text-sm">{a.reason}</p>}
           </Link>
         ))}
       </div>
       {r.data?.length === 0 && (
-        <p className="mt-6 rounded-2xl border border-dashed p-6 text-slate-500">
+        <p className="mt-6 border-dashed p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           Bạn chưa có hồ sơ. Bắt đầu với thông tin pháp lý và cơ sở đầu tiên.
         </p>
       )}
-    </main>
+    </BannerPage>
   )
 }
 export function Failure({ message, retry }: { message: string; retry: () => void }) {
@@ -151,12 +154,16 @@ function Detail({ id }: { id: string }) {
     )
   const a = r.data.application
   return (
-    <main className="mx-auto max-w-4xl px-5 py-10">
-      <Link href="/owner/application" className="text-sm text-slate-500">
-        Hồ sơ đăng ký chủ cơ sở
-      </Link>
-      <h1 className="mt-4 text-3xl font-black">{a.businessName}</h1>
-      <section className="mt-6 rounded-2xl border p-6">
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href="/owner/application">
+          Hồ sơ đăng ký chủ cơ sở
+        </Link>
+      }
+      title={a.businessName ?? ''}
+      width="max-w-4xl"
+    >
+      <section className="mt-6 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <p className="font-bold text-emerald-700">{applicationLabels[a.state]}</p>
         {a.submittedAt && (
           <p className="mt-3 text-sm text-slate-500">
@@ -164,7 +171,7 @@ function Detail({ id }: { id: string }) {
           </p>
         )}
         {a.reason && (
-          <p className="mt-4 whitespace-pre-wrap rounded-xl bg-amber-50 p-4 text-amber-900">
+          <p className="mt-4 whitespace-pre-wrap rounded-2xl bg-amber-50 p-4 text-amber-900">
             {a.reason}
           </p>
         )}
@@ -219,7 +226,10 @@ function Detail({ id }: { id: string }) {
           </div>
         )}
         {a.state === 'REJECTED' && (
-          <Link href="/owner/apply" className="mt-5 inline-block text-emerald-700 underline">
+          <Link
+            href="/owner/apply"
+            className="mt-5 inline-block font-semibold text-emerald-700 hover:underline"
+          >
             Tạo hồ sơ đăng ký mới
           </Link>
         )}
@@ -233,7 +243,9 @@ function Detail({ id }: { id: string }) {
           aria-label="Xác nhận gửi hồ sơ chủ cơ sở"
           className="mt-6 rounded-2xl border bg-emerald-50 p-6"
         >
-          <h2 className="text-xl font-bold">Gửi hồ sơ để quản trị viên thẩm định?</h2>
+          <h2 className="text-lg font-extrabold tracking-tight">
+            Gửi hồ sơ để quản trị viên thẩm định?
+          </h2>
           <p className="mt-3 text-sm">
             Thông tin pháp lý, tài liệu và cấu hình cơ sở hiện tại sẽ được lưu thành hồ sơ thẩm
             định.
@@ -258,8 +270,8 @@ function Detail({ id }: { id: string }) {
           {feedback}
         </p>
       )}
-      <section className="mt-8 rounded-2xl border p-6">
-        <h2 className="text-xl font-bold">Cơ sở đầu tiên</h2>
+      <section className="mt-8 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+        <h2 className="text-lg font-extrabold tracking-tight">Cơ sở đầu tiên</h2>
         <p className="mt-3">
           {r.data.facility.facility.name} · {r.data.facility.courts.length} sân
         </p>
@@ -269,23 +281,23 @@ function Detail({ id }: { id: string }) {
         </p>
         <Link
           href={`/owner/application/${id}/facility`}
-          className="mt-4 inline-block text-sm text-emerald-700 underline"
+          className="mt-4 inline-block text-sm font-semibold text-emerald-700 hover:underline"
         >
           Xem hồ sơ cơ sở
         </Link>
       </section>
       <section className="mt-8">
-        <h2 className="text-xl font-bold">Lịch sử gửi hồ sơ</h2>
+        <h2 className="text-lg font-extrabold tracking-tight">Lịch sử gửi hồ sơ</h2>
         {r.data.history.length === 0 && (
           <p className="mt-3 text-sm text-slate-500">Chưa gửi thẩm định.</p>
         )}
         {r.data.history.map((h, i) => (
-          <p className="mt-3 rounded-xl bg-slate-50 p-4 text-sm" key={h.id}>
+          <p className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm" key={h.id}>
             Lần {r.data!.history.length - i} · {new Date(h.submittedAt).toLocaleString('vi-VN')}
           </p>
         ))}
       </section>
-    </main>
+    </BannerPage>
   )
 }
 export function ApplicationLegalPage({ id }: { id: string }) {
@@ -318,11 +330,15 @@ function LegalEditor({ id }: { id: string }) {
     }
   }
   return (
-    <main className="mx-auto max-w-4xl px-5 py-10">
-      <Link href={`/owner/application/${id}`} className="text-sm text-emerald-700 underline">
-        Quay lại hồ sơ
-      </Link>
-      <h1 className="mt-5 text-3xl font-bold">Thông tin pháp lý</h1>
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href={`/owner/application/${id}`}>
+          Quay lại hồ sơ
+        </Link>
+      }
+      title="Thông tin pháp lý"
+      width="max-w-4xl"
+    >
       {r.loading && (
         <p role="status" className="mt-6">
           Đang tải…
@@ -333,7 +349,7 @@ function LegalEditor({ id }: { id: string }) {
         <form onSubmit={save} className="mt-8">
           <fieldset
             disabled={!isEditable(r.data.application.state) || busy}
-            className="grid gap-5 rounded-2xl border p-6 md:grid-cols-2"
+            className="grid gap-5 p-6 md:grid-cols-2 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
           >
             <LegalFields legal={r.data.legal} busy={busy} />
             <Button type="submit" className="bg-emerald-600 text-white">
@@ -352,7 +368,7 @@ function LegalEditor({ id }: { id: string }) {
           {error}
         </p>
       )}
-    </main>
+    </BannerPage>
   )
 }
 export function ApplicationWorkspace({ id, children }: { id: string; children: React.ReactNode }) {

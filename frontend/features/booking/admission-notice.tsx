@@ -90,7 +90,7 @@ function Loaded({ market }: { market: boolean }) {
   if (!messages.length && !read.data.resources.length) return null
   return (
     <aside
-      className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+      className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
       aria-label="Điều kiện giữ chỗ"
     >
       {messages.map((message) => (

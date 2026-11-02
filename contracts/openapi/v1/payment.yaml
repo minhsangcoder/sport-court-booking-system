@@ -2128,6 +2128,12 @@
           "accountName": {
             "type": "string"
           },
+          "lastWebhookAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Latest SePay delivery authenticated by the current revision's key; null until one arrives."
+          },
           "webhookUrl": {
             "type": "string"
           }

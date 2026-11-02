@@ -13,7 +13,7 @@ export function FavoriteButton({ id }: { id: string }) {
   if (!user)
     return (
       <Link
-        className="text-sm text-emerald-700 underline"
+        className="text-sm font-semibold text-emerald-700 hover:underline"
         href={`/login?next=${encodeURIComponent('/facilities/' + id)}`}
       >
         Đăng nhập để lưu cơ sở
@@ -58,7 +58,7 @@ function Favorites() {
             )}
             {f.available && (
               <Link
-                className="block text-emerald-700 underline"
+                className="block font-semibold text-emerald-700 hover:underline"
                 href={`/facilities/${f.facilityId}`}
               >
                 Xem lịch sân

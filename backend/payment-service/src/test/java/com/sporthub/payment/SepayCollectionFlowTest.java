@@ -139,6 +139,46 @@ class SepayCollectionFlowTest {
   }
 
   @Test
+  void webhookStatusProvesOnlyTheCurrentKeyAfterRotation() {
+    assertThat(channels.own(f.facility, f.owner, "token").lastWebhookAt()).isNull();
+    Payment p = create();
+    receive(webhook(p, 9101, 1000));
+    assertThat(channels.own(f.facility, f.owner, "token").lastWebhookAt()).isNotNull();
+
+    String rotated = "sepay-webhook-rotated-key-0123456789";
+    var current = channels.own(f.facility, f.owner, "token");
+    channels.configure(
+        f.facility,
+        new SepayChannels.Input(
+            current.version(), "970436", "000123456789", "FACILITY OWNER", rotated),
+        "sepay-rotate",
+        f.owner,
+        "token");
+    assertThat(channels.own(f.facility, f.owner, "token").lastWebhookAt()).isNull();
+
+    // SePay still sending the previous key is accepted, yet proves nothing about the new one.
+    receive(webhook(p, 9102, 1000));
+    assertThat(channels.own(f.facility, f.owner, "token").lastWebhookAt()).isNull();
+
+    // A transfer matching no order is still a delivery proven by the new key.
+    var unmatched = webhook(p, 9103, 1000).put("code", "").put("content", "CHUYEN KHOAN");
+    webhooks.receive(channel.channelId(), "Apikey " + rotated, unmatched.toString());
+    assertThat(channels.own(f.facility, f.owner, "token").lastWebhookAt()).isNotNull();
+  }
+
+  @Test
+  void rejectedWebhookLeavesTheChannelUnproven() {
+    assertThatThrownBy(
+            () ->
+                webhooks.receive(
+                    channel.channelId(),
+                    "Apikey wrong-key-0123456789012345678901234",
+                    webhook(create(), 9104, 1000).toString()))
+        .isInstanceOf(com.sporthub.common.exception.ForbiddenException.class);
+    assertThat(channels.own(f.facility, f.owner, "token").lastWebhookAt()).isNull();
+  }
+
+  @Test
   void organizerCanReplaceAnUnpaidMemberQrAndDuplicateTransfersSettleOnlyOnce() {
     UUID memberId = UUID.randomUUID();
     var organizer = new com.sporthub.common.security.RemoteIdentity.Caller(

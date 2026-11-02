@@ -2,7 +2,7 @@ export function RefundPolicyNotice() {
   return (
     <aside
       aria-label="Quy định lượt đặt"
-      className="space-y-2.5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600"
+      className="space-y-2.5 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600"
     >
       <p className="text-amber-900">
         <strong className="font-semibold text-rose-700">Quy định hoàn tiền:</strong> Không áp dụng

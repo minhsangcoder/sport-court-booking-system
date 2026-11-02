@@ -25,7 +25,7 @@ function SupportList() {
         tiền, tạm giữ tiền hoặc khoản trả người chuyển nhượng.
       </p>
       <form
-        className="grid gap-4 rounded-2xl border p-6 sm:grid-cols-2"
+        className="grid gap-4 p-6 sm:grid-cols-2 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
         onChange={() => setKey(crypto.randomUUID())}
         onSubmit={(e) => {
           e.preventDefault()
@@ -80,12 +80,16 @@ function SupportList() {
             required
             minLength={20}
             maxLength={10000}
-            className="rounded-lg border p-3"
+            className="rounded-2xl border border-slate-200/90 p-3"
           />
         </label>
         <label className="grid gap-2 text-sm">
           Bằng chứng dạng văn bản
-          <textarea name="evidence" maxLength={5000} className="rounded-lg border p-3" />
+          <textarea
+            name="evidence"
+            maxLength={5000}
+            className="rounded-2xl border border-slate-200/90 p-3"
+          />
         </label>
         <Button type="submit" disabled={a.busy}>
           Ghi nhận hồ sơ hỗ trợ
@@ -93,7 +97,11 @@ function SupportList() {
       </form>
       <Status loading={r.loading} error={r.error || a.error} empty={r.data?.length === 0} />
       {r.data?.map((c) => (
-        <Link key={c.id} href={`/admin/disputes/${c.id}`} className="block rounded-xl border p-5">
+        <Link
+          key={c.id}
+          href={`/admin/disputes/${c.id}`}
+          className="block p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+        >
           <strong>{c.subject}</strong>
           <p className="mt-2 text-sm text-slate-500">
             {displayLabel(c.category)} · {displayLabel(c.state)} · lượt đặt{' '}
@@ -109,7 +117,7 @@ function SupportDetail({ id }: { id: string }) {
     a = useMutation()
   return (
     <Frame title={r.data?.subject ?? 'Hồ sơ hỗ trợ'}>
-      <Link href="/admin/disputes" className="text-emerald-700 underline">
+      <Link href="/admin/disputes" className="font-semibold text-emerald-700 hover:underline">
         Danh sách hồ sơ
       </Link>
       <Status loading={r.loading} error={r.error || a.error} />
@@ -118,14 +126,14 @@ function SupportDetail({ id }: { id: string }) {
           <Card title={displayLabel(r.data.state)}>
             <p className="whitespace-pre-wrap">{r.data.description}</p>
             <p className="whitespace-pre-wrap text-sm text-slate-500">{r.data.evidence}</p>
-            <p className="rounded-xl bg-amber-50 p-4 text-sm">
+            <p className="rounded-2xl bg-amber-50 p-4 text-sm">
               Kết quả ghi nhận không là hoàn tiền, khoản trả người chuyển nhượng hay giải quyết tài
               chính đã hoàn tất. Chưa có cơ chế gửi thông báo các bên.
             </p>
           </Card>
           {r.data.state !== 'DECISION_RECORDED' && (
             <form
-              className="grid gap-4 rounded-xl border p-5"
+              className="grid gap-4 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
               onSubmit={(e) => {
                 e.preventDefault()
                 const f = new FormData(e.currentTarget)
@@ -165,7 +173,7 @@ function SupportDetail({ id }: { id: string }) {
                   required
                   minLength={20}
                   maxLength={2000}
-                  className="rounded-lg border p-3"
+                  className="rounded-2xl border border-slate-200/90 p-3"
                 />
               </label>
               <Button type="submit" disabled={a.busy}>

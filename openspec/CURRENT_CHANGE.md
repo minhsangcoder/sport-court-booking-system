@@ -4,7 +4,28 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: section 38 (2026-10-30): court search filters by former district and current ward, and
+Latest business revision: section 44 (2026-11-01): customers upload a profile photo (preview before saving, removable,
+re-encoded, public by random address, V17) and the bank settings screen shows the photo above a read-only bank account
+with an edit button; no bank-change lock or resale rule changes.
+
+Earlier business revision: section 43 (2026-10-31): the SePay channel screen has three steps, key generation, read-only
+saved details and a "webhook received" status proven by the current key; the channel read adds `lastWebhookAt`, receipts
+record the authenticating revision (V20); no authentication, money or booking rule changes.
+
+Earlier business revision: section 42 (2026-10-31): the remaining screens (admin, operations list, profile, facility
+detail, directions, owner application, group join/invite/split, hold, payment) use the Home design; no API or business
+rule changes.
+
+Earlier business revision: section 41 (2026-10-31): the Owner/Staff booking operations detail uses the Home design; no API
+or business rule changes.
+
+Earlier business revision: section 40 (2026-10-30): the Owner workspace and the resale listing form/detail use the Home
+design; leftover evidence and adjudication wording is corrected; no API or business rule changes.
+
+Earlier business revision: section 39 (2026-10-30): "Lịch đặt của tôi" uses the Home design, with tabs and facility/court
+names on each card; no API or business rule changes.
+
+Earlier business revision: section 38 (2026-10-30): court search filters by former district and current ward, and
 free text ignores diacritics and understands former district names (Hanoi mapping only).
 
 Earlier business revision: section 37 (2026-10-30): evidence, money-case and Owner adjudication code and APIs are

@@ -1,4 +1,5 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
 import { RecordDetails } from '@/components/record-details'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +12,7 @@ import { useApi } from '@/lib/use-api'
 import Link from 'next/link'
 import { useState } from 'react'
 import type { AdminAccount } from './admin-account-types'
-import { AdminNav } from './admin-nav'
+import { AdminPage } from './admin-nav'
 type AccountDetail = {
   account: AdminAccount
   sessions: {
@@ -89,13 +90,17 @@ function Loaded({ id }: { id: string }) {
   const u = r.data.account
   const protectedAdmin = u.roles.includes('ADMIN') || u.id === user?.id
   return (
-    <div className="mx-auto max-w-5xl px-5 py-10">
-      <Link href="/admin/accounts" className="text-sm text-slate-500">
-        Tài khoản / {u.fullName}
-      </Link>
-      <h1 className="mt-5 text-3xl font-black">{u.fullName}</h1>
-      <AdminNav active="accounts" />
-      <section className="mt-6 grid gap-5 rounded-2xl border p-6 sm:grid-cols-2">
+    <AdminPage
+      active="accounts"
+      eyebrow={
+        <Link className={bannerLink} href="/admin/accounts">
+          Tài khoản / {u.fullName}
+        </Link>
+      }
+      title={u.fullName ?? ''}
+      width="max-w-5xl"
+    >
+      <section className="mt-6 grid gap-5 p-6 sm:grid-cols-2 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div>
           <p className="text-sm text-slate-500">Liên hệ</p>
           <p className="mt-2">
@@ -197,7 +202,7 @@ function Loaded({ id }: { id: string }) {
       )}
       {action && (
         <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl bg-slate-50 p-6">
-          <h2 className="text-lg font-bold">
+          <h2 className="text-lg font-extrabold tracking-tight">
             {action === 'lock'
               ? 'Khóa tài khoản và thu hồi mọi phiên'
               : action === 'unlock'
@@ -207,7 +212,7 @@ function Loaded({ id }: { id: string }) {
           {action === 'lock' && (
             <label className="grid gap-2 text-sm">
               Thời hạn
-              <select name="duration" className="h-10 rounded-lg border bg-white px-3">
+              <select name="duration" className="h-11 rounded-xl border bg-white px-3.5">
                 <option value="SEVEN_DAYS">7 ngày</option>
                 <option value="THIRTY_DAYS">30 ngày</option>
                 <option value="PERMANENT">Vĩnh viễn</option>
@@ -271,7 +276,10 @@ function Loaded({ id }: { id: string }) {
       <div className="mt-5 space-y-4">
         {tab === 'audit'
           ? r.data.audit.map((a) => (
-              <article key={a.id} className="rounded-xl border p-5">
+              <article
+                key={a.id}
+                className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+              >
                 <p className="text-sm font-bold">{displayLabel(a.action)}</p>
                 <p className="mt-2 text-xs text-slate-500">
                   {new Date(a.createdAt).toLocaleString('vi-VN')}
@@ -279,7 +287,7 @@ function Loaded({ id }: { id: string }) {
                 {a.newValue != null && (
                   <details className="mt-3 text-sm">
                     <summary>Nội dung thay đổi</summary>
-                    <div className="mt-3 overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs">
+                    <div className="mt-3 overflow-x-auto rounded-2xl bg-slate-50 p-3 text-xs">
                       <RecordDetails value={a.newValue} />
                     </div>
                   </details>
@@ -287,7 +295,10 @@ function Loaded({ id }: { id: string }) {
               </article>
             ))
           : r.data.sessions.map((s) => (
-              <article key={s.id} className="rounded-xl border p-5">
+              <article
+                key={s.id}
+                className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+              >
                 <p className="text-sm font-bold">
                   {s.revoked ? 'Đã thu hồi' : 'Chưa thu hồi'} ·{' '}
                   {s.deviceInfo || 'Thiết bị chưa xác định'}
@@ -299,6 +310,6 @@ function Loaded({ id }: { id: string }) {
               </article>
             ))}
       </div>
-    </div>
+    </AdminPage>
   )
 }

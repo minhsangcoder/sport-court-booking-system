@@ -10,6 +10,17 @@ import { api } from '@/lib/api'
 import { useApi } from '@/lib/use-api'
 import { useState } from 'react'
 import { useFacility } from './facility-store'
+import {
+  OwnerPageHead,
+  amberNotice,
+  card,
+  dangerPill,
+  emeraldNotice,
+  emptyPanel,
+  fieldLabel,
+  primaryPill,
+  redNotice,
+} from './owner-ui'
 import type { Court, Maintenance } from './types'
 export function MaintenancePage() {
   const { facility } = useFacility()
@@ -61,68 +72,74 @@ export function MaintenancePage() {
     }
   }
   return (
-    <section>
-      <h2 className="text-2xl font-bold">Bảo trì sân</h2>
+    <section className="space-y-6">
+      <OwnerPageHead
+        title="Bảo trì sân"
+        description="Tạm khóa một sân trong khoảng thời gian sửa chữa để khách không đặt được."
+      />
       {courts.loading && <p role="status">Đang tải sân…</p>}
       {courts.error && (
-        <p role="alert" className="text-red-700">
+        <p role="alert" className={redNotice}>
           {courts.error}
         </p>
       )}
       {courts.data?.length === 0 && (
-        <p className="mt-5 text-slate-500">Tạo sân trước khi thiết lập bảo trì.</p>
+        <p className={emptyPanel}>Tạo sân trước khi thiết lập bảo trì.</p>
       )}
       {courtId && (
         <>
-          <select
-            aria-label="Chọn sân bảo trì"
-            className="my-5 rounded-lg border bg-white p-3"
-            value={courtId}
-            onChange={(e) => setSelection(e.target.value)}
-            disabled={busy}
-          >
-            {courts.data?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
           <form
             onSubmit={save}
-            className="grid max-w-2xl gap-4 rounded-xl border p-5 sm:grid-cols-2"
+            className={`${card} home-rise grid gap-4 p-5 sm:grid-cols-2 sm:p-6`}
           >
-            <label className="grid gap-2 text-sm">
+            <label className={`${fieldLabel} sm:col-span-2`}>
+              Sân
+              <select
+                aria-label="Chọn sân bảo trì"
+                className="rounded-xl border bg-white px-3.5 dark:bg-slate-800"
+                value={courtId}
+                onChange={(e) => setSelection(e.target.value)}
+                disabled={busy}
+              >
+                {courts.data?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={fieldLabel}>
               Bắt đầu
               <Input name="startsAt" type="datetime-local" required disabled={busy} />
             </label>
-            <label className="grid gap-2 text-sm">
+            <label className={fieldLabel}>
               Kết thúc
               <Input name="endsAt" type="datetime-local" required disabled={busy} />
             </label>
-            <label className="grid gap-2 text-sm sm:col-span-2">
+            <label className={`${fieldLabel} sm:col-span-2`}>
               Lý do
               <Input name="reason" maxLength={1200} required disabled={busy} />
             </label>
             <Button
-              className="bg-emerald-600 text-white sm:col-span-2"
+              className={`${primaryPill} justify-self-start sm:col-span-2`}
               disabled={busy}
               type="submit"
             >
               {busy ? 'Đang lưu…' : 'Tạo thời gian bảo trì'}
             </Button>
           </form>
-          <p className="mt-3 text-sm text-amber-700">
+          <p className={amberNotice}>
             Không tự hủy lượt đặt đã xác nhận. Cần xem và xử lý lượt đặt bị ảnh hưởng theo chính
             sách được chốt.
           </p>
           <ImpactNotice impact={impact} />
           {(error || windows.error) && (
-            <p className="mt-4 text-red-700" role="alert">
+            <p className={redNotice} role="alert">
               {error || windows.error}
             </p>
           )}
           {message && (
-            <p className="mt-4 text-emerald-700" role="status">
+            <p className={emeraldNotice} role="status">
               {message}
             </p>
           )}
@@ -131,27 +148,21 @@ export function MaintenancePage() {
               Đang tải bảo trì…
             </p>
           )}
-          {windows.data?.length === 0 && (
-            <p className="mt-5 text-slate-500">Chưa có thời gian bảo trì.</p>
-          )}
-          <div className="mt-6 grid gap-3">
+          {windows.data?.length === 0 && <p className={emptyPanel}>Chưa có thời gian bảo trì.</p>}
+          <div className="grid gap-3">
             {windows.data?.map((w) => (
               <article
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
+                className={`${card} home-rise flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5`}
                 key={w.id}
               >
                 <div>
-                  <p className="font-semibold">{w.reason}</p>
+                  <p className="font-bold text-slate-950 dark:text-white">{w.reason}</p>
                   <p className="mt-1 text-sm text-slate-500">
                     {new Date(w.startsAt).toLocaleString('vi-VN')} →{' '}
                     {new Date(w.endsAt).toLocaleString('vi-VN')}
                   </p>
                 </div>
-                <button
-                  className="text-sm text-red-700"
-                  onClick={() => cancel(w.id)}
-                  disabled={busy}
-                >
+                <button className={dangerPill} onClick={() => cancel(w.id)} disabled={busy}>
                   Hủy bảo trì
                 </button>
               </article>

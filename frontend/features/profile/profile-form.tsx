@@ -1,6 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { AvatarUploader } from '@/features/profile/avatar-uploader'
 import type { useProfile } from '@/features/profile/use-profile'
 import { AlertCircle, Calendar, Camera, CheckCircle2, RefreshCw, Save, User } from 'lucide-react'
 export function ProfileForm({
@@ -17,7 +18,6 @@ export function ProfileForm({
     | 'dateOfBirth'
     | 'setDateOfBirth'
     | 'setShowAvatarPicker'
-    | 'avatarUrl'
     | 'setAvatarUrl'
     | 'user'
   >
@@ -32,13 +32,12 @@ export function ProfileForm({
     dateOfBirth,
     setDateOfBirth,
     setShowAvatarPicker,
-    avatarUrl,
     setAvatarUrl,
     user,
   } = model
   return (
     <div className="lg:col-span-2">
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+      <div className="p-6 sm:p-8 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div className="flex items-center justify-between border-b border-slate-100 pb-5 dark:border-slate-800">
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thông tin cơ bản</h3>
@@ -54,14 +53,14 @@ export function ProfileForm({
 
         {/* Status Banners */}
         {message && (
-          <div className="mt-5 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200 animate-in fade-in">
+          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200 animate-in fade-in">
             <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
             <span>{message}</span>
           </div>
         )}
 
         {error && (
-          <div className="mt-5 flex items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-200 animate-in fade-in">
+          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-200 animate-in fade-in">
             <AlertCircle size={18} className="shrink-0 text-rose-600" />
             <span>{error}</span>
           </div>
@@ -109,13 +108,13 @@ export function ProfileForm({
             </p>
           </div>
 
-          {/* Avatar URL Field */}
-          <div className="space-y-2">
+          {/* Avatar */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <Camera size={15} className="text-emerald-600" />
-                Đường dẫn ảnh đại diện (Avatar URL)
-              </label>
+                Ảnh đại diện
+              </span>
               <button
                 type="button"
                 onClick={() => setShowAvatarPicker(true)}
@@ -124,28 +123,7 @@ export function ProfileForm({
                 Chọn mẫu có sẵn
               </button>
             </div>
-            <div className="flex gap-2">
-              <Input
-                name="avatarUrl"
-                type="url"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://example.com/my-photo.jpg"
-                maxLength={2048}
-                disabled={busy}
-                className="h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white dark:border-slate-800 dark:bg-slate-900 text-sm"
-              />
-              {avatarUrl && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setAvatarUrl('')}
-                  className="h-11 px-3 text-xs text-slate-500 hover:text-rose-600"
-                >
-                  Xóa
-                </Button>
-              )}
-            </div>
+            <AvatarUploader />
           </div>
 
           {/* Actions Bar */}
@@ -168,7 +146,7 @@ export function ProfileForm({
             <Button
               type="submit"
               disabled={busy}
-              className="h-11 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 font-semibold text-white shadow-md shadow-emerald-600/20 hover:from-emerald-700 hover:to-teal-700 active:scale-98 transition-all"
+              className="h-11 px-6 font-semibold text-white shadow-md shadow-emerald-600/20 transition-all"
             >
               {busy ? (
                 <>

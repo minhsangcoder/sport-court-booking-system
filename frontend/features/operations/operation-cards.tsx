@@ -52,7 +52,7 @@ export function OperationCards({
           return (
             <article
               key={b.id}
-              className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"
             >
               <div className="flex flex-wrap justify-between gap-3">
                 <div>
@@ -72,7 +72,7 @@ export function OperationCards({
                 <div className="text-right">
                   <p className="text-sm font-bold text-slate-900">{money(b.amount, b.currency)}</p>
                   <Link
-                    className="mt-1.5 block text-xs font-medium text-emerald-700 underline underline-offset-4"
+                    className="mt-1.5 block text-xs font-medium font-semibold text-emerald-700 hover:underline"
                     href={`/${owner ? 'owner' : 'staff'}/bookings/${b.id}`}
                   >
                     Chi tiết vận hành & điểm danh nhóm
@@ -145,7 +145,7 @@ export function OperationCards({
                 <Button
                   type="button"
                   onClick={() => setPaymentModalBooking(b)}
-                  className="mt-4 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow-xs flex items-center"
+                  className="mt-4 gap-2 bg-emerald-600 hover:bg-emerald-600 text-white font-semibold text-xs px-4 py-2 rounded-full shadow-xs flex items-center"
                 >
                   <CreditCard className="size-4" />
                   <span>Thanh toán tại quầy</span>

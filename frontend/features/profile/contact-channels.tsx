@@ -31,7 +31,7 @@ export function ContactChannels({
           return (
             <section
               key={channel}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              className="flex flex-col justify-between p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
             >
               <div>
                 {/* Section Header */}
@@ -70,7 +70,7 @@ export function ContactChannels({
                 </div>
 
                 {/* Current Value Display */}
-                <div className="mt-4 rounded-xl bg-slate-50 p-3.5 dark:bg-slate-800/60">
+                <div className="mt-4 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/60">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block">
                     ĐANG SỬ DỤNG
                   </span>
@@ -107,7 +107,7 @@ export function ContactChannels({
                     type="submit"
                     variant="outline"
                     disabled={!!busy}
-                    className="w-full h-10 rounded-xl font-semibold text-xs border-slate-200 hover:bg-slate-50 hover:text-emerald-600 transition-colors"
+                    className="w-full h-10 font-semibold text-xs border-slate-200 hover:bg-slate-50 hover:text-emerald-600 transition-colors"
                   >
                     {busy === channel ? (
                       <>
@@ -126,7 +126,7 @@ export function ContactChannels({
 
               {/* Pending Challenge Box */}
               {challenge && (
-                <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+                <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/30">
                   <div className="flex items-center justify-between text-xs font-bold text-emerald-900 dark:text-emerald-200">
                     <span>MÃ XÁC MINH OTP ĐÃ GỬI</span>
                     <span className="text-[11px] font-normal text-slate-500">
@@ -167,7 +167,7 @@ export function ContactChannels({
                       <Button
                         type="submit"
                         disabled={!!busy}
-                        className="h-10 rounded-xl bg-emerald-600 text-white font-semibold text-xs px-4 hover:bg-emerald-700 shrink-0"
+                        className="h-10 rounded-full bg-emerald-600 text-white font-semibold text-xs px-4 hover:bg-emerald-600 shrink-0"
                       >
                         {busy === challenge.channel ? (
                           <RefreshCw size={14} className="animate-spin" />

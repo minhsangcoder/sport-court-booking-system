@@ -1,6 +1,13 @@
 'use client'
 import { Input } from '@/components/ui/input'
 import { useFacility } from '@/features/facility/facility-store'
+import {
+  OwnerPageHead,
+  card,
+  emptyPanel,
+  fieldLabel,
+  redNotice,
+} from '@/features/facility/owner-ui'
 import type { Court } from '@/features/facility/types'
 import { displayLabel, timezoneLabel } from '@/lib/display-labels'
 import { useApi } from '@/lib/use-api'
@@ -16,17 +23,16 @@ export function PreviewPage() {
     courtId ? `/schedules/facilities/${facility.id}/preview?courtId=${courtId}&date=${date}` : null,
   )
   return (
-    <section>
-      <h2 className="text-2xl font-bold">Xem trước lịch và giá</h2>
-      <p className="mt-2 text-sm text-slate-500">
-        Giờ theo {timezoneLabel(facility.timezone)}. Bản xem trước xét lịch và bảo trì; lượt đặt và
-        giữ chỗ được xét tại bước đặt sân.
-      </p>
-      <div className="my-6 flex flex-wrap gap-4">
-        <label className="grid gap-2 text-sm">
+    <section className="space-y-6">
+      <OwnerPageHead
+        title="Xem trước lịch và giá"
+        description={`Giờ theo ${timezoneLabel(facility.timezone)}. Bản xem trước xét lịch và bảo trì; lượt đặt và giữ chỗ được xét tại bước đặt sân.`}
+      />
+      <div className={`${card} home-rise flex flex-wrap gap-4 p-5`}>
+        <label className={`${fieldLabel} min-w-48 flex-1`}>
           Sân
           <select
-            className="rounded-lg border bg-white p-3"
+            className="rounded-xl border bg-white px-3.5 dark:bg-slate-800"
             value={courtId || ''}
             onChange={(e) => setSelection(e.target.value)}
           >
@@ -37,13 +43,13 @@ export function PreviewPage() {
             ))}
           </select>
         </label>
-        <label className="grid gap-2 text-sm">
+        <label className={`${fieldLabel} min-w-48 flex-1`}>
           Ngày
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </label>
       </div>
       {(courts.error || resource.error) && (
-        <p role="alert" className="text-red-700">
+        <p role="alert" className={redNotice}>
           {courts.error || resource.error}
           <button className="ml-3 underline" onClick={resource.reload}>
             Thử lại
@@ -51,17 +57,17 @@ export function PreviewPage() {
         </p>
       )}
       {(courts.loading || resource.loading) && <p role="status">Đang tải lịch…</p>}
-      {courts.data?.length === 0 && <p className="text-slate-500">Tạo sân trước khi xem lịch.</p>}
+      {courts.data?.length === 0 && <p className={emptyPanel}>Tạo sân trước khi xem lịch.</p>}
       {resource.data?.slots.length === 0 && (
-        <p className="text-slate-500">Chưa có giờ mở cửa trong ngày này.</p>
+        <p className={emptyPanel}>Chưa có giờ mở cửa trong ngày này.</p>
       )}
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {resource.data?.slots.map((s) => (
           <article
             key={s.startsAt}
-            className={`rounded-xl border p-4 ${s.state === 'ELIGIBLE' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-100'}`}
+            className={`rounded-2xl border p-4 shadow-sm ${s.state === 'ELIGIBLE' ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10' : 'border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800'}`}
           >
-            <h3 className="font-semibold">
+            <h3 className="font-semibold text-slate-950 dark:text-white">
               {new Date(s.startsAt).toLocaleTimeString('vi-VN', {
                 timeZone: facility.timezone,
                 hour: '2-digit',
@@ -74,7 +80,7 @@ export function PreviewPage() {
                 minute: '2-digit',
               })}
             </h3>
-            <p className="mt-2 font-bold">
+            <p className="mt-2 font-bold text-emerald-800 dark:text-emerald-300">
               {s.amount == null ? 'Chưa có giá' : money(s.amount, s.currency)}
             </p>
             <p className="mt-2 text-xs text-slate-600">

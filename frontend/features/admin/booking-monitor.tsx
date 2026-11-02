@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import { RecordDetails } from '@/components/record-details'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +12,7 @@ import { translateError } from '@/lib/error-translator'
 import { useApi } from '@/lib/use-api'
 import Link from 'next/link'
 import { useState } from 'react'
-import { AdminNav } from './admin-nav'
+import { AdminPage } from './admin-nav'
 export function BookingMonitor() {
   return (
     <RequireAuth roles={['ADMIN']}>
@@ -32,12 +34,10 @@ function Loaded() {
     setPath(`/admin/bookings?${p}`)
   }
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <h1 className="text-3xl font-black">Giám sát lượt đặt</h1>
-      <AdminNav active="bookings" />
+    <AdminPage active="bookings" title="Giám sát lượt đặt">
       <form
         onSubmit={search}
-        className="mt-6 grid gap-4 rounded-2xl bg-slate-50 p-5 md:grid-cols-4"
+        className="mt-6 grid gap-4 p-5 md:grid-cols-4 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
       >
         <label className="grid gap-2 text-sm">
           Mã lượt đặt
@@ -49,7 +49,7 @@ function Loaded() {
         </label>
         <label className="grid gap-2 text-sm">
           Trạng thái
-          <select name="status" className="h-10 rounded-lg border bg-white px-3">
+          <select name="status" className="h-11 rounded-xl border bg-white px-3.5">
             <option value="">Tất cả</option>
             {['PENDING', 'CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'EXPIRED'].map(
               (s) => (
@@ -78,9 +78,11 @@ function Loaded() {
         </p>
       )}
       {r.data?.length === 0 && (
-        <p className="mt-6 rounded-xl border p-6 text-slate-500">Không có lượt đặt phù hợp.</p>
+        <p className="mt-6 p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          Không có lượt đặt phù hợp.
+        </p>
       )}
-      <div className="mt-6 divide-y rounded-2xl border">
+      <div className="mt-6 divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         {r.data?.map((b) => (
           <Link
             key={b.id}
@@ -104,11 +106,11 @@ function Loaded() {
       </div>
       <Link
         href="/admin/bookings/reconciliation"
-        className="mt-6 inline-block text-sm text-emerald-700 underline"
+        className="mt-6 inline-block text-sm font-semibold text-emerald-700 hover:underline"
       >
         Mở danh sách cần đối soát
       </Link>
-    </div>
+    </AdminPage>
   )
 }
 export function AdminBookingDetail({ id }: { id: string }) {
@@ -137,12 +139,16 @@ function Detail({ id }: { id: string }) {
     )
   const b = r.data.booking
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <Link href="/admin/bookings" className="text-sm text-slate-500">
-        Giám sát lượt đặt / {id.slice(0, 8).toUpperCase()}
-      </Link>
-      <h1 className="mt-6 text-3xl font-black">{statusLabels[b.status]}</h1>
-      <section className="mt-6 space-y-3 rounded-2xl border p-6">
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href="/admin/bookings">
+          Giám sát lượt đặt / {id.slice(0, 8).toUpperCase()}
+        </Link>
+      }
+      title={statusLabels[b.status] ?? ''}
+      width="max-w-4xl"
+    >
+      <section className="mt-6 space-y-3 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <p className="font-bold text-emerald-700">Giá gốc: {money(b.amount, b.currency)}</p>
         <p>
           {new Date(b.startsAt).toLocaleString('vi-VN', { timeZone: b.priceSnapshot.timezone })} →{' '}
@@ -157,19 +163,21 @@ function Detail({ id }: { id: string }) {
         {b.paymentId && (
           <Link
             href={`/admin/payments/${b.paymentId}`}
-            className="block text-sm text-emerald-700 underline"
+            className="block text-sm font-semibold text-emerald-700 hover:underline"
           >
             Giao dịch thanh toán gốc
           </Link>
         )}
         <details>
           <summary className="text-sm">Chi tiết giá tại lúc đặt</summary>
-          <div className="mt-4 overflow-x-auto rounded-lg bg-slate-50 p-4 text-xs">
+          <div className="mt-4 overflow-x-auto rounded-2xl bg-slate-50 p-4 text-xs">
             <RecordDetails value={b.priceSnapshot} />
           </div>
         </details>
       </section>
-      <h2 className="mt-8 text-xl font-bold">Lịch sử trạng thái và chuyển quyền</h2>
+      <h2 className="mt-8 text-lg font-extrabold tracking-tight">
+        Lịch sử trạng thái và chuyển quyền
+      </h2>
       <ol className="mt-5 space-y-4 border-l-2 border-emerald-100 pl-5">
         {r.data.history.map((h) => (
           <li key={h.id}>
@@ -188,7 +196,7 @@ function Detail({ id }: { id: string }) {
           </li>
         ))}
       </ol>
-    </div>
+    </BannerPage>
   )
 }
 export function BookingReconciliation() {
@@ -210,15 +218,12 @@ function Reconciliation() {
     }[]
   >('/admin/bookings/reconciliation')
   return (
-    <div className="mx-auto max-w-5xl px-5 py-10">
-      <Link href="/admin/bookings" className="text-sm text-slate-500">
-        Giám sát lượt đặt
-      </Link>
-      <h1 className="mt-5 text-3xl font-black">Thanh toán cần đối soát</h1>
-      <p className="mt-3 text-slate-500">
-        Các kết quả không đủ điều kiện xác nhận được giữ lại để kiểm tra. Chính sách hoàn tiền chưa
-        được chốt.
-      </p>
+    <AdminPage
+      active="bookings/reconciliation"
+      title="Thanh toán cần đối soát"
+      description="Các kết quả không đủ điều kiện xác nhận được giữ lại để kiểm tra. Chính sách hoàn tiền chưa được chốt."
+      width="max-w-5xl"
+    >
       {r.loading && (
         <p className="mt-6" role="status">
           Đang tải đối soát…
@@ -230,13 +235,16 @@ function Reconciliation() {
         </p>
       )}
       {r.data?.length === 0 && (
-        <p className="mt-6 rounded-xl border p-6 text-slate-500">
+        <p className="mt-6 p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           Chưa có trường hợp cần đối soát.
         </p>
       )}
       <div className="mt-6 space-y-4">
         {r.data?.map((x) => (
-          <article key={x.id} className="rounded-xl border p-5">
+          <article
+            key={x.id}
+            className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+          >
             <p className="font-semibold text-amber-800">
               {translateError(x.reason, { preserveUnknown: true })} · {displayLabel(x.state)}
             </p>
@@ -251,6 +259,6 @@ function Reconciliation() {
           </article>
         ))}
       </div>
-    </div>
+    </AdminPage>
   )
 }

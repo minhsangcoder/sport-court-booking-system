@@ -4,7 +4,7 @@ export function OwnFacilityNotice({ facilityId }: { facilityId: string }) {
   return (
     <aside
       role="status"
-      className="my-4 space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+      className="my-4 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
     >
       <p>
         Đây là cơ sở của bạn. Để đặt sân cho khách, hãy dùng Đặt tại quầy; không tạo lượt đặt cá

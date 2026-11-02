@@ -2,6 +2,7 @@
 import { canPayBooking, operationsWorkspace } from '@/features/booking/ownership'
 import { useMutation } from '@/features/integration/shared'
 import { checkInBooking } from '@/features/operations/check-in'
+import type { Court, Facility } from '@/features/facility/types'
 import { Operations } from '@/features/operations/use-operational-detail-shared'
 import { useAuth } from '@/lib/auth-context'
 import { useApi } from '@/lib/use-api'
@@ -26,6 +27,10 @@ export function useOperationalDetail({ id }: { id: string }) {
       ),
     )
   const b = r.data?.detail.booking
+  const facility = useApi<Facility>(b ? `/facilities/${b.facilityId}` : null)
+  const courts = useApi<Court[]>(b ? `/facilities/${b.facilityId}/courts` : null)
+  const actorLabel = (actorId: string) =>
+    actorId === user?.id ? 'Bạn' : `#${actorId.slice(0, 8).toUpperCase()}`
   const guestLabel =
     b?.source === 'OFFLINE_COUNTER'
       ? b.currentHolderId
@@ -85,6 +90,9 @@ export function useOperationalDetail({ id }: { id: string }) {
     can,
     b,
     guestLabel,
+    facility,
+    courts,
+    actorLabel,
     canPay,
     workspace,
     performCheckIn,

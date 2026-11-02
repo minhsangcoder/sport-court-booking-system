@@ -43,8 +43,8 @@ public class SepayWebhooks {
   }
 
   public void receive(UUID channel, String authorization, String raw) {
-    if (!channels.authenticate(channel, authorization))
-      throw new ForbiddenException("Khóa webhook SePay không hợp lệ.");
+    UUID authenticated = channels.authenticatedRevision(channel, authorization);
+    if (authenticated == null) throw new ForbiddenException("Khóa webhook SePay không hợp lệ.");
     if (raw == null || raw.length() > 65536)
       throw new IllegalArgumentException("Webhook SePay quá lớn.");
     JsonNode data;
@@ -190,15 +190,16 @@ public class SepayWebhooks {
           repo.jdbc()
               .update(
                   "INSERT INTO"
-                      + " sepay_webhook_receipts(channel_id,transaction_id,payment_id,fingerprint,raw_ciphertext,state,reason)"
-                      + " VALUES(?,?,?,?,?,?,?)",
+                      + " sepay_webhook_receipts(channel_id,transaction_id,payment_id,fingerprint,raw_ciphertext,state,reason,revision_id)"
+                      + " VALUES(?,?,?,?,?,?,?,?)",
                   channel,
                   nativeId,
                   payment,
                   fingerprint,
                   vault.seal(raw, "sepay-webhook:" + channel + ":" + nativeId),
                   state,
-                  reason);
+                  reason,
+                  authenticated);
         });
   }
 

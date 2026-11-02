@@ -3,7 +3,7 @@ import type { TransferFinanceTerms } from './types'
 export function TransferFinanceNotice({ terms }: { terms: TransferFinanceTerms }) {
   if (terms.protocol === 'PEER_RESALE_V1')
     return (
-      <section className="my-5 space-y-3 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-5 text-sm leading-relaxed text-emerald-950/85 shadow-sm sm:p-6 dark:border-emerald-500/20 dark:from-emerald-500/10 dark:to-teal-500/5 dark:text-emerald-100/85">
+      <section className="space-y-3 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-5 text-sm leading-relaxed text-emerald-950/85 shadow-sm sm:p-6 dark:border-emerald-500/20 dark:from-emerald-500/10 dark:to-teal-500/5 dark:text-emerald-100/85">
         <h2 className="text-base font-extrabold tracking-tight text-emerald-950 dark:text-emerald-200">
           Chuyển nhượng trực tiếp giữa hai khách
         </h2>
@@ -12,12 +12,12 @@ export function TransferFinanceNotice({ terms }: { terms: TransferFinanceTerms }
           đã chốt. Không có phí chuyển nhượng hoặc khoản cơ sở trả người bán.
         </p>
         <p>
-          Người mua gửi ảnh và mã giao dịch; người bán xác nhận đã nhận đủ tiền thì hệ thống bàn
-          giao quyền sân. Ảnh, mã QR và xác nhận hai bên không phải xác minh giao dịch từ ngân hàng.
+          Người mua bấm đã chuyển tiền, người bán kiểm tra và bấm đã nhận đủ tiền thì sân thuộc về
+          người mua. SportHub không xác minh giao dịch từ ngân hàng.
         </p>
         <p>
-          Chủ cơ sở chỉ phân xử quyền dùng sân khi tranh chấp, không hoàn khoản tiền P2P. Sau khi
-          nhận quyền, người mua không được chuyển nhượng tiếp.
+          Mọi trường hợp khác, sân vẫn thuộc người bán và hai bên tự giải quyết với nhau qua chủ
+          sân. Sau khi nhận sân, người mua không được chuyển nhượng tiếp.
         </p>
         <p>Lượt đặt nhận qua chuyển nhượng không áp dụng hoàn tiền khi tự hủy.</p>
       </section>

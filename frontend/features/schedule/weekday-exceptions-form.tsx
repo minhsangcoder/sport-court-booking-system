@@ -31,7 +31,7 @@ export function WeekdayExceptionsForm({
     addExceptionRange,
   } = model
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-4">
+    <div className="p-5 space-y-4 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div>
           <h4 className="text-sm font-bold text-slate-900">
@@ -75,7 +75,7 @@ export function WeekdayExceptionsForm({
             return (
               <div
                 key={exc.dayOfWeek}
-                className="rounded-xl border border-emerald-200 bg-white p-4 shadow-xs space-y-3"
+                className="rounded-2xl border border-emerald-200/80 bg-white p-4 shadow-xs space-y-3 dark:border-emerald-500/20 dark:bg-slate-900"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
                   <div className="flex items-center gap-3">
@@ -140,7 +140,7 @@ export function WeekdayExceptionsForm({
                     {exc.ranges.map((r, rIdx) => (
                       <div
                         key={rIdx}
-                        className="rounded-lg border border-slate-200 bg-slate-50/60 p-3"
+                        className="rounded-2xl border border-slate-200 bg-slate-50/60 p-3"
                       >
                         <div className="mb-2 flex items-center justify-between text-xs">
                           <span className="font-semibold text-slate-700">

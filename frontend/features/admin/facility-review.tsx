@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import { RecordDetails } from '@/components/record-details'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +13,7 @@ import { displayLabel, timezoneLabel } from '@/lib/display-labels'
 import { useApi } from '@/lib/use-api'
 import Link from 'next/link'
 import { useState } from 'react'
-import { AdminNav } from './admin-nav'
+import { AdminPage } from './admin-nav'
 import { FacilityStatus } from './facility-status'
 export function AdminFacilities() {
   return (
@@ -24,11 +26,9 @@ function List() {
   const [query, setQuery] = useState('status=PENDING_APPROVAL')
   const r = useApi<Facility[]>(`/admin/facilities?${query}`)
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <h1 className="text-3xl font-black">Kiểm duyệt cơ sở</h1>
-      <AdminNav active="facilities" />
+    <AdminPage active="facilities" title="Kiểm duyệt cơ sở">
       <form
-        className="mt-6 flex flex-wrap items-end gap-4 rounded-2xl bg-slate-50 p-5"
+        className="mt-6 flex flex-wrap items-end gap-4 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
         onSubmit={(e) => {
           e.preventDefault()
           const f = new FormData(e.currentTarget),
@@ -49,7 +49,7 @@ function List() {
           <select
             name="status"
             defaultValue="PENDING_APPROVAL"
-            className="h-10 rounded-lg border bg-white px-3"
+            className="h-11 rounded-xl border bg-white px-3.5"
           >
             <option value="">Tất cả</option>
             {['DRAFT', 'PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'SUSPENDED'].map((state) => (
@@ -77,9 +77,11 @@ function List() {
         </p>
       )}
       {r.data?.length === 0 && (
-        <p className="mt-6 rounded-xl border p-6 text-slate-500">Không có cơ sở phù hợp.</p>
+        <p className="mt-6 p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          Không có cơ sở phù hợp.
+        </p>
       )}
-      <div className="mt-6 divide-y rounded-2xl border">
+      <div className="mt-6 divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         {r.data?.map((f) => (
           <Link
             href={`/admin/facilities/${f.id}`}
@@ -98,7 +100,7 @@ function List() {
           </Link>
         ))}
       </div>
-    </div>
+    </AdminPage>
   )
 }
 type ReviewDetail = {
@@ -159,11 +161,15 @@ function Detail({ id }: { id: string }) {
     )
   const f = r.data.facility
   return (
-    <div className="mx-auto max-w-5xl px-5 py-10">
-      <Link href="/admin/facilities" className="text-sm text-slate-500">
-        Kiểm duyệt cơ sở
-      </Link>
-      <h1 className="mt-5 text-3xl font-black">{f.name}</h1>
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href="/admin/facilities">
+          Kiểm duyệt cơ sở
+        </Link>
+      }
+      title={f.name ?? ''}
+      width="max-w-5xl"
+    >
       <p className="mt-3 font-semibold text-emerald-700">
         {reviewLabels[f.status] || displayLabel(f.status)}
       </p>
@@ -203,7 +209,7 @@ function Detail({ id }: { id: string }) {
         ))}
       </div>
       {tab === 'profile' && (
-        <section className="mt-6 space-y-4 rounded-2xl border p-6">
+        <section className="mt-6 space-y-4 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           <p>
             {f.addressLine}, {f.ward}, {f.province}
           </p>
@@ -214,13 +220,13 @@ function Detail({ id }: { id: string }) {
           <p className="text-sm">Tiện ích: {f.amenities.join(', ') || 'Chưa khai báo'}</p>
           <Link
             href={`/admin/accounts/${f.ownerId}`}
-            className="block text-sm text-emerald-700 underline"
+            className="block text-sm font-semibold text-emerald-700 hover:underline"
           >
             Xem tài khoản chủ cơ sở
           </Link>
-          <h2 className="pt-4 text-xl font-bold">{r.data.courts.length} sân</h2>
+          <h2 className="pt-4 text-lg font-extrabold tracking-tight">{r.data.courts.length} sân</h2>
           {r.data.courts.map((c) => (
-            <div key={c.id} className="rounded-lg bg-slate-50 p-4">
+            <div key={c.id} className="rounded-2xl bg-slate-50 p-4">
               <p className="font-semibold">
                 {c.code} · {c.name}
               </p>
@@ -248,7 +254,7 @@ function Detail({ id }: { id: string }) {
               </button>
             </p>
           )}
-          <h2 className="text-xl font-bold">Tài liệu riêng tư</h2>
+          <h2 className="text-lg font-extrabold tracking-tight">Tài liệu riêng tư</h2>
           {docs.data?.length === 0 && (
             <p className="text-sm text-amber-800">Chưa có tài liệu địa điểm đính kèm.</p>
           )}
@@ -258,13 +264,13 @@ function Detail({ id }: { id: string }) {
               href={doc.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-xl border p-5 text-sm text-emerald-700 underline"
+              className="block p-5 text-sm font-semibold text-emerald-700 hover:underline rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
             >
               {doc.name} · {Math.ceil(doc.sizeBytes / 1024)} KB
               {doc.archived && ' · Bản lưu của hồ sơ trước'}
             </a>
           ))}
-          <h2 className="text-xl font-bold">Hình ảnh cơ sở</h2>
+          <h2 className="text-lg font-extrabold tracking-tight">Hình ảnh cơ sở</h2>
           <div className="grid gap-5 sm:grid-cols-2">
             {images.data?.map((image) => (
               <a
@@ -272,7 +278,7 @@ function Detail({ id }: { id: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 key={image.id}
-                className="rounded-xl border p-4 text-sm text-emerald-700 underline"
+                className="rounded-2xl border border-slate-200/90 p-4 text-sm font-semibold text-emerald-700 hover:underline"
               >
                 Mở ảnh {image.id.slice(0, 8)} · {Math.ceil(image.sizeBytes / 1024)} KB
               </a>
@@ -286,7 +292,10 @@ function Detail({ id }: { id: string }) {
       {tab === 'history' && (
         <section className="mt-6 space-y-4">
           {r.data.reviews.map((review) => (
-            <article key={review.id} className="rounded-xl border p-5">
+            <article
+              key={review.id}
+              className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+            >
               <p className="font-bold">
                 {reviewLabels[review.state] || displayLabel(review.state)}
               </p>
@@ -302,9 +311,9 @@ function Detail({ id }: { id: string }) {
               </details>
             </article>
           ))}
-          <h2 className="pt-4 text-lg font-bold">Nhật ký thẩm định</h2>
+          <h2 className="pt-4 text-lg font-extrabold tracking-tight">Nhật ký thẩm định</h2>
           {r.data.audit.map((a) => (
-            <article className="rounded-xl bg-slate-50 p-4 text-sm" key={a.id}>
+            <article className="rounded-2xl bg-slate-50 p-4 text-sm" key={a.id}>
               {displayLabel(a.action)} · {new Date(a.occurred_at).toLocaleString('vi-VN')}
               {a.details && (
                 <div className="mt-2 break-all text-xs text-slate-500">
@@ -316,8 +325,8 @@ function Detail({ id }: { id: string }) {
         </section>
       )}
       {f.status === 'PENDING_APPROVAL' && (
-        <section className="mt-8 rounded-2xl border p-6">
-          <h2 className="text-xl font-bold">Quyết định kiểm duyệt</h2>
+        <section className="mt-8 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          <h2 className="text-lg font-extrabold tracking-tight">Quyết định kiểm duyệt</h2>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button onClick={() => setAction('APPROVE')} className="bg-emerald-600 text-white">
               Phê duyệt cơ sở
@@ -347,7 +356,7 @@ function Detail({ id }: { id: string }) {
                 Ghi chú và hướng dẫn
                 <textarea
                   name="reason"
-                  className="min-h-28 rounded-lg border p-3"
+                  className="min-h-28 rounded-2xl border border-slate-200/90 p-3"
                   required
                   minLength={action === 'APPROVE' ? 2 : 20}
                   maxLength={2000}
@@ -372,6 +381,6 @@ function Detail({ id }: { id: string }) {
         </section>
       )}
       <FacilityStatus id={id} status={f.status} />
-    </div>
+    </BannerPage>
   )
 }

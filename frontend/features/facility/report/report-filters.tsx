@@ -9,7 +9,14 @@ export function ReportFilters({
 }: {
   model: Pick<
     ReturnType<typeof useFacilityReport>,
-    'apply' | 'draft' | 'setDraft' | 'facility' | 'range' | 'error' | 'moneySource' | 'setMoneySource'
+    | 'apply'
+    | 'draft'
+    | 'setDraft'
+    | 'facility'
+    | 'range'
+    | 'error'
+    | 'moneySource'
+    | 'setMoneySource'
   >
 }) {
   const { apply, draft, setDraft, facility, range, error, moneySource, setMoneySource } = model
@@ -19,14 +26,14 @@ export function ReportFilters({
         event.preventDefault()
         apply(draft)
       }}
-      className="flex flex-wrap items-end gap-4 rounded-2xl border bg-white p-5"
+      className="flex flex-wrap items-end gap-4 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 p-5"
     >
       <label className="grid gap-2 text-sm">
         Nguồn tiền
         <select
           value={moneySource}
           onChange={(event) => setMoneySource(event.target.value as 'ALL' | 'CASH' | 'BANK')}
-          className="h-10 rounded-lg border px-3"
+          className="rounded-xl border bg-white px-3.5 dark:bg-slate-800"
         >
           <option value="ALL">Tất cả</option>
           <option value="CASH">Tiền mặt</option>
@@ -53,7 +60,7 @@ export function ReportFilters({
           onChange={(event) => setDraft({ ...draft, toDate: event.target.value })}
         />
       </label>
-      <Button type="submit" className="bg-emerald-600 text-white">
+      <Button type="submit" className="bg-emerald-600 text-white hover:bg-emerald-500">
         Xem báo cáo
       </Button>
       <div className="flex flex-wrap gap-2">

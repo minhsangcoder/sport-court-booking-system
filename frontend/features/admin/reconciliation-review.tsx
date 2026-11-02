@@ -21,7 +21,10 @@ export function ReconciliationReview({ id }: { id: string }) {
     [key, setKey] = useState(() => crypto.randomUUID())
   return (
     <Frame title="Rà soát sai lệch lượt đặt">
-      <Link className="text-emerald-700 underline" href="/admin/bookings/reconciliation">
+      <Link
+        className="font-semibold text-emerald-700 hover:underline"
+        href="/admin/bookings/reconciliation"
+      >
         Danh sách đối soát
       </Link>
       <Status loading={r.loading} error={r.error || a.error} />
@@ -33,7 +36,7 @@ export function ReconciliationReview({ id }: { id: string }) {
               Ghi chú không xác nhận lượt đặt hoặc thực thi hoàn tiền.
             </p>
             <Link
-              className="text-emerald-700 underline"
+              className="font-semibold text-emerald-700 hover:underline"
               href={`/admin/bookings/${r.data.bookingId}`}
             >
               Lượt đặt gốc
@@ -63,7 +66,7 @@ export function ReconciliationReview({ id }: { id: string }) {
                 required
                 minLength={20}
                 maxLength={2000}
-                className="rounded-lg border p-3"
+                className="rounded-2xl border border-slate-200/90 p-3"
               />
             </label>
             <Button type="submit" disabled={a.busy}>

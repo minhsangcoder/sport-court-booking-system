@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import { timezoneLabel } from '@/lib/display-labels'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -102,26 +104,33 @@ function Detail({ id, returnTo }: { id: string; returnTo: string }) {
     a = d.application,
     f = d.facility.facility
   return (
-    <main className="mx-auto max-w-5xl px-5 py-10">
-      <Link href={returnTo} className="text-sm text-slate-500">
-        Đăng ký chủ cơ sở
-      </Link>
-      <h1 className="mt-5 break-words text-3xl font-black">{a.businessName}</h1>
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href={returnTo}>
+          Đăng ký chủ cơ sở
+        </Link>
+      }
+      title={a.businessName ?? ''}
+      width="max-w-5xl"
+    >
       <p className="mt-3 font-semibold text-emerald-700">{applicationLabels[a.state]}</p>
       <Link
         href={`/admin/accounts/${a.userId}`}
-        className="mt-3 inline-block text-sm text-emerald-700 underline"
+        className="mt-3 inline-block text-sm font-semibold text-emerald-700 hover:underline"
       >
         Xem tài khoản người đăng ký
       </Link>
-      {a.reason && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm">{a.reason}</p>}
+      {a.reason && <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm">{a.reason}</p>}
       {a.lastError && (
         <p role="alert" className="mt-4 text-red-700">
           {translateError(a.lastError)}
         </p>
       )}
       {d.applicant && (
-        <section aria-label="Tài khoản đăng ký" className="mt-6 rounded-2xl border bg-slate-50 p-5">
+        <section
+          aria-label="Tài khoản đăng ký"
+          className="mt-6 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+        >
           <h2 className="font-bold">Tài khoản đăng ký</h2>
           <dl className="mt-4 grid min-w-0 grid-cols-1 gap-3 text-sm sm:grid-cols-2">
             {[
@@ -171,8 +180,8 @@ function Detail({ id, returnTo }: { id: string; returnTo: string }) {
         ))}
       </div>
       {tab === 'profile' && (
-        <section className="mt-6 min-w-0 space-y-4 rounded-2xl border p-6">
-          <h2 className="text-xl font-bold">{f.name}</h2>
+        <section className="mt-6 min-w-0 space-y-4 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          <h2 className="text-lg font-extrabold tracking-tight">{f.name}</h2>
           <p>
             {f.addressLine}, {f.ward}, {f.province}
           </p>
@@ -200,7 +209,7 @@ function Detail({ id, returnTo }: { id: string; returnTo: string }) {
           <p>{f.description}</p>
           <h3 className="pt-3 text-lg font-bold">{d.facility.courts.length} sân</h3>
           {d.facility.courts.map((c) => (
-            <article key={c.id} className="rounded-lg bg-slate-50 p-4">
+            <article key={c.id} className="rounded-2xl bg-slate-50 p-4">
               <p className="font-semibold">
                 {c.code} · {c.name}
               </p>
@@ -213,8 +222,8 @@ function Detail({ id, returnTo }: { id: string; returnTo: string }) {
         </section>
       )}
       {tab === 'legal' && (
-        <section className="mt-6 rounded-2xl border p-6">
-          <h2 className="text-xl font-bold">Thông tin pháp lý và ngân hàng</h2>
+        <section className="mt-6 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          <h2 className="text-lg font-extrabold tracking-tight">Thông tin pháp lý và ngân hàng</h2>
           <dl className="mt-6 grid gap-5 sm:grid-cols-2">
             {legalFields.map(([key, label]) => (
               <div key={key}>
@@ -231,8 +240,8 @@ function Detail({ id, returnTo }: { id: string; returnTo: string }) {
       {tab === 'documents' && <Documents facilityId={f.id} />}
       {tab === 'history' && <RevisionHistory detail={d} />}
       {a.state === 'PENDING_APPROVAL' && (
-        <section className="mt-8 rounded-2xl border p-6">
-          <h2 className="text-xl font-bold">Quyết định thẩm định</h2>
+        <section className="mt-8 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          <h2 className="text-lg font-extrabold tracking-tight">Quyết định thẩm định</h2>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button
               onClick={() => setAction('APPROVE')}
@@ -288,7 +297,7 @@ function Detail({ id, returnTo }: { id: string; returnTo: string }) {
                   minLength={action === 'APPROVE' ? 1 : 20}
                   maxLength={1200}
                   disabled={busy}
-                  className="min-h-28 rounded-lg border p-3"
+                  className="min-h-28 rounded-2xl border border-slate-200/90 p-3"
                 />
               </label>
               <p className="text-sm text-slate-600">
@@ -337,7 +346,7 @@ function Detail({ id, returnTo }: { id: string; returnTo: string }) {
           {feedback}
         </p>
       )}
-    </main>
+    </BannerPage>
   )
 }
 function Configuration({ detail }: { detail: ApplicationDetail }) {
@@ -360,7 +369,7 @@ function Configuration({ detail }: { detail: ApplicationDetail }) {
       {!snapshot && <p className="text-sm text-slate-500">Hồ sơ chưa gửi thẩm định.</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         {snapshot?.hours?.map((h, i) => (
-          <p key={i} className="rounded-lg bg-slate-50 p-3 text-sm">
+          <p key={i} className="rounded-2xl bg-slate-50 p-3 text-sm">
             Ngày {h.dayOfWeek} · {h.opensAt}–{h.closesAt} · {h.slotMinutes} phút/khung giờ
           </p>
         ))}
@@ -389,11 +398,11 @@ function Documents({ facilityId }: { facilityId: string }) {
           }}
         />
       )}
-      <h2 className="text-xl font-bold">Giấy tờ định danh và địa điểm</h2>
+      <h2 className="text-lg font-extrabold tracking-tight">Giấy tờ định danh và địa điểm</h2>
       {docs.data?.length === 0 && <p className="text-sm text-slate-500">Chưa có tài liệu.</p>}
       {docs.data?.map((d) => (
         <a
-          className="block rounded-xl border p-5 text-sm text-emerald-700 underline"
+          className="block p-5 text-sm font-semibold text-emerald-700 hover:underline rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
           href={d.url}
           target="_blank"
           rel="noopener noreferrer"
@@ -402,10 +411,10 @@ function Documents({ facilityId }: { facilityId: string }) {
           {d.name} · {Math.ceil(d.sizeBytes / 1024)} KB{d.archived ? ' · Bản lưu hồ sơ trước' : ''}
         </a>
       ))}
-      <h2 className="pt-4 text-xl font-bold">Ảnh cơ sở</h2>
+      <h2 className="pt-4 text-lg font-extrabold tracking-tight">Ảnh cơ sở</h2>
       {images.data?.map((m, i) => (
         <a
-          className="block rounded-xl border p-4 text-sm text-emerald-700 underline"
+          className="block rounded-2xl border border-slate-200/90 p-4 text-sm font-semibold text-emerald-700 hover:underline"
           href={m.url}
           target="_blank"
           rel="noopener noreferrer"

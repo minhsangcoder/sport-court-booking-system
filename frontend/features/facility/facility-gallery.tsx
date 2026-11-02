@@ -1,4 +1,5 @@
 'use client'
+import { card, emeraldNotice, primaryPill, outlinePill, redNotice } from './owner-ui'
 import { Button } from '@/components/ui/button'
 import type { useFacilityOverview } from '@/features/facility/use-facility-overview'
 import { AlertCircle, RefreshCw, Trash2, Upload } from 'lucide-react'
@@ -13,14 +14,16 @@ export function FacilityGallery({
 }) {
   const { replacement, upload, busy, setReplacement, message, error, images, remove } = model
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className={`${card} home-rise p-5 sm:p-6`}>
       <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thư viện ảnh cơ sở</h3>
+          <h3 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
+            Thư viện ảnh cơ sở
+          </h3>
           <p className="text-xs text-slate-500">Định dạng JPG/PNG, tối đa 10 MB mỗi ảnh.</p>
         </div>
         {replacement && (
-          <div className="inline-flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">
+          <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
             <AlertCircle size={14} />
             <span>Đang ở chế độ thay thế ảnh</span>
           </div>
@@ -30,7 +33,7 @@ export function FacilityGallery({
       {/* Upload Form */}
       <form
         onSubmit={upload}
-        className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-5 dark:border-slate-700 dark:bg-slate-800/30"
+        className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 p-5 dark:border-slate-700 dark:bg-slate-800/30"
       >
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -39,14 +42,10 @@ export function FacilityGallery({
             accept="image/png,image/jpeg"
             required
             disabled={busy}
-            className="text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-slate-800 hover:file:bg-slate-300"
+            className="text-xs text-slate-600 file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-emerald-800 hover:file:bg-emerald-100"
           />
-          <Button
-            type="submit"
-            disabled={busy}
-            className="bg-emerald-600 hover:bg-emerald-500 text-xs font-bold"
-          >
-            <Upload size={14} className="mr-1.5" />
+          <Button type="submit" disabled={busy} className={primaryPill}>
+            <Upload size={14} />
             <span>{busy ? 'Đang xử lý…' : replacement ? 'Lưu ảnh thay thế' : 'Tải ảnh lên'}</span>
           </Button>
           {replacement && (
@@ -55,7 +54,7 @@ export function FacilityGallery({
               type="button"
               disabled={busy}
               onClick={() => setReplacement(null)}
-              className="text-xs"
+              className={outlinePill}
             >
               Hủy thay ảnh
             </Button>
@@ -65,16 +64,13 @@ export function FacilityGallery({
 
       {/* Feedback Messages */}
       {message && (
-        <p
-          role="status"
-          className="mt-4 rounded-lg bg-emerald-50 p-3 text-xs font-bold text-emerald-700"
-        >
-          ✓ {message}
+        <p role="status" className={`${emeraldNotice} mt-4`}>
+          {message}
         </p>
       )}
       {(error || images.error) && (
-        <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-xs font-bold text-red-700">
-          ⚠ {error || images.error}
+        <p role="alert" className={`${redNotice} mt-4`}>
+          {error || images.error}
         </p>
       )}
 
@@ -89,7 +85,7 @@ export function FacilityGallery({
         {images.data?.map((image) => (
           <figure
             key={image.id}
-            className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-800"
+            className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="relative h-44 w-full bg-slate-100 dark:bg-slate-900">
               <Image
@@ -98,7 +94,7 @@ export function FacilityGallery({
                 alt="Ảnh cơ sở"
                 width={400}
                 height={240}
-                className="h-44 w-full object-cover"
+                className="h-44 w-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
             </div>
             <figcaption className="flex items-center justify-between border-t border-slate-100 p-3 dark:border-slate-700">

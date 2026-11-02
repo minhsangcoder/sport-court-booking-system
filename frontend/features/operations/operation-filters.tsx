@@ -37,7 +37,7 @@ export function OperationFilters({
       <label className="grid gap-2 text-sm">
         Cơ sở
         <select
-          className="rounded-lg border bg-white p-3"
+          className="rounded-2xl border border-slate-200/90 bg-white p-3"
           value={facilityId || ''}
           onChange={(e) => {
             setSelection(e.target.value)
@@ -55,7 +55,7 @@ export function OperationFilters({
       <label className="grid gap-2 text-sm">
         Trạng thái
         <select
-          className="rounded-lg border bg-white p-3"
+          className="rounded-2xl border border-slate-200/90 bg-white p-3"
           value={filter}
           onChange={(e) => {
             setFilter(e.target.value)

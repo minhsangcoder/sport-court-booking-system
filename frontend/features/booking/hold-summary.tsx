@@ -1,4 +1,5 @@
 'use client'
+import { BannerPage } from '@/components/page-banner'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -142,14 +143,16 @@ function Loaded({ id }: { id: string }) {
   const expired = remaining === 0 || h.state !== 'HOLD'
   const timezone = h.quote.timezone
   return (
-    <div className="mx-auto max-w-2xl px-5 py-10">
-      <p className="text-sm font-semibold text-emerald-700">Chọn sân → Tóm tắt → Thanh toán</p>
-      <h1 className="mt-4 text-3xl font-black">Kiểm tra lượt đặt</h1>
+    <BannerPage
+      eyebrow="Chọn sân → Tóm tắt → Thanh toán"
+      title="Kiểm tra lượt đặt"
+      width="max-w-2xl"
+    >
       <div className="my-6">
         <Countdown expiresAt={h.expiresAt} />
       </div>
-      <section className="space-y-4 rounded-2xl border p-6">
-        <h2 className="text-xl font-bold">
+      <section className="space-y-4 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+        <h2 className="text-lg font-extrabold tracking-tight">
           {facility.data?.name || 'Cơ sở'} ·{' '}
           {courts.data?.find((c) => c.id === h.courtId)?.name || 'Sân'}
         </h2>
@@ -189,7 +192,7 @@ function Loaded({ id }: { id: string }) {
           <label className="grid gap-2 text-sm">
             Hình thức đặt sân
             <select
-              className="rounded-lg border p-3"
+              className="rounded-2xl border border-slate-200/90 p-3"
               value={mode}
               onChange={(e) => setMode(e.target.value)}
               disabled={busy}
@@ -262,7 +265,7 @@ function Loaded({ id }: { id: string }) {
                 type="button"
                 onClick={() => setPaymentMethod('BANK_TRANSFER')}
                 disabled={busy}
-                className={`relative flex items-start gap-3.5 rounded-xl border p-4 text-left transition-all ${
+                className={`relative flex items-start gap-3.5 rounded-2xl border border-slate-200/90 p-4 text-left transition-all ${
                   paymentMethod === 'BANK_TRANSFER'
                     ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-600/20 shadow-xs'
                     : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
@@ -302,7 +305,7 @@ function Loaded({ id }: { id: string }) {
                 type="button"
                 disabled={busy || !counter}
                 onClick={() => setPaymentMethod('CASH')}
-                className={`relative flex items-start gap-3.5 rounded-xl border p-4 text-left transition-all ${
+                className={`relative flex items-start gap-3.5 rounded-2xl border border-slate-200/90 p-4 text-left transition-all ${
                   !counter
                     ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-60'
                     : paymentMethod === 'CASH'
@@ -349,7 +352,7 @@ function Loaded({ id }: { id: string }) {
           </div>
         )}
         {error && (
-          <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">
             {error}
           </p>
         )}
@@ -370,6 +373,6 @@ function Loaded({ id }: { id: string }) {
           Hủy giữ chỗ
         </Button>
       </form>
-    </div>
+    </BannerPage>
   )
 }

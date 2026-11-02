@@ -16,6 +16,8 @@ import { useAuth } from '@/lib/auth-context'
 import { AdmissionNotice } from '@/features/booking/admission-notice'
 import { PageBanner } from '@/components/page-banner'
 import { CourtLines } from '@/features/home/home-art'
+import { StepTitle } from './step-title'
+import { CalendarClock, Wallet } from 'lucide-react'
 import {
   amberNotice,
   bannerLink,
@@ -147,6 +149,14 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
   const amount = booking.data?.booking.amount ?? listing.data!.originalAmount
   const starts = booking.data?.booking.startsAt ?? listing.data!.startsAt
   const currency = booking.data?.booking.currency ?? listing.data!.currency
+  const startsLabel = new Date(starts).toLocaleString('vi-VN', {
+    timeZone: booking.data?.booking.priceSnapshot.timezone ?? listing.data?.venue.timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
   if (!real)
     return (
       <div>
@@ -193,98 +203,135 @@ function Loaded({ bookingId, listingId }: { bookingId?: string; listingId?: stri
         title={listingId ? 'Sửa tin chuyển nhượng' : 'Đăng lượt đặt lên chợ'}
         description={`Giá gốc: ${money(amount, currency)}. Sân và lịch chơi được giữ nguyên.`}
       />
-      <div className="home-rise mx-auto max-w-3xl space-y-6 px-4 py-7 sm:px-6 sm:py-9">
-        <AdmissionNotice market />
-        {real && (
-          <BankDestinationForm
-            value={bankDestination}
-            onChange={(revision) => {
-              setBankDestination(revision)
+      <div className="home-rise mx-auto grid max-w-6xl items-start gap-6 px-4 py-7 sm:px-6 sm:py-9 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-6">
+          <AdmissionNotice market />
+          <StepTitle
+            step={1}
+            title="Chọn tài khoản nhận tiền"
+            description="Người mua chuyển tiền trực tiếp vào tài khoản này."
+          />
+          {real && (
+            <BankDestinationForm
+              value={bankDestination}
+              onChange={(revision) => {
+                setBankDestination(revision)
+                setTerms(null)
+                setDraft(null)
+                setConsent(false)
+              }}
+              disabled={busy}
+            />
+          )}
+          <StepTitle
+            step={2}
+            title="Đặt giá và hạn nhận"
+            description="Giá không vượt quá giá gốc, hạn nhận không muộn hơn giờ chơi."
+          />
+          <form
+            onSubmit={quote}
+            onChange={() => {
               setTerms(null)
-              setDraft(null)
               setConsent(false)
             }}
-            disabled={busy}
-          />
-        )}
-        <form
-          onSubmit={quote}
-          onChange={() => {
-            setTerms(null)
-            setConsent(false)
-          }}
-          className={`${card} space-y-5 p-5 sm:p-7 [animation-delay:60ms]`}
-        >
-          <CourtLines className="pointer-events-none absolute -right-20 -top-12 -z-10 w-80 -rotate-6 text-emerald-600/[0.05]" />
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className={fieldLabel}>
-              Giá chuyển nhượng ({currency})
-              <Input
-                name="price"
-                type="number"
-                min={1}
-                max={amount}
-                step={1}
-                required
-                defaultValue={listing.data?.price ?? amount}
-                disabled={busy}
-                className="h-11 rounded-xl"
-              />
-            </label>
-            <label className={fieldLabel}>
-              Hạn nhận lượt đặt
-              <Input
-                name="deadline"
-                type="datetime-local"
-                required
-                max={localInput(starts)}
-                defaultValue={localInput(listing.data?.deadline ?? starts)}
-                disabled={busy}
-                className="h-11 rounded-xl"
-              />
-            </label>
-          </div>
+            className={`${card} space-y-5 p-5 sm:p-7 [animation-delay:60ms]`}
+          >
+            <CourtLines className="pointer-events-none absolute -right-20 -top-12 -z-10 w-80 -rotate-6 text-emerald-600/[0.05]" />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className={fieldLabel}>
+                Giá chuyển nhượng ({currency})
+                <Input
+                  name="price"
+                  type="number"
+                  min={1}
+                  max={amount}
+                  step={1}
+                  required
+                  defaultValue={listing.data?.price ?? amount}
+                  disabled={busy}
+                  className="h-11 rounded-xl"
+                />
+              </label>
+              <label className={fieldLabel}>
+                Hạn nhận lượt đặt
+                <Input
+                  name="deadline"
+                  type="datetime-local"
+                  required
+                  max={localInput(starts)}
+                  defaultValue={localInput(listing.data?.deadline ?? starts)}
+                  disabled={busy}
+                  className="h-11 rounded-xl"
+                />
+              </label>
+            </div>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={busy}
+              className={`${outlinePill} w-full`}
+            >
+              {busy ? 'Đang xử lý…' : 'Xem điều khoản'}
+            </Button>
+          </form>
+          {terms && (
+            <StepTitle
+              step={3}
+              title="Đồng ý điều khoản và đăng tin"
+              description="Tin được đăng ngay sau khi bạn xác nhận."
+            />
+          )}
+          {terms && (
+            <section className={`${card} space-y-5 p-5 sm:p-7`}>
+              <TransferFinanceNotice terms={terms} />
+              <label className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(event) => setConsent(event.target.checked)}
+                  disabled={busy}
+                  className="mt-1 size-4 accent-emerald-600"
+                />
+                Tôi đồng ý điều khoản, chia sẻ tài khoản đã chọn cho người mua và gửi ngân hàng, số
+                tài khoản, số tiền, nội dung tới SePay để tạo QR. Tôi tự kiểm tra tiền thực nhận
+                trước khi bàn giao.
+              </label>
+              <Button
+                type="button"
+                className={`${primaryPill} w-full`}
+                onClick={publish}
+                disabled={!consent || busy}
+              >
+                {busy ? 'Đang lưu…' : listingId ? 'Lưu thay đổi' : 'Đăng tin chuyển nhượng'}
+              </Button>
+            </section>
+          )}
+          {error && (
+            <p
+              role="alert"
+              className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {error}
+            </p>
+          )}
+        </div>
+        <aside className={`${card} space-y-4 p-5 sm:p-6 lg:sticky lg:top-6`}>
+          <h2 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
+            Lượt đặt của bạn
+          </h2>
+          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+            <CalendarClock className="size-4 shrink-0" />
+            {startsLabel}
+          </p>
+          <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <Wallet className="size-4 shrink-0 text-emerald-600" />
+            Giá gốc: <strong className="tabular-nums">{money(amount, currency)}</strong>
+          </p>
           <p className={amberNotice}>
             Người mua chuyển khoản 100% giá đã chốt trực tiếp cho bạn qua QR SePay. Bạn xác nhận đã
             nhận đủ tiền để bàn giao sân; không có phí chuyển nhượng.
           </p>
-          <Button type="submit" variant="outline" disabled={busy} className={outlinePill}>
-            {busy ? 'Đang xử lý…' : 'Xem điều khoản'}
-          </Button>
-        </form>
-        {terms && (
-          <section className={`${card} space-y-5 p-5 sm:p-7`}>
-            <TransferFinanceNotice terms={terms} />
-            <label className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(event) => setConsent(event.target.checked)}
-                disabled={busy}
-                className="mt-1 size-4 accent-emerald-600"
-              />
-              Tôi đồng ý điều khoản, chia sẻ tài khoản đã chọn cho người mua và gửi ngân hàng, số
-              tài khoản, số tiền, nội dung tới SePay để tạo QR. Tôi tự kiểm tra tiền thực nhận trước
-              khi bàn giao.
-            </label>
-            <Button
-              type="button"
-              className={`${primaryPill} w-full`}
-              onClick={publish}
-              disabled={!consent || busy}
-            >
-              {busy ? 'Đang lưu…' : listingId ? 'Lưu thay đổi' : 'Đăng tin chuyển nhượng'}
-            </Button>
-          </section>
-        )}
-        {error && (
-          <p
-            role="alert"
-            className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
-            {error}
-          </p>
-        )}
+        </aside>
       </div>
     </div>
   )

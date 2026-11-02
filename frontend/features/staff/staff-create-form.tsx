@@ -68,7 +68,7 @@ export function StaffCreateForm({
       </div>
 
       {createSuccess && (
-        <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3.5 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+        <div className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-50 p-3.5 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
           <Check size={18} className="text-emerald-600 shrink-0" />
           <span>{createSuccess}</span>
         </div>
@@ -163,7 +163,7 @@ export function StaffCreateForm({
             </div>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 rounded-xl border border-slate-200 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
             {availableCatalog.map((code) => {
               const checked = selectedPermissions.includes(code)
               return (
@@ -206,7 +206,7 @@ export function StaffCreateForm({
               !password ||
               selectedPermissions.length === 0
             }
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md"
+            className="gap-2 bg-emerald-600 hover:bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-full shadow-md"
           >
             <UserPlus size={16} />
             <span>{a.busy ? 'Đang tạo tài khoản…' : 'Tạo tài khoản nhân viên'}</span>

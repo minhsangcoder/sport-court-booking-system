@@ -3,11 +3,13 @@
 import React from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { ChevronRight, MapPin, ArrowLeft, Ticket, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Ticket, CheckCircle2 } from 'lucide-react'
 import { useApi } from '@/lib/use-api'
 import { useAuth } from '@/lib/auth-context'
 import type { Facility } from '@/features/facility/types'
 import type { Booking } from '@/features/booking/types'
+import { PageBanner } from '@/components/page-banner'
+import { bannerLink } from '@/features/transfers/transfer-styles'
 import { DirectionsCard } from './directions-card'
 
 export function FacilityDirectionsPage({
@@ -56,50 +58,23 @@ export function FacilityDirectionsPage({
       : ['🏸 Sân Chuẩn Thi Đấu', '🅿️ Bãi Đỗ Ô Tô & Xe Máy', '❄️ Điều Hòa & Phòng Nghỉ VIP']
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50/50 pb-20">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 pt-6 sm:pt-8">
-        {/* Breadcrumb navigation */}
-        <nav
-          aria-label="Đường dẫn trang"
-          className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 overflow-x-auto whitespace-nowrap pb-2"
-        >
-          <Link href="/" className="hover:text-slate-900 transition">
-            Trang chủ
-          </Link>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-
-          {effectiveBookingId ? (
-            <>
-              <Link href="/customer/bookings" className="hover:text-slate-900 transition">
-                Lịch đặt của tôi
-              </Link>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-              <Link
-                href={`/customer/bookings/${effectiveBookingId}`}
-                className="hover:text-slate-900 transition text-slate-700 font-medium"
-              >
-                Mã {effectiveBookingId.slice(0, 8).toUpperCase()} (Xác nhận)
-              </Link>
-            </>
+    <div className="pb-20">
+      <PageBanner
+        eyebrow={
+          effectiveBookingId ? (
+            <Link href={`/customer/bookings/${effectiveBookingId}`} className={bannerLink}>
+              Lượt đặt {effectiveBookingId.slice(0, 8).toUpperCase()}
+            </Link>
           ) : (
-            <>
-              <Link href="/search" className="hover:text-slate-900 transition">
-                Danh sách sân
-              </Link>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-              <Link
-                href={`/facilities/${facilityId}`}
-                className="hover:text-slate-900 transition text-slate-700 font-medium"
-              >
-                {venueName}
-              </Link>
-            </>
-          )}
-
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          <span className="text-rose-700 font-semibold">Chỉ đường & Vị trí</span>
-        </nav>
-
+            <Link href={`/facilities/${facilityId}`} className={bannerLink}>
+              Chi tiết cơ sở
+            </Link>
+          )
+        }
+        title={venueName}
+        description={`Chỉ đường đến ${addressLine}, ${ward}, ${province}`}
+      />
+      <div className="mx-auto max-w-5xl px-4 pt-3 sm:px-6 sm:pt-5">
         {/* Active Booking Banner if already booked/confirmed */}
         {effectiveBookingId && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-emerald-50 border border-emerald-200/90 p-4 text-sm text-emerald-900 shadow-xs">
@@ -129,7 +104,7 @@ export function FacilityDirectionsPage({
         )}
 
         {/* Venue Info Top Card */}
-        <div className="mt-5 rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xs">
+        <div className="mt-5 rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xl shadow-slate-900/5 home-rise sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-xs font-bold tracking-widest text-slate-500 uppercase">
               CƠ SỞ THỂ THAO
@@ -140,23 +115,12 @@ export function FacilityDirectionsPage({
             </span>
           </div>
 
-          <h1 className="mt-3 text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
-            {venueName}
-          </h1>
-
-          <div className="mt-3 flex items-start gap-2 text-slate-600">
-            <MapPin className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
-            <p className="text-sm sm:text-base leading-relaxed">
-              {addressLine}, {ward}, {province}
-            </p>
-          </div>
-
           {/* Amenities pill tags */}
           <div className="mt-5 flex flex-wrap gap-2 pt-2 border-t border-slate-100">
             {amenities.map((item, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-3.5 py-1.5 text-xs font-medium text-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 text-xs font-medium text-slate-700"
               >
                 {item}
               </span>

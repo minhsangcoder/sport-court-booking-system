@@ -166,7 +166,7 @@ export function AccountTable({ model }: { model: Pick<ReturnType<typeof useAccou
                     <td className="py-3.5 px-4 text-right">
                       <Link
                         href={`/admin/accounts/${u.id}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-sm hover:border-emerald-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       >
                         <span>Quản trị</span>
                         <ArrowRight size={12} />

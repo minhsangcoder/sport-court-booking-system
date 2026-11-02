@@ -61,6 +61,25 @@ export function PageBanner({
   )
 }
 
+/** A whole screen: the banner, then its content in the standard page column. */
+export function BannerPage({
+  width = 'max-w-6xl',
+  className = '',
+  children,
+  ...banner
+}: Omit<Parameters<typeof PageBanner>[0], 'children'> & {
+  width?: string
+  className?: string
+  children?: ReactNode
+}) {
+  return (
+    <>
+      <PageBanner {...banner} />
+      <div className={`mx-auto ${width} px-4 py-7 sm:px-6 sm:py-9 ${className}`}>{children}</div>
+    </>
+  )
+}
+
 /** Shared button styles for banner actions. */
 export const bannerPrimary =
   'inline-flex h-10 items-center gap-1.5 rounded-full bg-emerald-500 px-5 text-sm font-bold text-slate-950 shadow-[0_8px_24px_-6px_rgba(16,185,129,0.6)] transition hover:bg-emerald-400'

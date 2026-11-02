@@ -77,6 +77,7 @@ class IdentityServiceIntegrationTest {
 
     @Autowired AuthService authService;
     @Autowired ProfileService profileService;
+    @Autowired com.sporthub.identity.service.AvatarService avatars;
     @Autowired UserRepository userRepository;
     @Autowired OtpCodeRepository otpRepository;
     @Autowired RefreshTokenRepository refreshRepository;
@@ -321,6 +322,49 @@ class IdentityServiceIntegrationTest {
                 new UpdateProfileRequest(null, null, null, null, null), metadata))
                 .isInstanceOf(IdentityException.class)
                 .hasMessageContaining("At least one");
+    }
+
+    @Test
+    void uploadedAvatarIsPublicSquareAndRetiredWhenReplaced() throws Exception {
+        User user = activate(uniqueEmail("avatar"));
+        var image = new java.awt.image.BufferedImage(800, 400, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        var png = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", png);
+        var file = new org.springframework.mock.web.MockMultipartFile("file", "photo.png", "image/png", png.toByteArray());
+
+        String first = avatars.replace(user.getId(), file, metadata).avatarUrl();
+        assertThat(first).startsWith(com.sporthub.identity.service.AvatarService.URL_PREFIX);
+        byte[] served = http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(first))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentType("image/jpeg"))
+                .andReturn().getResponse().getContentAsByteArray();
+        var stored = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(served));
+        assertThat(stored.getWidth()).isEqualTo(400);
+        assertThat(stored.getHeight()).isEqualTo(400);
+
+        String second = avatars.replace(user.getId(), file, metadata).avatarUrl();
+        assertThat(second).isNotEqualTo(first);
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(first)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+
+        // Saving the profile form resends the current address and must keep the photo.
+        profileService.update(user.getId(), new UpdateProfileRequest(null, null, null, second, null), metadata);
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(second)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        profileService.update(user.getId(), new UpdateProfileRequest(null, null, null, "https://cdn.sporthub.local/preset.png", null), metadata);
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(second)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+
+        String third = avatars.replace(user.getId(), file, metadata).avatarUrl();
+        assertThat(avatars.remove(user.getId(), metadata).avatarUrl()).isNull();
+        http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(third)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    void avatarRejectsAFileThatIsNotAnImage() {
+        User user = activate(uniqueEmail("avatar-bad"));
+        var file = new org.springframework.mock.web.MockMultipartFile("file", "a.png", "image/png", "<svg></svg>".getBytes());
+        assertThatThrownBy(() -> avatars.replace(user.getId(), file, metadata))
+                .isInstanceOf(IdentityException.class)
+                .hasMessageContaining("JPEG or PNG");
+        assertThat(profileService.get(user.getId()).avatarUrl()).isNull();
     }
 
     private User activate(String email) {

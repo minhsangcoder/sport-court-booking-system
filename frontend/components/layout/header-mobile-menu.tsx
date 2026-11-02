@@ -1,4 +1,5 @@
 'use client'
+import { UserAvatar } from '@/components/user-avatar'
 import {
   ArrowLeftRight,
   Briefcase,
@@ -62,9 +63,11 @@ export function HeaderMobileMenu({ model }: { model: HeaderModel }) {
       ) : (
         <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/60">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white shrink-0 dark:bg-emerald-700">
-              {user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-            </div>
+            <UserAvatar
+              name={user.fullName}
+              src={user.avatarUrl}
+              className="size-8 rounded-md text-xs"
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">
                 {user.fullName}

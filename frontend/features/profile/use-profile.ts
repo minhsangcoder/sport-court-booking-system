@@ -23,8 +23,11 @@ export function useProfile() {
   if (user !== initialUser) {
     setInitialUser(user)
     if (user) {
-      setFullName(user.fullName || '')
-      setDateOfBirth(user.dateOfBirth || '')
+      // A photo upload refreshes the session; only overwrite the fields that actually changed.
+      const switched = user.id !== initialUser?.id
+      if (switched || user.fullName !== initialUser?.fullName) setFullName(user.fullName || '')
+      if (switched || user.dateOfBirth !== initialUser?.dateOfBirth)
+        setDateOfBirth(user.dateOfBirth || '')
       setAvatarUrl(user.avatarUrl || '')
     }
   }

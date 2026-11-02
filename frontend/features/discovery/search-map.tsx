@@ -114,7 +114,7 @@ function MapCanvas({
         </p>
       )}
       {tileError && (
-        <p role="alert" className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+        <p role="alert" className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
           Không tải được một phần bản đồ nền. Bạn vẫn có thể chọn cơ sở bên dưới hoặc dùng danh sách
           sân.
         </p>
@@ -157,7 +157,10 @@ export function SearchMap({ results }: { results: DiscoveryResult[] }) {
 
   if (!selected)
     return (
-      <p role="status" className="mt-6 rounded-2xl border bg-white p-6 text-slate-600">
+      <p
+        role="status"
+        className="mt-6 p-6 text-slate-600 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+      >
         Các sân phù hợp chưa có tọa độ bản đồ. Chọn “Danh sách” để xem địa chỉ và giờ chơi.
       </p>
     )
@@ -198,7 +201,7 @@ export function SearchMap({ results }: { results: DiscoveryResult[] }) {
               type="button"
               aria-pressed={selected.facility.id === point.facility.id}
               onClick={() => select(point.facility.id)}
-              className={`rounded-xl border p-4 text-left ${selected.facility.id === point.facility.id ? 'border-emerald-700 bg-emerald-50' : 'hover:bg-slate-50'}`}
+              className={`rounded-2xl border border-slate-200/90 p-4 text-left ${selected.facility.id === point.facility.id ? 'border-emerald-700 bg-emerald-50' : 'hover:bg-slate-50'}`}
             >
               <span className="flex items-center gap-2 font-semibold">
                 <MapPin size={16} className="shrink-0 text-emerald-700" />
@@ -210,7 +213,10 @@ export function SearchMap({ results }: { results: DiscoveryResult[] }) {
             </button>
           ))}
         </div>
-        <div className="min-w-0 rounded-2xl bg-slate-50 p-5" aria-live="polite">
+        <div
+          className="min-w-0 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+          aria-live="polite"
+        >
           <h3 className="text-lg font-bold">
             <Link href={`/facilities/${selected.facility.id}`} className="hover:underline">
               {selected.facility.name}
@@ -221,7 +227,10 @@ export function SearchMap({ results }: { results: DiscoveryResult[] }) {
           </p>
           <div className="mt-4 grid gap-3">
             {selected.courts.map((court) => (
-              <article key={court.courtId} className="rounded-xl border bg-white p-4">
+              <article
+                key={court.courtId}
+                className="rounded-2xl border border-slate-200/90 bg-white p-4"
+              >
                 <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
                   {court.sportName} · {court.date}
                 </p>

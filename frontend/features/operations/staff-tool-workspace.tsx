@@ -32,7 +32,7 @@ export function Workspace({ id, tool }: { id: string; tool: StaffTool }) {
   const base = `/staff/facilities/${id}`
   return (
     <Frame title="Cấu hình vận hành được phân quyền">
-      <Link className="text-emerald-700 underline" href="/staff/schedule">
+      <Link className="font-semibold text-emerald-700 hover:underline" href="/staff/schedule">
         Về lịch cơ sở được phân công
       </Link>
       <Status loading={access.loading || facility.loading} error={access.error || facility.error} />
@@ -41,7 +41,7 @@ export function Workspace({ id, tool }: { id: string; tool: StaffTool }) {
       )}
       {facility.data && (
         <FacilityWorkspace facility={facility.data} reload={facility.reload} basePath={base}>
-          <h2 className="text-xl font-bold">{facility.data.name}</h2>
+          <h2 className="text-lg font-extrabold tracking-tight">{facility.data.name}</h2>
           <nav className="flex flex-wrap gap-3" aria-label="Quyền vận hành">
             {(
               [

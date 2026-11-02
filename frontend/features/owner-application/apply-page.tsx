@@ -1,4 +1,5 @@
 'use client'
+import { BannerPage } from '@/components/page-banner'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -33,12 +34,14 @@ function Create() {
 
   if (user?.roles.includes('OWNER'))
     return (
-      <div className="mx-auto max-w-3xl p-8">
-        <h1 className="text-3xl font-bold">Bạn đã có quyền chủ cơ sở</h1>
-        <Link href="/owner/facilities" className="mt-5 block text-emerald-700 underline">
+      <BannerPage title="Bạn đã có quyền chủ cơ sở" width="max-w-3xl">
+        <Link
+          href="/owner/facilities"
+          className="mt-5 block font-semibold text-emerald-700 hover:underline"
+        >
           Quản lý cơ sở của tôi
         </Link>
-      </div>
+      </BannerPage>
     )
 
   function handlePrimaryChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -124,22 +127,21 @@ function Create() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-5 py-10">
-      <p className="text-sm font-bold text-emerald-700">TRỞ THÀNH ĐỐI TÁC SPORTHUB</p>
-      <h1 className="mt-3 text-3xl font-black">Đăng ký trở thành chủ cơ sở</h1>
-      <p className="mt-4 text-slate-600">
-        Tạo hồ sơ nháp, sau đó khai báo sân, lịch mở cửa, bảng giá và tài liệu cho cơ sở đầu tiên
-        trước khi gửi quản trị viên thẩm định.
-      </p>
+    <BannerPage
+      eyebrow="TRỞ THÀNH ĐỐI TÁC SPORTHUB"
+      title="Đăng ký trở thành chủ cơ sở"
+      description="Tạo hồ sơ nháp, sau đó khai báo sân, lịch mở cửa, bảng giá và tài liệu cho cơ sở đầu tiên trước khi gửi quản trị viên thẩm định."
+      width="max-w-4xl"
+    >
       <Link
         href="/owner/application"
-        className="mt-4 inline-block text-sm text-emerald-700 underline"
+        className="mt-4 inline-block text-sm font-semibold text-emerald-700 hover:underline"
       >
         Xem hồ sơ đã đăng ký
       </Link>
 
       <form onSubmit={submit} className="mt-8 space-y-8">
-        <fieldset className="grid min-w-0 grid-cols-1 gap-5 rounded-2xl border bg-white p-6 md:grid-cols-2">
+        <fieldset className="grid min-w-0 grid-cols-1 gap-5 p-6 md:grid-cols-2 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           <legend className="px-2 text-xl font-bold">Người đại diện và thông tin pháp lý</legend>
           <LegalFields busy={busy} />
           <p className="text-xs text-slate-500 md:col-span-2">
@@ -148,7 +150,7 @@ function Create() {
           </p>
         </fieldset>
 
-        <fieldset className="grid min-w-0 grid-cols-1 gap-5 rounded-2xl border bg-white p-6 md:grid-cols-2">
+        <fieldset className="grid min-w-0 grid-cols-1 gap-5 p-6 md:grid-cols-2 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           <legend className="px-2 text-xl font-bold">Cơ sở đầu tiên</legend>
           <FacilityFields
             nameField="facilityName"
@@ -159,7 +161,7 @@ function Create() {
         </fieldset>
 
         {/* Mục 5: Thêm ảnh cơ sở gồm 1 ảnh chính và các ảnh mô tả */}
-        <fieldset className="grid min-w-0 grid-cols-1 gap-6 rounded-2xl border bg-white p-6 md:grid-cols-2">
+        <fieldset className="grid min-w-0 grid-cols-1 gap-6 p-6 md:grid-cols-2 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           <legend className="px-2 text-xl font-bold">Hình ảnh cơ sở</legend>
 
           {/* 1. Ảnh chính (hiển thị ở mục tìm sân) */}
@@ -184,7 +186,7 @@ function Create() {
                 required
                 disabled={busy}
                 onChange={handlePrimaryChange}
-                className="text-xs text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-emerald-700 cursor-pointer"
+                className="text-xs text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-emerald-600 cursor-pointer"
               />
               {primaryPreview && (
                 <div className="relative h-44 w-full overflow-hidden rounded-xl border border-emerald-300 bg-slate-900 shadow-sm">
@@ -196,7 +198,7 @@ function Create() {
                     alt="Xem trước ảnh chính"
                     className="h-full w-full object-cover"
                   />
-                  <span className="absolute top-2 left-2 rounded-md bg-emerald-700/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-xs">
+                  <span className="absolute top-2 left-2 rounded-full bg-emerald-600/90 px-2 py-0.5 text-[11px] font-bold text-white shadow-xs">
                     ★ Ảnh chính (Tìm sân)
                   </span>
                 </div>
@@ -223,7 +225,7 @@ function Create() {
                 multiple
                 disabled={busy}
                 onChange={handleGalleryChange}
-                className="text-xs text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-xs file:font-bold file:text-slate-800 hover:file:bg-slate-200 cursor-pointer"
+                className="text-xs text-slate-600 file:mr-3 file:rounded-full file:border border-slate-200-0 file:bg-slate-100 file:px-4 file:py-2 file:text-xs file:font-bold file:text-slate-800 hover:file:bg-slate-200 cursor-pointer"
               />
               {galleryPreviews.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto rounded-xl border border-slate-200 p-2 bg-slate-50">
@@ -260,6 +262,6 @@ function Create() {
           {busy ? 'Đang tạo hồ sơ và lưu ảnh…' : 'Tạo hồ sơ và tiếp tục'}
         </Button>
       </form>
-    </main>
+    </BannerPage>
   )
 }

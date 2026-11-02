@@ -31,14 +31,14 @@ export function ProfileIdentity({
     getRoleBadge,
   } = model
   return (
-    <div className="mt-6 relative z-10 rounded-xl border border-slate-200 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+    <div className="mt-6 relative z-10 p-5 sm:p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <ProfileAvatar model={model} />
 
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
+              <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-xl">
                 {fullName || user?.fullName || 'Người dùng SportHub'}
               </h2>
               {user?.status === 'ACTIVE' && (
@@ -77,7 +77,7 @@ export function ProfileIdentity({
         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 md:border-t-0 md:pt-0">
           <Link
             href="/customer/bookings"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-2xs transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
           >
             <CalendarCheck2 size={14} strokeWidth={1.75} className="text-emerald-700" />
             Lịch đặt của tôi
@@ -96,7 +96,7 @@ export function ProfileIdentity({
           {user?.roles?.includes('OWNER') && (
             <Link
               href="/owner"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-emerald-800"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-emerald-600 px-3 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-emerald-500"
             >
               <Building2 size={14} strokeWidth={1.75} />
               Kênh Chủ sân
@@ -106,7 +106,7 @@ export function ProfileIdentity({
           {user?.roles?.includes('STAFF') && (
             <Link
               href="/staff"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-800 shadow-2xs transition-colors hover:bg-slate-100"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-800 shadow-2xs transition-colors hover:bg-slate-100"
             >
               <Shield size={14} strokeWidth={1.75} className="text-slate-600" />
               Kênh Nhân viên

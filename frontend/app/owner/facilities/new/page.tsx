@@ -1,3 +1,17 @@
+import { BannerPage } from '@/components/page-banner'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { FacilityForm } from '@/features/facility/facility-form'
-export default function Page(){return <RequireAuth roles={['OWNER']}><div className="mx-auto max-w-4xl px-5 py-10"><h1 className="mb-7 text-3xl font-bold">Tạo cơ sở</h1><FacilityForm/></div></RequireAuth>}
+export default function Page() {
+  return (
+    <RequireAuth roles={['OWNER']}>
+      <BannerPage
+        eyebrow="Không gian chủ cơ sở"
+        title="Tạo cơ sở"
+        description="Khai báo thông tin cơ bản, vị trí và ảnh của cơ sở."
+        width="max-w-4xl"
+      >
+        <FacilityForm />
+      </BannerPage>
+    </RequireAuth>
+  )
+}

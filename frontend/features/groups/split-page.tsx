@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { RequireAuth } from '@/features/auth/require-auth'
@@ -72,16 +74,25 @@ function Loaded({ id }: { id: string }) {
     g.state !== 'GROUP_PENDING'
   if (g.ownerId !== user?.id)
     return (
-      <p className="p-8" role="alert">
-        Chỉ người tổ chức được chia tiền nhóm.
-      </p>
+      <div className="mx-auto max-w-2xl px-4 py-9 sm:px-6">
+        <p
+          role="alert"
+          className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-sm text-amber-950/85 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-100/85"
+        >
+          Chỉ người tổ chức được chia tiền nhóm.
+        </p>
+      </div>
     )
   return (
-    <div className="mx-auto max-w-2xl px-5 py-10">
-      <Link className="text-sm text-slate-500" href={`/customer/groups/${id}`}>
-        {g.name} / Phân chia chi phí
-      </Link>
-      <h1 className="mt-5 text-3xl font-black">Chốt danh sách và chia tiền</h1>
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href={`/customer/groups/${id}`}>
+          {g.name} / Phân chia chi phí
+        </Link>
+      }
+      title="Chốt danh sách và chia tiền"
+      width="max-w-2xl"
+    >
       <p className="mt-3 text-slate-500">
         Tổng tiền giữ nguyên: {money(g.booking.amount)}. Phần dư chia đều được cộng cho người tổ
         chức.
@@ -90,7 +101,7 @@ function Loaded({ id }: { id: string }) {
         <label className="grid gap-2 text-sm">
           Cách chia
           <select
-            className="rounded-lg border p-3"
+            className="rounded-2xl border border-slate-200/90 p-3"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
             disabled={busy || locked}
@@ -99,7 +110,7 @@ function Loaded({ id }: { id: string }) {
             <option value="CUSTOM">Tùy chỉnh từng người</option>
           </select>
         </label>
-        <div className="divide-y rounded-2xl border">
+        <div className="divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           {g.members.map((m) => (
             <label key={m.id} className="flex items-center justify-between gap-4 p-5">
               <span>{m.displayName}</span>
@@ -126,7 +137,7 @@ function Loaded({ id }: { id: string }) {
           </p>
         )}
         {(error || locked) && (
-          <p role="alert" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+          <p role="alert" className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
             {error || 'Không thể thay đổi phân bổ khi thanh toán đã bắt đầu hoặc nhóm đã kết thúc.'}
           </p>
         )}
@@ -138,6 +149,6 @@ function Loaded({ id }: { id: string }) {
           Xác nhận phân chia và khóa danh sách
         </Button>
       </form>
-    </div>
+    </BannerPage>
   )
 }

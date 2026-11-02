@@ -14,7 +14,7 @@ export function LocationUrlInput({
   const { mapUrlInput, setMapUrlInput, urlResolving, urlMessage, setUrlMessage, handleApplyUrl } =
     useLocationUrl(disabled, onApply)
   return (
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5 space-y-2.5">
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3.5 space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-1.5">
         <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
           <Link2 className="h-4 w-4 text-emerald-700" />
@@ -62,7 +62,7 @@ export function LocationUrlInput({
           type="button"
           onClick={() => void handleApplyUrl()}
           disabled={disabled || urlResolving || !mapUrlInput.trim()}
-          className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-600 px-4 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50 transition-colors shrink-0"
+          className="inline-flex h-9 items-center justify-center rounded-full bg-emerald-600 px-4 text-xs font-bold text-white shadow-xs hover:bg-emerald-600 disabled:opacity-50 transition-colors shrink-0"
         >
           {urlResolving ? 'Đang đọc đường dẫn…' : 'Xác định vị trí'}
         </button>

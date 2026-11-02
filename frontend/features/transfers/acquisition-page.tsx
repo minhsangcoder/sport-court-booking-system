@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useRef, useState } from 'react'
@@ -126,16 +128,20 @@ function Loaded({ id }: { id: string }) {
   const a = current ?? r.data
   if (a.protocol === 'PEER_RESALE_V1') return <PeerAcquisitionPage id={id} />
   return (
-    <div className="mx-auto max-w-xl px-5 py-10">
-      <Link href="/customer/transfers" className="text-sm text-slate-500">
-        Chuyển nhượng / Giao dịch
-      </Link>
-      <h1 className="mt-6 text-3xl font-black">{transferStates[a.state]}</h1>
-      <section className="mt-6 space-y-4 rounded-2xl border p-6">
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href="/customer/transfers">
+          Chuyển nhượng / Giao dịch
+        </Link>
+      }
+      title={transferStates[a.state] ?? ''}
+      width="max-w-xl"
+    >
+      <section className="mt-6 space-y-4 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <p className="text-3xl font-bold text-emerald-700">{money(a.amount, a.currency)}</p>
         <p className="break-all text-xs text-slate-500">Mã giao dịch {id}</p>
         <Link
-          className="block text-sm text-emerald-700 underline"
+          className="block text-sm font-semibold text-emerald-700 hover:underline"
           href={`/transfers/${a.listingId}`}
         >
           Xem sân và khung giờ
@@ -184,6 +190,6 @@ function Loaded({ id }: { id: string }) {
           Giao dịch đang đối soát. Quyền sử dụng chỉ được cấp sau khi bàn giao thành công.
         </p>
       )}
-    </div>
+    </BannerPage>
   )
 }

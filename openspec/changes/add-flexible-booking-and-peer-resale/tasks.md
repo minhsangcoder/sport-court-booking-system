@@ -320,3 +320,33 @@ Kết quả mục 33 (30/10/2026): toàn bộ backend 2.700 test case đã chạ
 - [x] 38.2 Frontend: bộ lọc quận/huyện cũ và phường/xã theo tỉnh.
 - [ ] 38.3 Đối chiếu bảng quận/huyện cũ của Hà Nội với Nghị quyết 1656/NQ-UBTVQH15; bổ sung tỉnh khác nếu cần.
 - [ ] 38.4 Kiểm tra trực quan trang tìm sân trên trình duyệt.
+
+## 39. Lịch đặt của tôi theo thiết kế Home (2026-10-30)
+
+- [x] 39.1 Frontend: thiết kế lại `my-bookings.tsx`, thêm tab và tên cơ sở/sân.
+
+## 40. Cơ sở của tôi và đăng/xem tin chuyển nhượng theo thiết kế Home (2026-10-30)
+
+- [x] 40.1 Frontend: khung chủ cơ sở, bảng giá, các màn cấu hình và báo cáo.
+- [x] 40.2 Frontend: đăng tin, chi tiết tin, tài khoản nhận tiền; sửa câu chữ cũ.
+
+## 41. Chi tiết vận hành lượt đặt theo thiết kế Home (2026-10-31)
+
+- [x] 41.1 Frontend: thiết kế lại chi tiết vận hành và điểm danh thành viên.
+
+## 42. Đồng bộ các màn còn lại theo thiết kế Home (2026-10-31)
+
+- [x] 42.1 Frontend: nút, ô nhập, khung trang dùng chung và điều hướng quản trị theo Home.
+- [x] 42.2 Frontend: chuyển các màn còn lại sang banner, thẻ và pill của Home.
+- [ ] 42.3 Kiểm tra trực quan các màn cần dữ liệu đang hoạt động: giữ chỗ, QR thanh toán, phiên mua chuyển nhượng, chia tiền nhóm của người tổ chức.
+
+## 43. Kênh nhận tiền SePay theo ba bước và trạng thái webhook (2026-10-31)
+
+- [x] 43.1 Backend: V20, ghi phiên bản đã xác thực vào biên nhận, trả `lastWebhookAt`.
+- [x] 43.2 Frontend: ba bước, tạo và sao chép khóa, sao chép địa chỉ, thông tin chỉ đọc và "Đổi tài khoản".
+- [ ] 43.3 Kiểm tra với SePay Live: một giao dịch thật làm trạng thái chuyển sang "Đã nhận webhook".
+
+## 44. Ảnh đại diện tải lên và màn tài khoản nhận tiền theo thiết kế Home (2026-11-01)
+
+- [x] 44.1 Backend: V17, tải/xóa/đọc ảnh đại diện, gateway cho phép đọc công khai.
+- [x] 44.2 Frontend: chọn, xem trước, lưu ảnh; thông tin ngân hàng chỉ đọc kèm "Chỉnh sửa"; đầu trang hiện ảnh.

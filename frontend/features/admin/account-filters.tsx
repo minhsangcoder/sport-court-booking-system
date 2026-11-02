@@ -11,7 +11,7 @@ export function AccountFilters({
 }) {
   const { search, setPath } = model
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
       <form
         onSubmit={search}
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
@@ -70,7 +70,7 @@ export function AccountFilters({
         <div className="flex gap-2">
           <Button
             type="submit"
-            className="h-11 flex-1 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold rounded-xl"
+            className="h-11 flex-1 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold"
           >
             <Filter size={14} className="mr-1.5" />
             <span>Tra cứu ngay</span>

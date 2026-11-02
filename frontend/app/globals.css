@@ -141,6 +141,25 @@
   h1, h2, h3, h4 {
     letter-spacing: -0.02em;
   }
+  input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range']),
+  select,
+  textarea {
+    border-radius: 0.75rem;
+    border-color: var(--color-slate-200);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .dark input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range']),
+  .dark select,
+  .dark textarea {
+    border-color: var(--color-slate-700);
+  }
+  input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'], [type='range']):focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    border-color: var(--color-emerald-500);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-emerald-500) 20%, transparent);
+  }
 }
 
 /* Custom modern SaaS utilities */
@@ -281,4 +300,37 @@
   .hl-word { animation: none; opacity: 1; }
   .hl-flow { animation: none; }
   .hl-stroke { animation: none; stroke-dashoffset: 0; }
+}
+
+/* Owner workspace: Home-style fields and pill buttons */
+.owner-workspace input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden']),
+.owner-workspace select {
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+}
+.owner-workspace input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden']),
+.owner-workspace select,
+.owner-workspace textarea {
+  border-color: var(--color-slate-200);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.owner-workspace textarea {
+  border-radius: 0.75rem;
+}
+.dark .owner-workspace input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden']),
+.dark .owner-workspace select,
+.dark .owner-workspace textarea {
+  border-color: var(--color-slate-700);
+}
+.owner-workspace input:focus-visible,
+.owner-workspace select:focus-visible,
+.owner-workspace textarea:focus-visible {
+  border-color: var(--color-emerald-500);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-emerald-500) 20%, transparent);
+}
+.owner-workspace [data-slot='button'] {
+  min-height: 2.5rem;
+  border-radius: 9999px;
+  padding-inline: 1.25rem;
 }

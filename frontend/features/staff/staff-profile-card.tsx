@@ -25,7 +25,7 @@ export function StaffProfileCard({
   })
   const { setResettingPassword, resettingPassword, a, version, passwordSuccess } = model
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900">
+    <div className="p-5 transition-all hover:border-slate-300 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2.5">

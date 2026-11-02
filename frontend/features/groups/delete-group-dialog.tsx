@@ -57,7 +57,7 @@ export function DeleteGroupDialog({
           khỏi danh sách Nhóm đặt sân của bạn.
         </p>
 
-        <div className="mt-3.5 flex items-start gap-2.5 rounded-xl bg-amber-50 p-3 border border-amber-200/80 text-xs text-amber-900 leading-relaxed">
+        <div className="mt-3.5 flex items-start gap-2.5 rounded-2xl bg-amber-50 p-3 border border-amber-200/80 text-xs text-amber-900 leading-relaxed">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
           <span>
             Nhóm sẽ bị ẩn khỏi trang của bạn. Bạn vẫn có thể xem lại hoặc khôi phục bất cứ lúc nào

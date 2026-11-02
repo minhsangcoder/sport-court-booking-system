@@ -142,3 +142,27 @@ Xóa code và API chứng từ, hồ sơ tiền, phân xử của Owner ở back
 ## 38. Tìm sân theo quận/huyện cũ và phường/xã (2026-10-30)
 
 Địa chỉ chỉ lưu tỉnh và phường/xã hiện hành, nhưng người dùng vẫn tìm theo quận/huyện cũ. Trang tìm sân có thêm bộ lọc "Quận / huyện (trước sáp nhập)" và "Phường / xã". Ô tìm kiếm không phân biệt dấu và hiểu tên quận/huyện cũ trong câu, ví dụ "Quận Hà Đông", "nam tu liem". Một quận cũ khớp mọi phường mới nhận phần địa bàn của quận đó, nên một phường có thể thuộc nhiều quận cũ. Bảng đối chiếu hiện chỉ có Hà Nội (`legacy-districts.json`); tỉnh khác lọc theo phường/xã và từ khóa.
+
+## 39. Lịch đặt của tôi theo thiết kế Home (2026-10-30)
+
+Trang "Lịch đặt của tôi" dùng token, thẻ, pill và hiệu ứng của Home. Mỗi thẻ hiển thị tên cơ sở, tên sân, khu vực, giờ bắt đầu và kết thúc; màu trạng thái khác nhau theo trạng thái. Danh sách có các tab Tất cả, Sắp tới, Chờ thanh toán, Đã qua. Không đổi API, dữ liệu hay nghiệp vụ đặt sân.
+
+## 40. Cơ sở của tôi và đăng/xem tin chuyển nhượng theo thiết kế Home (2026-10-30)
+
+Không gian chủ cơ sở dùng banner, thẻ, pill và hiệu ứng của Home; form bảng giá chia ba bước, nút lưu và xem thử gom ở khung riêng. Màn đăng tin và chi tiết tin chuyển nhượng chia hai cột, nút thao tác nằm ở khung bên phải. Câu chữ còn nhắc nộp ảnh, mã giao dịch hoặc chủ cơ sở phân xử được sửa theo mục 36. Không đổi API, dữ liệu hay nghiệp vụ.
+
+## 41. Chi tiết vận hành lượt đặt theo thiết kế Home (2026-10-31)
+
+Màn chi tiết vận hành của Owner/Staff dùng banner, thẻ, pill và hiệu ứng của Home, hiển thị tên cơ sở và sân. Người thực hiện hiển thị "Bạn" hoặc mã ngắn; nguồn thay đổi không có nhãn được ẩn. Không đổi API, dữ liệu, quyền hay nghiệp vụ.
+
+## 42. Đồng bộ các màn còn lại theo thiết kế Home (2026-10-31)
+
+Các màn chưa theo thiết kế Home được đồng bộ banner, thẻ, pill và hiệu ứng: toàn bộ quản trị (một kiểu điều hướng dạng pill, bỏ thanh bên riêng của màn tài khoản), danh sách vận hành và lịch sân của Owner/Staff, hồ sơ cá nhân, ngân hàng nhận tiền, chi tiết cơ sở, chỉ đường, đăng ký và hồ sơ chủ cơ sở, tham gia/mời/chia tiền nhóm, kiểm tra lượt đặt, thanh toán, yêu thích, lời mời nhân viên. Nút và ô nhập dùng chung theo kiểu Home. Không đổi API, dữ liệu, quyền hay nghiệp vụ.
+
+## 43. Kênh nhận tiền SePay theo ba bước và trạng thái webhook (2026-10-31)
+
+Màn Kênh nhận tiền chia ba bước: liên kết ngân hàng trên SePay, nhập tài khoản, tạo webhook. Owner có nút tạo và sao chép khóa API, sao chép địa chỉ webhook. Kênh đã lưu hiện thông tin chỉ đọc kèm nút "Đổi tài khoản". "Đã nhận webhook" chỉ hiện khi có webhook hợp lệ được xác thực bằng khóa của phiên bản hiện tại; đổi khóa thì trạng thái quay về chưa nhận. API đọc kênh trả thêm `lastWebhookAt`; biên nhận webhook ghi thêm phiên bản đã xác thực (cột mới, dữ liệu cũ giữ nguyên). Không đổi quy tắc xác thực, xác nhận tiền hay nghiệp vụ đặt sân.
+
+## 44. Ảnh đại diện tải lên và màn tài khoản nhận tiền theo thiết kế Home (2026-11-01)
+
+Customer tải được ảnh đại diện từ thiết bị: chọn, xem trước, rồi mới lưu; có thể xóa. Ảnh JPG/PNG tối đa 10 MB, được cắt vuông, tối đa 512px, mã hóa lại để bỏ metadata, lưu trong cơ sở dữ liệu identity (V17) và phục vụ công khai qua địa chỉ ngẫu nhiên đổi theo mỗi lần tải. Màn `/customer/profile/bank` hiện ảnh đại diện ở trên, tài khoản ngân hàng chỉ đọc ở dưới kèm nút "Chỉnh sửa". Ô nhập địa chỉ ảnh ở hồ sơ được thay bằng nút tải ảnh; ảnh mẫu vẫn giữ. Thanh đầu trang hiện ảnh đại diện. Không đổi quy tắc khóa thay đổi ngân hàng hay nghiệp vụ chuyển nhượng.

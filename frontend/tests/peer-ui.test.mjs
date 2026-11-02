@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { moduleLoader, deferred, flush, hookDriver } from './support/load-module.mjs'
+import * as jsx from 'react/jsx-runtime'
 
 test('chat mutations refresh their own resource without reloading calendars, reports or bank permissions', async () => {
   const load = moduleLoader({ fetch: async () => Response.json({ data: {} }) })
@@ -140,6 +141,7 @@ test('bank forms reset per account and guest destinations never use a personal b
       },
       '@/components/ui/input': { Input: 'input' },
       '@/components/ui/button': { Button: 'button' },
+      'lucide-react': { Pencil: 'icon' },
       './bank-select': { BankSelect: 'bank-select' },
       './bank-profile-status': { BankProfileStatus: 'bank-profile' },
     },
@@ -182,4 +184,78 @@ test('bank forms reset per account and guest destinations never use a personal b
   assert.equal(Object.hasOwn(writes[0].body, 'expectedProfileVersion'), false)
   assert.deepEqual(changes, ['guest-revision'])
   guestDriver.unmount()
+})
+
+test('the profile shows the saved bank account read-only until the customer chooses to edit', () => {
+  const driver = hookDriver()
+  const profile = {
+    version: 2,
+    canChange: true,
+    canRegisterFirst: false,
+    activeRevisionId: 'revision',
+    responsibilities: [],
+    destination: {
+      id: 'revision',
+      bankBin: '970436',
+      bankName: 'Vietcombank',
+      maskedAccountNumber: '***6410',
+      accountName: 'MSANG',
+    },
+  }
+  const load = moduleLoader(
+    {},
+    {
+      react: driver.react,
+      'react/jsx-runtime': jsx,
+      '@/lib/auth-context': { useAuth: () => ({ user: { id: 'A' } }) },
+      '@/lib/use-api': {
+        useApi: () => ({ data: profile, loading: false, error: '', reload: () => {} }),
+      },
+      '@/lib/api': { api: async () => ({}) },
+      '@/components/ui/input': { Input: 'input' },
+      '@/components/ui/button': { Button: 'button' },
+      'lucide-react': { Pencil: 'icon' },
+      './bank-select': { BankSelect: 'bank-select' },
+      './bank-profile-status': { BankProfileStatus: 'bank-profile' },
+    },
+  )
+  const element = load('features/payments/bank-destination-form.tsx').BankDestinationForm({
+    value: 'revision',
+    onChange: () => {},
+    summary: true,
+  })
+  const render = () => driver.render(element.type, element.props)
+  const all = (tree) =>
+    !tree
+      ? []
+      : Array.isArray(tree)
+        ? tree.flatMap(all)
+        : typeof tree === 'object'
+          ? [tree, ...all(tree.props?.children)]
+          : []
+  const words = (tree) =>
+    !tree || typeof tree === 'boolean'
+      ? ''
+      : Array.isArray(tree)
+        ? tree.map(words).join('')
+        : typeof tree === 'object'
+          ? words(tree.props?.children)
+          : String(tree)
+  let tree = render()
+  assert.equal(all(tree).some((node) => node.type === 'form'), false)
+  assert.equal(all(tree).some((node) => node.type === 'select'), false)
+  assert.match(words(tree), /\*\*\*6410/)
+  assert.match(words(tree), /100% giá đã chốt trực tiếp/)
+  assert.match(words(tree), /Đặt sân hoặc mua lại lượt đặt không cần khai/)
+  all(tree)
+    .find((node) => node.type === 'button' && /Chỉnh sửa/.test(words(node)))
+    .props.onClick()
+  tree = render()
+  assert.equal(all(tree).find((node) => node.type === 'bank-select').props.defaultValue, '970436')
+  assert.equal(all(tree).find((node) => node.props?.name === 'accountNumber').props.defaultValue, undefined)
+  all(tree)
+    .find((node) => node.type === 'button' && /Hủy/.test(words(node)))
+    .props.onClick()
+  assert.equal(all(render()).some((node) => node.type === 'form'), false)
+  driver.unmount()
 })

@@ -16,13 +16,17 @@ export function RefundReviews({ id }: { id?: string }) {
   return (
     <Frame title="Rà soát yêu cầu hoàn tiền">
       <AdminNav active="refunds" />
-      <p className="rounded-xl bg-amber-50 p-4 text-sm">
+      <p className="rounded-2xl bg-amber-50 p-4 text-sm">
         Chưa có số tiền hoặc lệnh hoàn tiền. Ghi chú không thực thi giao dịch; người nhận phải là
         người thanh toán gốc.
       </p>
       <Status loading={r.loading || one.loading} error={r.error || one.error || a.error} />
       {r.data?.map((x) => (
-        <Link key={x.id} className="block rounded-xl border p-5" href={`/admin/refunds/${x.id}`}>
+        <Link
+          key={x.id}
+          className="block p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+          href={`/admin/refunds/${x.id}`}
+        >
           {translateError(x.reason, { preserveUnknown: true })} · {displayLabel(x.state)}
         </Link>
       ))}
@@ -55,7 +59,7 @@ export function RefundReviews({ id }: { id?: string }) {
                 required
                 minLength={20}
                 maxLength={2000}
-                className="rounded-lg border p-3"
+                className="rounded-2xl border border-slate-200/90 p-3"
               />
             </label>
             <Button type="submit" disabled={a.busy}>

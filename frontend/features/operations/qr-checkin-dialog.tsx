@@ -45,7 +45,7 @@ export function QuickQrCheckinModal({ isOpen, onClose, onSuccess }: QuickQrCheck
               <QrCode className="h-5 w-5" />
             </div>
             <div>
-              <h2 id="qr-modal-title" className="text-lg font-black text-slate-900">
+              <h2 id="qr-modal-title" className="text-lg font-extrabold text-slate-900">
                 Xác nhận vào sân bằng mã QR
               </h2>
               <p className="text-xs text-slate-500">Tải ảnh mã QR của khách hoặc quét trực tiếp</p>
@@ -98,7 +98,7 @@ export function QuickQrCheckinModal({ isOpen, onClose, onSuccess }: QuickQrCheck
               <QrCheckinUpload model={model} />
               {/* Error Alert */}
               {scanError && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 animate-in fade-in">
+                <div className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 animate-in fade-in">
                   <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
                   <div className="flex-1">
                     <p className="font-semibold">Không thể xác nhận vào sân</p>
@@ -116,7 +116,7 @@ export function QuickQrCheckinModal({ isOpen, onClose, onSuccess }: QuickQrCheck
 
               {/* Manual Confirmation if bookingId was resolved but needs click */}
               {detectedToken && detectedBookingId && !isSubmitting && !checkinSuccess && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-semibold text-emerald-800">
@@ -139,7 +139,7 @@ export function QuickQrCheckinModal({ isOpen, onClose, onSuccess }: QuickQrCheck
 
               {/* Fallback if token was read but bookingId could not be extracted automatically */}
               {detectedToken && !detectedBookingId && !isSubmitting && !checkinSuccess && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-2">
                   <p className="text-xs font-semibold text-amber-900">
                     Đã đọc được mã QR, vui lòng nhập mã lượt đặt cần xác nhận vào sân:
                   </p>

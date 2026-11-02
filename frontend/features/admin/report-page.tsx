@@ -6,7 +6,7 @@ import { money } from '@/features/schedule/types'
 import { displayLabel } from '@/lib/display-labels'
 import { useApi } from '@/lib/use-api'
 import { useState } from 'react'
-import { AdminNav } from './admin-nav'
+import { AdminPage } from './admin-nav'
 import { CollectionsReport } from './collections-report'
 import { AdminDemoMoneyMonitor } from './demo-money-monitor'
 import { AdminRealMoneyMonitor } from './real-money-monitor'
@@ -48,15 +48,13 @@ function Loaded() {
   const payments = useApi<PaymentStats>(`/admin/payments/statistics?${query}`)
   const error = users.error || bookings.error || payments.error
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <h1 className="text-3xl font-black">Giám sát hoạt động hệ thống</h1>
-      <AdminNav active="reports" />
+    <AdminPage active="reports" title="Giám sát hoạt động hệ thống">
       <form
         onSubmit={(e) => {
           e.preventDefault()
           setQuery(reportRange(new FormData(e.currentTarget)))
         }}
-        className="mt-6 flex flex-wrap items-end gap-4 rounded-2xl bg-slate-50 p-5"
+        className="mt-6 flex flex-wrap items-end gap-4 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
       >
         <label className="grid gap-2 text-sm">
           Từ ngày
@@ -94,10 +92,13 @@ function Loaded() {
         </p>
       )}
       <section className="mt-8">
-        <h2 className="text-xl font-bold">Tài khoản hiện tại</h2>
+        <h2 className="text-lg font-extrabold tracking-tight">Tài khoản hiện tại</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {users.data?.map((x) => (
-            <div className="rounded-2xl border p-5" key={x.status}>
+            <div
+              className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+              key={x.status}
+            >
               <p className="text-sm text-slate-500">{displayLabel(x.status)}</p>
               <p className="mt-3 text-3xl font-bold text-emerald-700">{x.total}</p>
             </div>
@@ -105,10 +106,13 @@ function Loaded() {
         </div>
       </section>
       <section className="mt-8">
-        <h2 className="text-xl font-bold">Lượt đặt theo trạng thái</h2>
+        <h2 className="text-lg font-extrabold tracking-tight">Lượt đặt theo trạng thái</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {bookings.data?.states.map((x) => (
-            <div className="rounded-2xl border p-5" key={x.status}>
+            <div
+              className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+              key={x.status}
+            >
               <p className="text-sm text-slate-500">{displayLabel(x.status)}</p>
               <p className="mt-3 text-3xl font-bold">{x.count}</p>
               <p className="mt-3 text-xs text-slate-500">
@@ -122,8 +126,8 @@ function Loaded() {
         )}
       </section>
       <section className="mt-8">
-        <h2 className="text-xl font-bold">Giao dịch theo nghiệp vụ</h2>
-        <div className="mt-4 divide-y rounded-2xl border">
+        <h2 className="text-lg font-extrabold tracking-tight">Giao dịch theo nghiệp vụ</h2>
+        <div className="mt-4 divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           {payments.data?.orders.map((x) => (
             <div
               className="flex flex-wrap justify-between gap-3 p-5"
@@ -145,7 +149,9 @@ function Loaded() {
         </p>
       </section>
       <section className="mt-8 rounded-2xl bg-amber-50 p-6">
-        <h2 className="text-xl font-bold text-amber-900">Khoản giữ và yêu cầu xem xét trước đây</h2>
+        <h2 className="text-lg font-extrabold tracking-tight text-amber-900">
+          Khoản giữ và yêu cầu xem xét trước đây
+        </h2>
         {payments.data?.escrow.map((x) => (
           <p key={`${x.state}-${x.currency}`} className="mt-4 text-sm">
             {displayLabel(x.state)}: {x.count} khoản · {money(x.amount, x.currency)}
@@ -164,6 +170,6 @@ function Loaded() {
       <AdminDemoMoneyMonitor query={query} />
       <AdminRealMoneyMonitor query={query} />
       <CollectionsReport />
-    </div>
+    </AdminPage>
   )
 }

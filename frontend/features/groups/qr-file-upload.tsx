@@ -150,7 +150,7 @@ export function QrFileUpload({ onCodeDetected, busy = false }: QrFileUploadProps
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs transition hover:border-slate-300">
+    <div className="p-5 transition hover:border-slate-300 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -209,7 +209,7 @@ export function QrFileUpload({ onCodeDetected, busy = false }: QrFileUploadProps
             fileInputRef.current?.click()
           }
         }}
-        className={`relative flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-4 text-center transition ${
+        className={`relative flex min-h-[140px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-slate-200/90-2 border-dashed p-4 text-center transition ${
           isDragging
             ? 'border-emerald-500 bg-emerald-50/70 scale-[0.99]'
             : 'border-slate-200 bg-slate-50/50 hover:border-emerald-400 hover:bg-emerald-50/20'
@@ -260,8 +260,10 @@ export function QrFileUpload({ onCodeDetected, busy = false }: QrFileUploadProps
               <UploadCloud className="h-5 w-5 text-emerald-600" />
             </div>
             <p className="text-xs font-semibold text-slate-800">
-              <span className="text-emerald-700 underline">Bấm để tải ảnh QR</span> hoặc kéo thả vào
-              đây
+              <span className="font-semibold text-emerald-700 hover:underline">
+                Bấm để tải ảnh QR
+              </span>{' '}
+              hoặc kéo thả vào đây
             </p>
             <p className="text-[11px] text-slate-500">
               Hỗ trợ PNG, JPG, WEBP, SVG hoặc dán ảnh trực tiếp (
@@ -276,7 +278,7 @@ export function QrFileUpload({ onCodeDetected, busy = false }: QrFileUploadProps
 
       {/* Success alert */}
       {scanSuccessMsg && (
-        <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-medium text-emerald-800 border border-emerald-100 animate-in fade-in">
+        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-emerald-50 px-3.5 py-2 text-xs font-medium text-emerald-800 border border-emerald-100 animate-in fade-in">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           <span>{scanSuccessMsg}</span>
         </div>
@@ -284,7 +286,7 @@ export function QrFileUpload({ onCodeDetected, busy = false }: QrFileUploadProps
 
       {/* Error alert */}
       {scanError && (
-        <div className="mt-3 flex items-start gap-2 rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs text-rose-800 border border-rose-100 animate-in fade-in">
+        <div className="mt-3 flex items-start gap-2 rounded-2xl bg-rose-50 px-3.5 py-2.5 text-xs text-rose-800 border border-rose-100 animate-in fade-in">
           <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
           <span>{scanError}</span>
         </div>

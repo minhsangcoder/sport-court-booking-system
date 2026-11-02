@@ -18,8 +18,10 @@ export function AdminRealMoneyMonitor({ query }: { query: string }) {
     sessions: { payment_id: string; state: string; last_error_code: string | null }[]
   }>(`/admin/payments/real-collections?${query}`)
   return (
-    <section className="mt-8 space-y-4 rounded-2xl border bg-white p-5">
-      <h2 className="text-xl font-bold">Giám sát giao dịch ngân hàng và nghĩa vụ của cơ sở</h2>
+    <section className="mt-8 space-y-4 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+      <h2 className="text-lg font-extrabold tracking-tight">
+        Giám sát giao dịch ngân hàng và nghĩa vụ của cơ sở
+      </h2>
       <p className="text-sm text-slate-600">
         Chỉ đọc, tối đa 200 dòng mỗi nguồn. Tiền vào có chứng từ ngân hàng; tiền ra do cơ sở xác
         nhận thủ công. Admin không được xác nhận tiền hoặc thay cơ sở chi trả. Đây không phải doanh
@@ -35,7 +37,7 @@ export function AdminRealMoneyMonitor({ query }: { query: string }) {
         <section className="space-y-2">
           <h3 className="font-semibold">Tiền ngân hàng nhận theo thời điểm giao dịch</h3>
           {collections.data?.bankCredits.map((item) => (
-            <p key={item.id} className="rounded-lg border p-3 text-sm">
+            <p key={item.id} className="rounded-2xl border border-slate-200/90 p-3 text-sm">
               {demoVnd(String(item.amount))} · {new Date(item.bank_time).toLocaleString('vi-VN')} ·
               Đã xác thực ngân hàng
             </p>
@@ -44,7 +46,7 @@ export function AdminRealMoneyMonitor({ query }: { query: string }) {
         <section className="space-y-2">
           <h3 className="font-semibold">Khoản cơ sở phải thực hiện</h3>
           {finance.data?.obligations.map((item) => (
-            <p key={item.id} className="rounded-lg border p-3 text-sm">
+            <p key={item.id} className="rounded-2xl border border-slate-200/90 p-3 text-sm">
               {obligationKinds[item.kind] ?? 'Khoản phải trả'} · {demoVnd(item.amount)} ·{' '}
               {obligationLabels[item.state] ?? 'Đang đối soát'}
             </p>
@@ -52,7 +54,7 @@ export function AdminRealMoneyMonitor({ query }: { query: string }) {
         </section>
       </div>
       {collections.data?.sessions.some((item) => item.state === 'REVIEW') && (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+        <p className="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
           Có QR hoặc khoản thu cần đối soát. Kiểm tra giao dịch gốc trước khi xử lý lại.
         </p>
       )}

@@ -1,4 +1,5 @@
 'use client'
+import { BannerPage } from '@/components/page-banner'
 import { displayLabel } from '@/lib/display-labels'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -146,54 +147,39 @@ function Loaded({ id }: { id: string }) {
     )
   if (p.provider === 'SEPAY')
     return (
-      <div className="relative isolate min-h-[85vh] py-8 sm:py-12">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -left-32 top-0 size-[420px] rounded-full bg-emerald-500/10 blur-3xl" />
-          <div className="absolute -right-24 bottom-1/4 size-[380px] rounded-full bg-amber-400/10 blur-3xl" />
-        </div>
-        <div className="mx-auto max-w-xl space-y-5 px-4 sm:px-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
-              <span className="text-slate-400">Chọn sân</span>
-              <span className="text-slate-300">→</span>
-              <span className="text-slate-400">Tóm tắt</span>
-              <span className="text-slate-300">→</span>
-              <span className="text-emerald-700">Thanh toán</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950">
-              Thanh toán lượt đặt
-            </h1>
+      <BannerPage
+        eyebrow="Chọn sân → Tóm tắt → Thanh toán"
+        title="Thanh toán lượt đặt"
+        width="max-w-xl"
+        className="space-y-5"
+      >
+        <BankPaymentInstructions payment={p} resultHref={resultPath} />
+        {bookingResource.data && <RefundPolicyNotice />}
+        {acquisitionResource.data?.financeTerms && (
+          <TransferFinanceNotice terms={acquisitionResource.data.financeTerms} />
+        )}
+        {resultPath && (
+          <div className="text-center pt-1">
+            <Link
+              href={resultPath}
+              className="text-xs font-semibold text-slate-500 hover:text-emerald-700 hover:underline"
+            >
+              Quay lại lượt đặt
+            </Link>
           </div>
-          <BankPaymentInstructions payment={p} resultHref={resultPath} />
-          {bookingResource.data && (
-            <RefundPolicyNotice />
-          )}
-          {acquisitionResource.data?.financeTerms && (
-            <TransferFinanceNotice terms={acquisitionResource.data.financeTerms} />
-          )}
-          {resultPath && (
-            <div className="text-center pt-1">
-              <Link
-                href={resultPath}
-                className="text-xs font-semibold text-slate-500 hover:text-emerald-700 underline"
-              >
-                Quay lại lượt đặt
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
+        )}
+      </BannerPage>
     )
   return (
-    <div className="mx-auto max-w-xl px-5 py-10">
-      <p className="text-sm font-bold text-amber-700">
+    <BannerPage
+      title="Thanh toán lượt đặt"
+      description="Không phát sinh giao dịch tiền thật. Kết quả được máy chủ ghi nhận."
+      width="max-w-xl"
+    >
+      <p className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
         {runtime.data?.mode === 'REAL' ? 'GIAO DỊCH MÔ PHỎNG CŨ' : 'MÔI TRƯỜNG THANH TOÁN MÔ PHỎNG'}
       </p>
-      <h1 className="mt-4 text-3xl font-black">Thanh toán lượt đặt</h1>
-      <p className="mt-3 text-sm text-slate-500">
-        Không phát sinh giao dịch tiền thật. Kết quả được máy chủ ghi nhận.
-      </p>
-      <section className="my-6 space-y-4 rounded-2xl border p-6">
+      <section className="my-6 space-y-4 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <p className="text-sm text-slate-500">
           Mã giao dịch <span className="break-all">{p.providerReference}</span>
         </p>
@@ -201,15 +187,13 @@ function Loaded({ id }: { id: string }) {
         <p className="text-sm">Trạng thái: {displayLabel(p.status)}</p>
         {p.status === 'PENDING' && <Countdown expiresAt={p.expiresAt} />}
       </section>
-      {bookingResource.data && (
-        <RefundPolicyNotice />
-      )}
+      {bookingResource.data && <RefundPolicyNotice />}
       {acquisitionResource.data?.financeTerms && (
         <TransferFinanceNotice terms={acquisitionResource.data.financeTerms} />
       )}
       {p.status === 'SUCCESS' && p.purpose !== 'TRANSFER' && <PaymentSynchronization id={id} />}
       {error && (
-        <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+        <p role="alert" className="mb-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
           {error}
         </p>
       )}
@@ -219,7 +203,7 @@ function Loaded({ id }: { id: string }) {
         </p>
       )}
       {p.status === 'PENDING' && runtime.data?.mode === 'REAL' && (
-        <p role="status" className="my-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+        <p role="status" className="my-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
           Đây là giao dịch mô phỏng cũ, không thể chuyển thành thanh toán tiền thật. Lượt đặt mới sử
           dụng QR SePay của cơ sở.
         </p>
@@ -255,10 +239,10 @@ function Loaded({ id }: { id: string }) {
         </Link>
       )}
       {p.status === 'FAILED' && resultPath && (
-        <Link className="text-emerald-700 underline" href={resultPath}>
+        <Link className="font-semibold text-emerald-700 hover:underline" href={resultPath}>
           Xem giao dịch và thử lại
         </Link>
       )}
-    </div>
+    </BannerPage>
   )
 }

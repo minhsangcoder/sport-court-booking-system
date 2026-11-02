@@ -15,7 +15,7 @@ export function GroupReuseForm({
   const { setReuseKey, a, p, reuseKey, router } = model
   return (
     <form
-      className="space-y-4 rounded-xl border p-4"
+      className="space-y-4 rounded-2xl border border-slate-200/90 p-4"
       onChange={() => setReuseKey(crypto.randomUUID())}
       onSubmit={(e) => {
         e.preventDefault()
@@ -38,7 +38,7 @@ export function GroupReuseForm({
         Chọn sân/khung giờ và giữ chỗ trước. Chỉ người tổ chức tham gia lúc tạo; mời lại từng người
         để họ xác nhận, không thu tiền tự động.
       </p>
-      <Link className="text-emerald-700 underline" href="/search">
+      <Link className="font-semibold text-emerald-700 hover:underline" href="/search">
         Chọn lịch sân mới
       </Link>
       <label className="grid gap-2 text-sm">

@@ -4,6 +4,7 @@ import { ApiError, api } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { FacilityFields } from './facility-fields'
+import { outlinePill, primaryPill, redNotice } from './owner-ui'
 import { facilityFrom } from './facility-payload'
 import type { FacilityLocation } from './location-picker'
 import type { FacilityInput, FacilityProfile } from './types'
@@ -52,7 +53,7 @@ export function FacilityForm({
   return (
     <form
       onSubmit={save}
-      className="grid min-w-0 grid-cols-1 gap-5 rounded-2xl border bg-white p-6 md:grid-cols-2"
+      className="owner-workspace home-rise grid min-w-0 grid-cols-1 gap-5 rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xl shadow-slate-900/5 sm:p-7 md:grid-cols-2 dark:border-slate-800 dark:bg-slate-900"
     >
       <FacilityFields
         facility={facility}
@@ -63,15 +64,21 @@ export function FacilityForm({
         fields={fields}
       />
       {error && (
-        <p role="alert" className="text-red-700 md:col-span-2">
+        <p role="alert" className={`${redNotice} md:col-span-2`}>
           {error}
         </p>
       )}
       <div className="flex gap-3 md:col-span-2">
-        <Button disabled={busy} className="bg-emerald-600 text-white" type="submit">
+        <Button disabled={busy} className={primaryPill} type="submit">
           {busy ? 'Đang lưu…' : facility ? 'Lưu thay đổi' : 'Tạo cơ sở'}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.back()} disabled={busy}>
+        <Button
+          type="button"
+          variant="outline"
+          className={outlinePill}
+          onClick={() => router.back()}
+          disabled={busy}
+        >
           Quay lại
         </Button>
       </div>

@@ -40,7 +40,8 @@ public class SepayChannels {
       String bankBin,
       String maskedAccountNumber,
       String accountName,
-      String webhookUrl) {}
+      String webhookUrl,
+      java.time.Instant lastWebhookAt) {}
 
   private final PaymentRepository repo;
   private final PaymentBankAccess access;
@@ -213,8 +214,9 @@ public class SepayChannels {
         });
   }
 
-  public boolean authenticate(UUID channel, String authorization) {
-    if (authorization == null || !authorization.startsWith("Apikey ")) return false;
+  /** The revision whose key matches, or null. Old keys stay valid for orders they issued. */
+  public UUID authenticatedRevision(UUID channel, String authorization) {
+    if (authorization == null || !authorization.startsWith("Apikey ")) return null;
     var rows =
         repo.jdbc()
             .queryForList(
@@ -228,9 +230,9 @@ public class SepayChannels {
           && java.security.MessageDigest.isEqual(
               expected.getBytes(java.nio.charset.StandardCharsets.UTF_8),
               authorization.substring(7).getBytes(java.nio.charset.StandardCharsets.UTF_8)))
-        return true;
+        return (UUID) row.get("id");
     }
-    return false;
+    return null;
   }
 
   public String gateway(UUID revision) {
@@ -276,6 +278,17 @@ public class SepayChannels {
                     + " WHERE r.id=?",
                 revision);
     UUID id = (UUID) r.get("id");
+    // Receipts from before V20 carry no revision; only their time can tie them to this one.
+    var lastWebhook =
+        repo.jdbc()
+            .queryForObject(
+                "SELECT max(received_at) FROM sepay_webhook_receipts WHERE channel_id=? AND"
+                    + " (revision_id=? OR (revision_id IS NULL AND received_at>=(SELECT verified_at"
+                    + " FROM payos_channel_revisions WHERE id=?)))",
+                java.time.OffsetDateTime.class,
+                id,
+                revision,
+                revision);
     return new Channel(
         id,
         (UUID) r.get("facility_id"),
@@ -286,6 +299,7 @@ public class SepayChannels {
         Objects.toString(r.get("bank_bin"), ""),
         Objects.toString(r.get("masked_account"), ""),
         Objects.toString(r.get("account_name"), ""),
-        origin + "/api/v1/payments/providers/sepay/" + id + "/webhook");
+        origin + "/api/v1/payments/providers/sepay/" + id + "/webhook",
+        lastWebhook == null ? null : lastWebhook.toInstant());
   }
 }

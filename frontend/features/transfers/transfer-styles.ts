@@ -14,6 +14,9 @@ export const amberNotice =
 export const emeraldNotice =
   'rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200'
 
+export const selectField =
+  'h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 shadow-2xs outline-none transition focus-visible:border-emerald-500 focus-visible:ring-3 focus-visible:ring-emerald-500/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+
 export const fieldLabel = 'grid gap-2 text-sm font-medium text-slate-700 dark:text-slate-300'
 
 export const bannerLink = 'transition hover:text-emerald-200'

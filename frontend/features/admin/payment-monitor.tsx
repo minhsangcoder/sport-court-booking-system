@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import { RecordDetails } from '@/components/record-details'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +12,7 @@ import { translateError } from '@/lib/error-translator'
 import { useApi } from '@/lib/use-api'
 import Link from 'next/link'
 import { useState } from 'react'
-import { AdminNav } from './admin-nav'
+import { AdminPage } from './admin-nav'
 export function PaymentMonitor() {
   return (
     <RequireAuth roles={['ADMIN']}>
@@ -66,17 +68,18 @@ function Loaded() {
     URL.revokeObjectURL(url)
   }
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <div className="flex justify-between gap-4">
-        <h1 className="text-3xl font-black">Giám sát giao dịch</h1>
+    <AdminPage
+      active="payments"
+      title="Giám sát giao dịch"
+      actions={
         <Button variant="outline" onClick={exportRows} disabled={!r.data?.length}>
           Xuất kết quả hiển thị
         </Button>
-      </div>
-      <AdminNav active="payments" />
+      }
+    >
       <form
         onSubmit={search}
-        className="mt-6 grid gap-4 rounded-2xl bg-slate-50 p-5 md:grid-cols-4"
+        className="mt-6 grid gap-4 p-5 md:grid-cols-4 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
       >
         <label className="grid gap-2 text-sm">
           Mã hoặc tham chiếu
@@ -84,7 +87,7 @@ function Loaded() {
         </label>
         <label className="grid gap-2 text-sm">
           Trạng thái
-          <select name="status" className="h-10 rounded-lg border bg-white px-3">
+          <select name="status" className="h-11 rounded-xl border bg-white px-3.5">
             <option value="">Tất cả</option>
             {['PENDING', 'SUCCESS', 'FAILED', 'EXPIRED'].map((s) => (
               <option key={s} value={s}>
@@ -95,7 +98,7 @@ function Loaded() {
         </label>
         <label className="grid gap-2 text-sm">
           Nghiệp vụ
-          <select name="purpose" className="h-10 rounded-lg border bg-white px-3">
+          <select name="purpose" className="h-11 rounded-xl border bg-white px-3.5">
             <option value="">Tất cả</option>
             <option value="BOOKING">Đặt sân</option>
             <option value="GROUP_CONTRIBUTION">Góp tiền nhóm</option>
@@ -120,9 +123,11 @@ function Loaded() {
         </p>
       )}
       {r.data?.length === 0 && (
-        <p className="mt-6 rounded-xl border p-6 text-slate-500">Không có giao dịch phù hợp.</p>
+        <p className="mt-6 p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          Không có giao dịch phù hợp.
+        </p>
       )}
-      <div className="mt-6 divide-y rounded-2xl border">
+      <div className="mt-6 divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         {r.data?.map((p) => (
           <Link
             key={p.id}
@@ -142,7 +147,7 @@ function Loaded() {
       <p className="mt-4 text-xs text-slate-500">
         Tối đa 200 kết quả. Xuất CSV áp dụng cho danh sách đang hiển thị.
       </p>
-    </div>
+    </AdminPage>
   )
 }
 type PaymentDetail = {
@@ -182,12 +187,16 @@ function Detail({ id }: { id: string }) {
   const records =
     tab === 'audit' ? r.data.audit : tab === 'callbacks' ? r.data.callbacks : r.data.requests
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <Link className="text-sm text-slate-500" href="/admin/payments">
-        Giám sát giao dịch
-      </Link>
-      <h1 className="mt-5 break-all text-2xl font-black">{p.providerReference}</h1>
-      <section className="mt-6 space-y-3 rounded-2xl border p-6">
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href="/admin/payments">
+          Giám sát giao dịch
+        </Link>
+      }
+      title={p.providerReference ?? ''}
+      width="max-w-4xl"
+    >
+      <section className="mt-6 space-y-3 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <p className="text-3xl font-bold text-emerald-700">{money(p.amount, p.currency)}</p>
         <p>
           {displayLabel(p.purpose)} · {displayLabel(p.status)}
@@ -195,7 +204,7 @@ function Detail({ id }: { id: string }) {
         <p className="break-all text-sm text-slate-500">Người trả {p.payerId}</p>
         <Link
           href={`/admin/bookings/${p.bookingId}`}
-          className="block text-sm text-emerald-700 underline"
+          className="block text-sm font-semibold text-emerald-700 hover:underline"
         >
           Xem lượt đặt liên quan
         </Link>
@@ -213,7 +222,10 @@ function Detail({ id }: { id: string }) {
         </section>
       ))}
       {r.data.refunds.map((x, i) => (
-        <section key={i} className="mt-5 rounded-xl border p-5 text-sm">
+        <section
+          key={i}
+          className="mt-5 p-5 text-sm rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+        >
           <p className="font-bold">Yêu cầu hoàn tiền: {displayLabel(x.state)}</p>
           <p className="mt-2">{translateError(x.reason, { preserveUnknown: true })}</p>
         </section>
@@ -246,6 +258,6 @@ function Detail({ id }: { id: string }) {
           </div>
         ))}
       </div>
-    </div>
+    </BannerPage>
   )
 }

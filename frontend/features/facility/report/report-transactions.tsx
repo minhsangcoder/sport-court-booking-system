@@ -11,7 +11,7 @@ export function ReportTransactions({
   const { report, timestamp, page, setPage } = model
   if (!report) return null
   return (
-    <section className="rounded-2xl border bg-white p-5">
+    <section className="rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 p-5">
       <h3 className="text-lg font-bold">Giao dịch và ghi nhận trong kỳ</h3>
       <p className="mt-2 text-xs text-slate-500">
         Phí được tách từ tiền mua lại, không phải một khoản nộp thêm. Dòng thất bại không được tính
@@ -60,10 +60,10 @@ export function ReportTransactions({
                       ? item.confirmationMethod === 'CASH_RECEIVED'
                         ? 'Đã thu tiền mặt'
                         : item.confirmationMethod === 'MANUALLY_RECORDED'
-                        ? 'Cơ sở xác nhận đã chuyển'
-                        : item.confirmationMethod === 'HANDOFF_COMMITTED'
-                          ? 'Bàn giao đã hoàn tất'
-                          : 'Chứng từ ngân hàng đã xác thực'
+                          ? 'Cơ sở xác nhận đã chuyển'
+                          : item.confirmationMethod === 'HANDOFF_COMMITTED'
+                            ? 'Bàn giao đã hoàn tất'
+                            : 'Chứng từ ngân hàng đã xác thực'
                       : item.state === 'SUCCESS'
                         ? 'Thành công mô phỏng'
                         : 'Thất bại mô phỏng'}

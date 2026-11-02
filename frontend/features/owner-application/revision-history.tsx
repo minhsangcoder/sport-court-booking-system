@@ -57,7 +57,10 @@ function Event({ entry, timezone }: { entry: ApplicationHistoryEntry; timezone: 
     entry.action === 'OWNER_APPLICATION_SUBMITTED' &&
     entry.submissionOrigin === 'SUPPLEMENT_REQUIRED'
   return (
-    <li className="rounded-2xl border bg-white p-5" data-event-id={entry.id}>
+    <li
+      className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+      data-event-id={entry.id}
+    >
       <h3 className="font-semibold">
         {resubmitted ? 'Gửi lại hồ sơ sau bổ sung' : labels[entry.action] || 'Cập nhật hồ sơ'}
       </h3>
@@ -79,7 +82,7 @@ function Event({ entry, timezone }: { entry: ApplicationHistoryEntry; timezone: 
         </p>
       )}
       {entry.reason && (
-        <p className="mt-3 whitespace-pre-wrap break-words rounded-lg bg-amber-50 p-3 text-sm">
+        <p className="mt-3 whitespace-pre-wrap break-words rounded-2xl bg-amber-50 p-3 text-sm">
           {entry.reason}
         </p>
       )}
@@ -99,7 +102,7 @@ function Event({ entry, timezone }: { entry: ApplicationHistoryEntry; timezone: 
       {entry.submissionId && (
         <a
           href={`#submission-${entry.submissionId}`}
-          className="mt-3 inline-block text-sm text-emerald-700 underline"
+          className="mt-3 inline-block text-sm font-semibold text-emerald-700 hover:underline"
         >
           Xem bản hồ sơ đã gửi
         </a>
@@ -127,7 +130,7 @@ export function RevisionHistory({ detail }: { detail: ApplicationDetail }) {
   return (
     <section className="mt-6 min-w-0 space-y-5" aria-label="Lịch sử hồ sơ">
       <div>
-        <h2 className="text-xl font-bold">Diễn biến hồ sơ</h2>
+        <h2 className="text-lg font-extrabold tracking-tight">Diễn biến hồ sơ</h2>
         <p className="mt-2 text-sm text-slate-500">
           Múi giờ: {timezoneLabel(timezone)}
           {timezone !== detail.facility.facility.timezone ? ' (múi giờ cơ sở chưa hợp lệ)' : ''}.
@@ -139,7 +142,7 @@ export function RevisionHistory({ detail }: { detail: ApplicationDetail }) {
       {!history.loading && !history.error && history.data && (
         <>
           {history.data.items.length === 0 && (
-            <p className="rounded-xl border border-dashed p-5 text-sm text-slate-500">
+            <p className="border-dashed p-5 text-sm text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
               Chưa có sự kiện trong trang lịch sử này.
             </p>
           )}
@@ -172,7 +175,7 @@ export function RevisionHistory({ detail }: { detail: ApplicationDetail }) {
           </nav>
         </>
       )}
-      <h2 className="pt-4 text-xl font-bold">Các bản hồ sơ đã gửi</h2>
+      <h2 className="pt-4 text-lg font-extrabold tracking-tight">Các bản hồ sơ đã gửi</h2>
       {detail.history.length === 0 && (
         <p className="text-sm text-slate-500">Hồ sơ chưa gửi thẩm định.</p>
       )}
@@ -182,7 +185,7 @@ export function RevisionHistory({ detail }: { detail: ApplicationDetail }) {
           <article
             id={`submission-${h.id}`}
             key={h.id}
-            className="scroll-mt-6 rounded-xl border p-5 text-sm"
+            className="scroll-mt-6 p-5 text-sm rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
           >
             <h3 className="font-semibold">Lần {detail.history.length - i} · Đã gửi thẩm định</h3>
             <p className="mt-2 text-slate-500">
@@ -208,7 +211,7 @@ export function RevisionHistory({ detail }: { detail: ApplicationDetail }) {
           </article>
         )
       })}
-      <h2 className="pt-4 text-xl font-bold">Nhật ký cơ sở đầu tiên</h2>
+      <h2 className="pt-4 text-lg font-extrabold tracking-tight">Nhật ký cơ sở đầu tiên</h2>
       <p className="text-xs text-slate-500">
         Từ tối đa 100 bản ghi gần nhất của cơ sở; lượt xem được ẩn. Cấu hình đã gửi được lưu trong
         từng bản hồ sơ.
@@ -217,7 +220,7 @@ export function RevisionHistory({ detail }: { detail: ApplicationDetail }) {
         <p className="text-sm text-slate-500">Chưa có thay đổi cơ sở trong các bản ghi gần nhất.</p>
       )}
       {facilityEvents.map((e) => (
-        <article key={e.id} className="rounded-xl bg-slate-50 p-4 text-sm">
+        <article key={e.id} className="rounded-2xl bg-slate-50 p-4 text-sm">
           <h3 className="font-medium">{labels[e.action] || 'Cập nhật cơ sở'}</h3>
           {contactEdited(e.details) && (
             <p className="mt-2 text-sm">Trường đã chỉnh sửa: thư điện tử liên hệ cơ sở.</p>

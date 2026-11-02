@@ -1,22 +1,19 @@
 'use client'
+import { BannerPage } from '@/components/page-banner'
+import { card } from '@/features/transfers/transfer-styles'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 export function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="mx-auto max-w-5xl space-y-5 px-4 sm:px-6 py-8">
-      <div className="border-b border-slate-200/80 pb-3.5 dark:border-slate-800">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {title}
-        </h1>
-      </div>
+    <BannerPage title={title} width="max-w-5xl" className="space-y-5">
       {children}
-    </div>
+    </BannerPage>
   )
 }
 export function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-3.5 rounded-xl border border-slate-200/90 bg-white p-5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
+    <section className={`${card} home-rise space-y-4 p-5 sm:p-6`}>
+      <h2 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
         {title}
       </h2>
       {children}
@@ -35,19 +32,23 @@ export function Status({
   return (
     <>
       {loading && (
-        <p role="status" className="text-xs text-slate-500">
+        <p role="status" className="text-sm text-slate-500">
           Đang tải…
         </p>
       )}
       {error && (
         <p
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs font-medium text-red-700"
+          className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
         >
           {error}
         </p>
       )}
-      {!loading && !error && empty && <p className="text-xs text-slate-500">Chưa có bản ghi.</p>}
+      {!loading && !error && empty && (
+        <p className="rounded-3xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">
+          Chưa có bản ghi.
+        </p>
+      )}
     </>
   )
 }
@@ -72,4 +73,4 @@ export function useMutation() {
   return { busy, error, message, setMessage, run }
 }
 export const selectStyle =
-  'h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs sm:text-[13px] text-slate-900 shadow-2xs focus:border-emerald-700 focus:outline-none'
+  'h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 shadow-2xs transition focus:border-emerald-500 focus:outline-none focus:ring-3 focus:ring-emerald-500/20'

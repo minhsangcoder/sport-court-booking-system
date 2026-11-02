@@ -1,4 +1,5 @@
 'use client'
+import { UserAvatar } from '@/components/user-avatar'
 import { Briefcase, Building2, ChevronDown, LayoutGrid, Menu, ShieldCheck, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
@@ -133,9 +134,11 @@ export function AppHeader() {
                 aria-expanded={userMenuOpen}
                 className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 text-left shadow-2xs transition-colors hover:border-slate-300 hover:bg-slate-50/60 dark:border-slate-700 dark:bg-slate-800 shrink-0 cursor-pointer"
               >
-                <div className="flex size-6 items-center justify-center rounded-md bg-slate-900 text-[11px] font-semibold text-white shrink-0 dark:bg-emerald-700">
-                  {user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-                </div>
+                <UserAvatar
+                  name={user.fullName}
+                  src={user.avatarUrl}
+                  className="size-6 rounded-md text-[11px]"
+                />
                 <span className="hidden sm:inline-block max-w-[120px] truncate text-xs font-medium text-slate-800 dark:text-slate-200">
                   {user.fullName || 'Tài khoản'}
                 </span>

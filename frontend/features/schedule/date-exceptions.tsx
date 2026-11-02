@@ -57,8 +57,10 @@ export function Exceptions({ facilityId, courtId }: { facilityId: string; courtI
     }
   }
   return (
-    <div className="rounded-2xl border p-5">
-      <h3 className="font-bold">Ngày nghỉ và giờ đặc biệt</h3>
+    <div>
+      <h3 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
+        Ngày nghỉ và giờ đặc biệt
+      </h3>
       <p className="mt-1 text-xs text-slate-500">
         Thiết lập ngày nghỉ hoặc giờ mở cửa riêng cho một ngày cụ thể (nếu khác với lịch cố định cả
         tuần ở trên).
@@ -71,7 +73,7 @@ export function Exceptions({ facilityId, courtId }: { facilityId: string; courtI
         <label className="grid gap-2 text-sm">
           Loại ngoại lệ
           <select
-            className="rounded-lg border bg-white p-3"
+            className="rounded-xl border bg-white px-3.5 dark:bg-slate-800"
             value={type}
             onChange={(e) => setType(e.target.value)}
             disabled={busy}
@@ -138,7 +140,7 @@ export function Exceptions({ facilityId, courtId }: { facilityId: string; courtI
           ?.filter((e) => (e.courtId || '') === courtId)
           .map((e) => (
             <article
-              className="flex flex-wrap justify-between gap-3 rounded-lg bg-slate-50 p-4"
+              className="flex flex-wrap justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-800/50"
               key={e.id}
             >
               <div className="text-sm">

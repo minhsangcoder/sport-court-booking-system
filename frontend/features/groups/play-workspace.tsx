@@ -43,7 +43,7 @@ export function PlayWorkspace({
       </p>
       <Status loading={r.loading} error={r.error || a.error} />
       <ol
-        className="max-h-96 space-y-3 overflow-y-auto rounded-xl bg-slate-50 p-4"
+        className="max-h-96 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-4"
         aria-label="Tin nhắn nhóm"
       >
         {messages.map((m) => (
@@ -76,7 +76,7 @@ export function PlayWorkspace({
         </Button>
       )}
       {p.state === 'DISSOLVED' ? (
-        <p className="rounded-xl bg-amber-50 p-4">
+        <p className="rounded-2xl bg-amber-50 p-4">
           Nhóm đã giải tán. Lịch sử vẫn đọc được với thành viên hiện tại; gửi tin nhắn đã đóng.
         </p>
       ) : (
@@ -104,7 +104,7 @@ export function PlayWorkspace({
               }}
               required
               maxLength={2000}
-              className="rounded-lg border p-3"
+              className="rounded-2xl border border-slate-200/90 p-3"
             />
           </label>
           <Button type="submit" className="self-end" disabled={a.busy || !text.trim()}>

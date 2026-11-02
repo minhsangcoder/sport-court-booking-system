@@ -1,4 +1,5 @@
 'use client'
+import { BannerPage } from '@/components/page-banner'
 import { Button } from '@/components/ui/button'
 import { CounterPaymentModal } from '@/features/operations/counter-payment-modal'
 import { OperationCards } from '@/features/operations/operation-cards'
@@ -26,9 +27,12 @@ export function Loaded({ owner }: { owner: boolean }) {
     setMessage,
   } = model
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-black">{owner ? 'Vận hành lịch đặt' : 'Kiểm tra lượt đặt'}</h1>
+    <BannerPage
+      eyebrow="Vận hành tại sân"
+      title={owner ? 'Vận hành lịch đặt' : 'Kiểm tra lượt đặt'}
+      description="Tra cứu lượt đặt, xác nhận khách vào sân và thu tiền tại quầy."
+    >
+      <div className="mb-6 flex justify-end">
         <OperationToolbar model={model} />
       </div>
       <OperationFilters model={model} />
@@ -51,7 +55,9 @@ export function Loaded({ owner }: { owner: boolean }) {
         </p>
       )}
       {bookings.data?.items.filter((b) => !filter || b.status === filter).length === 0 && (
-        <p className="rounded-xl border p-6 text-slate-500">Chưa có lượt đặt phù hợp.</p>
+        <p className="p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          Chưa có lượt đặt phù hợp.
+        </p>
       )}
       <OperationCards model={model} />
       <div className="mt-5 flex items-center gap-3">
@@ -87,6 +93,6 @@ export function Loaded({ owner }: { owner: boolean }) {
           bookings.reload()
         }}
       />
-    </div>
+    </BannerPage>
   )
 }

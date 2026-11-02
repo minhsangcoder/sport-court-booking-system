@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import { Input } from '@/components/ui/input'
 import { RequireAuth } from '@/features/auth/require-auth'
 import type { Court, Facility } from '@/features/facility/types'
@@ -74,19 +76,19 @@ function Loaded() {
     prices.error ||
     preview.error
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <Link href="/staff/bookings" className="text-sm text-slate-500">
-        Vận hành / Lịch và giá
-      </Link>
-      <h1 className="mt-5 text-3xl font-black">Lịch sân và bảng giá</h1>
-      <p className="mt-3 text-sm text-slate-500">
-        Lịch và giá chỉ đọc theo quyền được cấp tại cơ sở. Các thao tác cấu hình cần quyền chuyên
-        biệt; preview không là lịch trống lượt đặt.
-      </p>
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href="/staff/bookings">
+          Vận hành / Lịch và giá
+        </Link>
+      }
+      title="Lịch sân và bảng giá"
+      description="Lịch và giá chỉ đọc theo quyền được cấp tại cơ sở. Các thao tác cấu hình cần quyền chuyên biệt; preview không là lịch trống lượt đặt."
+    >
       <div className="mt-4">
         {tool && facility && (
           <Link
-            className="text-emerald-700 underline"
+            className="font-semibold text-emerald-700 hover:underline"
             href={`/staff/facilities/${facility}/${tool}`}
           >
             Cấu hình lịch, bảo trì và trạng thái theo quyền được cấp
@@ -97,7 +99,7 @@ function Loaded() {
         <label className="grid gap-2 text-sm">
           Cơ sở
           <select
-            className="rounded-lg border p-3"
+            className="rounded-2xl border border-slate-200/90 p-3"
             value={facility || ''}
             onChange={(e) => {
               setSelection(e.target.value)
@@ -114,7 +116,7 @@ function Loaded() {
         <label className="grid gap-2 text-sm">
           Sân
           <select
-            className="rounded-lg border p-3"
+            className="rounded-2xl border border-slate-200/90 p-3"
             value={court || ''}
             onChange={(e) => setCourtSelection(e.target.value)}
           >
@@ -143,7 +145,7 @@ function Loaded() {
         {preview.data?.slots.map((s) => (
           <div
             key={s.startsAt}
-            className={`rounded-xl border p-4 ${s.state === 'ELIGIBLE' ? 'border-emerald-200 bg-emerald-50' : 'bg-slate-100 text-slate-500'}`}
+            className={`rounded-2xl border border-slate-200/90 p-4 ${s.state === 'ELIGIBLE' ? 'border-emerald-200 bg-emerald-50' : 'bg-slate-100 text-slate-500'}`}
           >
             <p className="font-semibold">
               {new Date(s.startsAt).toLocaleTimeString('vi-VN', {
@@ -166,8 +168,8 @@ function Loaded() {
         ))}
       </div>
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border p-6">
-          <h2 className="text-xl font-bold">Giờ hoạt động</h2>
+        <section className="p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          <h2 className="text-lg font-extrabold tracking-tight">Giờ hoạt động</h2>
           <div className="mt-4 space-y-3">
             {hours.data
               ?.filter((h) => h.courtId == null || h.courtId === court)
@@ -179,8 +181,8 @@ function Loaded() {
               ))}
           </div>
         </section>
-        <section className="rounded-2xl border p-6">
-          <h2 className="text-xl font-bold">Quy tắc giá hiện hành</h2>
+        <section className="p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          <h2 className="text-lg font-extrabold tracking-tight">Quy tắc giá hiện hành</h2>
           <div className="mt-4 space-y-4">
             {prices.data
               ?.filter((p) => p.active && (p.courtId == null || p.courtId === court))
@@ -198,6 +200,6 @@ function Loaded() {
           </div>
         </section>
       </div>
-    </div>
+    </BannerPage>
   )
 }

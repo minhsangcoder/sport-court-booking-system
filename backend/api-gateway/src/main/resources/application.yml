@@ -103,6 +103,7 @@ sporthub:
         - /api/v1/auth/oauth2/**
         - /api/v1/facilities/**
         - /api/v1/sport-categories
+        - /api/v1/users/avatars/*
         - /api/v1/schedules/public/**
         - /api/v1/bookings/availability
         - /api/v1/bookings/quote

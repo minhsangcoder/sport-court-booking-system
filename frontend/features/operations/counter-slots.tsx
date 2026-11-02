@@ -55,7 +55,7 @@ export function CounterSlots({ courtId, owner = false }: { courtId: string; owne
         <AvailabilityPage facilityId={facilityId} courtId={courtId} counter />
       ) : !facilityId ? (
         <div className="mx-auto max-w-4xl p-6">
-          <p className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm font-medium text-slate-600 shadow-2xs">
+          <p className="p-5 text-sm font-medium text-slate-600 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
             Thiếu cơ sở. Quay lại màn hình vận hành.
           </p>
         </div>

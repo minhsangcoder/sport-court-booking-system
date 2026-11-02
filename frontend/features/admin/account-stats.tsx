@@ -12,7 +12,7 @@ export function AccountStats({
   const { r, totalUsers, activeUsers, lockedUsers, privilegedUsers } = model
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Tài khoản kết quả
@@ -22,7 +22,7 @@ export function AccountStats({
           </div>
         </div>
         <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-3xl font-black text-slate-900 dark:text-white">
+          <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
             {r.loading ? '…' : totalUsers}
           </span>
           <span className="text-xs text-slate-400">tài khoản</span>
@@ -30,7 +30,7 @@ export function AccountStats({
         <p className="mt-2 text-xs text-slate-500">Hiển thị trong phiên tra cứu hiện tại</p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Đang hoạt động
@@ -40,7 +40,7 @@ export function AccountStats({
           </div>
         </div>
         <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+          <span className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
             {r.loading ? '…' : activeUsers}
           </span>
           <span className="text-xs font-semibold text-emerald-600">bình thường</span>
@@ -48,7 +48,7 @@ export function AccountStats({
         <p className="mt-2 text-xs text-slate-500">Có quyền đặt sân và thao tác dịch vụ</p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Bị khóa / Tạm dừng
@@ -58,7 +58,7 @@ export function AccountStats({
           </div>
         </div>
         <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-3xl font-black text-red-600 dark:text-red-400">
+          <span className="text-3xl font-extrabold text-red-600 dark:text-red-400">
             {r.loading ? '…' : lockedUsers}
           </span>
           <span className="text-xs text-red-500">hạn chế</span>
@@ -66,7 +66,7 @@ export function AccountStats({
         <p className="mt-2 text-xs text-slate-500">Tài khoản vi phạm hoặc chờ xác minh</p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Chủ sân & Quản trị
@@ -76,7 +76,7 @@ export function AccountStats({
           </div>
         </div>
         <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-3xl font-black text-purple-600 dark:text-purple-400">
+          <span className="text-3xl font-extrabold text-purple-600 dark:text-purple-400">
             {r.loading ? '…' : privilegedUsers}
           </span>
           <span className="text-xs text-slate-400">nhân sự</span>

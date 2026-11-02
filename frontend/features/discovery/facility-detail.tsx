@@ -1,8 +1,10 @@
 'use client'
+import { BannerPage } from '@/components/page-banner'
+import { bannerLink } from '@/features/transfers/transfer-styles'
 import { timezoneLabel } from '@/lib/display-labels'
 import Image from 'next/image'
 import Link from 'next/link'
-import { MapPin, Navigation, Ticket } from 'lucide-react'
+import { Navigation, Ticket } from 'lucide-react'
 import { useApi } from '@/lib/use-api'
 import { useAuth } from '@/lib/auth-context'
 import { FavoriteButton } from '@/features/integration/favorites'
@@ -33,7 +35,7 @@ export function PublicFacilityDetail({ id }: { id: string }) {
     return (
       <div className="p-8" role="alert">
         {resource.error}
-        <Link className="ml-4 text-emerald-700 underline" href="/search">
+        <Link className="ml-4 font-semibold text-emerald-700 hover:underline" href="/search">
           Quay lại tìm sân
         </Link>
       </div>
@@ -41,11 +43,17 @@ export function PublicFacilityDetail({ id }: { id: string }) {
 
   const f = resource.data
   return (
-    <div className="mx-auto max-w-6xl px-5 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-        <Link href="/search" className="hover:underline">
-          Tìm sân / {f.name}
+    <BannerPage
+      eyebrow={
+        <Link href="/search" className={bannerLink}>
+          Tìm sân
         </Link>
+      }
+      title={f.name}
+      description={`${f.addressLine}, ${f.ward}, ${f.province}`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+        <FavoriteButton id={id} />
         <Link
           href={`/facilities/${id}/directions${confirmedBooking ? `?bookingId=${confirmedBooking.id}` : ''}`}
           className="inline-flex items-center gap-1.5 font-semibold text-rose-700 hover:text-rose-800 hover:underline"
@@ -56,7 +64,7 @@ export function PublicFacilityDetail({ id }: { id: string }) {
       </div>
 
       {confirmedBooking && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-2xs">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-2xs">
           <div className="flex items-center gap-3">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-xs text-white font-bold">
               ✓
@@ -76,28 +84,13 @@ export function PublicFacilityDetail({ id }: { id: string }) {
           </div>
           <Link
             href={`/customer/bookings/${confirmedBooking.id}`}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-emerald-800"
+            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-emerald-500"
           >
             <Ticket className="size-3.5" strokeWidth={1.75} />
             <span>Quay lại phần xác nhận</span>
           </Link>
         </div>
       )}
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{f.name}</h1>
-          <div className="mt-1.5 flex items-center gap-1.5 text-slate-600">
-            <MapPin className="size-3.5 shrink-0 text-emerald-700" strokeWidth={1.75} />
-            <p className="text-xs sm:text-sm">
-              {f.addressLine}, {f.ward}, {f.province}
-            </p>
-          </div>
-        </div>
-        <div>
-          <FavoriteButton id={id} />
-        </div>
-      </div>
 
       {images.data && images.data.length > 0 && (
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -137,7 +130,7 @@ export function PublicFacilityDetail({ id }: { id: string }) {
             ))}
           </div>
         </div>
-        <aside className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Thông tin liên hệ
           </h3>
@@ -159,7 +152,7 @@ export function PublicFacilityDetail({ id }: { id: string }) {
         />
       </div>
 
-      <h2 className="text-lg font-bold text-slate-900">Chọn sân</h2>
+      <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Chọn sân</h2>
       {courts.loading && (
         <p role="status" className="mt-4 text-xs text-slate-500">
           Đang tải sân…
@@ -176,7 +169,7 @@ export function PublicFacilityDetail({ id }: { id: string }) {
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {courts.data?.map((c) => (
           <article
-            className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-2xs"
+            className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs"
             key={c.id}
           >
             <div>
@@ -195,7 +188,7 @@ export function PublicFacilityDetail({ id }: { id: string }) {
               <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
                 <Link
                   href={`/facilities/${id}/courts/${c.id}`}
-                  className="inline-flex h-8 items-center rounded-lg bg-emerald-700 px-4 text-xs font-semibold text-white hover:bg-emerald-800 transition-colors"
+                  className="inline-flex h-8 items-center rounded-full bg-emerald-600 px-4 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors"
                 >
                   Kiểm tra lịch trống
                 </Link>
@@ -204,6 +197,6 @@ export function PublicFacilityDetail({ id }: { id: string }) {
           </article>
         ))}
       </div>
-    </div>
+    </BannerPage>
   )
 }

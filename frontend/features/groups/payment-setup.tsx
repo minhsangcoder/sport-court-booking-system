@@ -50,9 +50,9 @@ export function GroupPaymentSetup({ group, reload }: { group: Group; reload: () 
   return (
     <section
       aria-label="Mời thành viên và chia tiền"
-      className="mt-6 space-y-4 rounded-2xl border p-5"
+      className="mt-6 space-y-4 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
     >
-      <h2 className="text-lg font-bold">Mời bạn cùng thanh toán</h2>
+      <h2 className="text-lg font-extrabold tracking-tight">Mời bạn cùng thanh toán</h2>
       {accepting && (
         <>
           <p className="text-sm text-slate-600">
@@ -76,14 +76,14 @@ export function GroupPaymentSetup({ group, reload }: { group: Group; reload: () 
                   readOnly
                   value={invite.data.code}
                   rows={3}
-                  className="w-full rounded-lg border p-3 font-mono text-xs"
+                  className="w-full rounded-2xl border border-slate-200/90 p-3 font-mono text-xs"
                 />
               </label>
               <Button variant="outline" onClick={copy}>
                 Sao chép mã mời
               </Button>
               <Link
-                className="ml-4 text-sm text-emerald-700 underline"
+                className="ml-4 text-sm font-semibold text-emerald-700 hover:underline"
                 href={`/customer/groups/${group.id}/invite`}
               >
                 Xem QR và liên kết mời
@@ -101,7 +101,7 @@ export function GroupPaymentSetup({ group, reload }: { group: Group; reload: () 
           Chia đều và bắt đầu thanh toán
         </Button>
         <Link
-          className="text-sm text-emerald-700 underline"
+          className="text-sm font-semibold text-emerald-700 hover:underline"
           href={`/customer/groups/${group.id}/split`}
         >
           Tùy chỉnh phần tiền từng người

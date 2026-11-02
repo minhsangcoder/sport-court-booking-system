@@ -9,7 +9,7 @@ export function ReportCourts({
   const { stats, report, amount } = model
   if (!stats || !report) return null
   return (
-    <section className="rounded-2xl border bg-white p-5">
+    <section className="rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 p-5">
       <div className="mb-4 flex flex-wrap justify-between gap-2">
         <h3 className="text-lg font-bold">Hiệu suất theo sân</h3>
         <p className="text-sm text-slate-500">

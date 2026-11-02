@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useRef, useState, useTransition } from 'react'
-import { AdminNav } from '@/features/admin/admin-nav'
+import { AdminPage } from '@/features/admin/admin-nav'
 import { useApi } from '@/lib/use-api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,13 +61,15 @@ export function AdminOwnerApplicationList({ initial }: { initial: ApplicationFil
     } else startTransition(() => router.push(ownerApplicationListPath, { scroll: false }))
   }
   return (
-    <main className="mx-auto max-w-6xl px-5 py-10">
-      <h1 className="text-3xl font-black">Đăng ký chủ cơ sở</h1>
-      <AdminNav active="owner-applications" />
+    <AdminPage active="owner-applications" title="Đăng ký chủ cơ sở">
       <p className="mt-5 text-sm text-slate-500">
         Tra cứu hồ sơ và cơ sở đầu tiên. Mặc định ưu tiên hồ sơ chờ thẩm định gửi trước.
       </p>
-      <form ref={formRef} onSubmit={apply} className="mt-6 space-y-5 rounded-2xl bg-slate-50 p-5">
+      <form
+        ref={formRef}
+        onSubmit={apply}
+        className="mt-6 space-y-5 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+      >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="grid gap-2 text-sm">
             Từ khóa
@@ -140,7 +142,7 @@ export function AdminOwnerApplicationList({ initial }: { initial: ApplicationFil
           </label>
         </div>
         <details
-          className="rounded-xl border bg-white p-4"
+          className="rounded-2xl border border-slate-200/90 bg-white p-4"
           open={Boolean(
             filters.reviewedFrom ||
             filters.reviewedTo ||
@@ -216,7 +218,7 @@ export function AdminOwnerApplicationList({ initial }: { initial: ApplicationFil
               : ''}
           </p>
           {r.data.items.length === 0 && (
-            <div className="mt-4 rounded-xl border border-dashed p-6 text-slate-500">
+            <div className="mt-4 border-dashed p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
               <p>
                 {r.data.totalElements === 0
                   ? 'Không có hồ sơ phù hợp với bộ lọc.'
@@ -225,14 +227,14 @@ export function AdminOwnerApplicationList({ initial }: { initial: ApplicationFil
               {r.data.page > 0 && (
                 <Link
                   href={applicationListHref({ ...filters, page: '0' })}
-                  className="mt-3 inline-block text-emerald-700 underline"
+                  className="mt-3 inline-block font-semibold text-emerald-700 hover:underline"
                 >
                   Về trang đầu
                 </Link>
               )}
             </div>
           )}
-          <div className="mt-4 divide-y rounded-2xl border">
+          <div className="mt-4 divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
             {r.data.items.map((a) => (
               <Link
                 href={`${ownerApplicationListPath}/${a.id}?${new URLSearchParams({ returnTo })}`}
@@ -261,7 +263,7 @@ export function AdminOwnerApplicationList({ initial }: { initial: ApplicationFil
               {r.data.page > 0 && (
                 <Link
                   href={applicationListHref({ ...filters, page: String(r.data.page - 1) })}
-                  className="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50"
                 >
                   Trang trước
                 </Link>
@@ -269,7 +271,7 @@ export function AdminOwnerApplicationList({ initial }: { initial: ApplicationFil
               {r.data.page + 1 < r.data.totalPages && (
                 <Link
                   href={applicationListHref({ ...filters, page: String(r.data.page + 1) })}
-                  className="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50"
                 >
                   Trang sau
                 </Link>
@@ -278,6 +280,6 @@ export function AdminOwnerApplicationList({ initial }: { initial: ApplicationFil
           )}
         </section>
       )}
-    </main>
+    </AdminPage>
   )
 }

@@ -23,13 +23,13 @@ export function ProfileSecurity({
   return (
     <div className="space-y-6">
       {/* Account Identifier Card */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <h4 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           Định danh tài khoản
         </h4>
 
         <div className="mt-4 space-y-3">
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
             <span className="text-[11px] font-medium text-slate-400 block">MÃ NGƯỜI DÙNG</span>
             <div className="flex items-center justify-between gap-2 mt-1">
               <code className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 truncate">
@@ -46,7 +46,7 @@ export function ProfileSecurity({
             </div>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
             <span className="text-[11px] font-medium text-slate-400 block">
               TRẠNG THÁI TÀI KHOẢN
             </span>
@@ -61,7 +61,7 @@ export function ProfileSecurity({
       </div>
 
       {/* Contact & Verification Card */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Thông tin liên hệ
@@ -76,7 +76,7 @@ export function ProfileSecurity({
         </div>
 
         <div className="mt-4 space-y-3">
-          <div className="flex items-start gap-3 rounded-xl border border-slate-100 p-3.5 dark:border-slate-800">
+          <div className="flex items-start gap-3 rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60">
               <Mail size={16} />
             </div>
@@ -101,7 +101,7 @@ export function ProfileSecurity({
             </div>
           </div>
 
-          <div className="flex items-start gap-3 rounded-xl border border-slate-100 p-3.5 dark:border-slate-800">
+          <div className="flex items-start gap-3 rounded-2xl border border-slate-100 p-3.5 dark:border-slate-800">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/60">
               <Phone size={16} />
             </div>

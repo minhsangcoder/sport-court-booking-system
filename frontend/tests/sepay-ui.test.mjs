@@ -62,6 +62,7 @@ function listing(moneyClass) {
       '@/features/auth/require-auth': { RequireAuth: 'auth' },
       '@/components/ui/input': { Input: 'input' },
       '@/components/ui/button': { Button: 'button' },
+      'lucide-react': { CalendarClock: 'icon', Wallet: 'icon' },
       '@/features/booking/admission-notice': { AdmissionNotice: 'admission' },
       '@/features/payments/bank-destination-form': { BankDestinationForm: 'bank-form' },
     },
@@ -115,6 +116,7 @@ test('the Owner SePay setup writes the bank and secret, and reads only masked ch
       react: driver.react,
       'react/jsx-runtime': { jsx, jsxs: jsx },
       './facility-store': { useFacility: () => ({ facility: { id: 'facility' } }) },
+      'lucide-react': new Proxy({}, { get: (_, name) => String(name) }),
       '@/lib/use-api': {
         useApi: (path) => {
           assert.equal(path, '/payments/facilities/facility/sepay-channel')
@@ -134,14 +136,14 @@ test('the Owner SePay setup writes the bank and secret, and reads only masked ch
   )
   const Page = load('features/facility/sepay-channel-page.tsx').SepayChannelPage,
     tree = driver.render(Page)
-  assert.match(text(tree), /Kênh nhận tiền SePay/)
+  assert.ok(nodes(tree).some((n) => n.props?.title === 'Kênh nhận tiền SePay'))
   const secret = nodes(tree).find((n) => n.props?.name === 'webhookApiKey')
   assert.equal(secret.props.type, 'password')
   assert.equal(secret.props.value, undefined)
   assert.match(text(tree), /Cơ sở chưa có tài khoản nhận tiền/)
   assert.equal(nodes(tree).find((n) => n.type === 'banks').props.disabled, false)
-  assert.equal(nodes(tree).find((n) => n.type === 'button').props.disabled, false)
-  assert.equal(nodes(tree).find((n) => n.type === 'button').props.type, 'submit')
+  const submit = nodes(tree).find((n) => n.props?.type === 'submit')
+  assert.equal(submit.props.disabled, false)
   await nodes(tree)
     .find((n) => n.type === 'form')
     .props.onSubmit({ preventDefault() {}, currentTarget: { reset() {} } })
@@ -153,6 +155,85 @@ test('the Owner SePay setup writes the bank and secret, and reads only masked ch
   assert.equal('clientId' in body, false)
   assert.equal('checksumKey' in body, false)
   driver.unmount()
+})
+
+function sepayPage(channel, reload = () => {}) {
+  const driver = hookDriver()
+  const load = moduleLoader(
+    {},
+    {
+      react: driver.react,
+      'react/jsx-runtime': { jsx, jsxs: jsx },
+      './facility-store': { useFacility: () => ({ facility: { id: 'facility' } }) },
+      'lucide-react': new Proxy({}, { get: (_, name) => String(name) }),
+      '@/lib/use-api': { useApi: () => ({ data: channel, reload }) },
+      '@/lib/api': { api: async () => ({}) },
+      '@/components/ui/input': { Input: 'input' },
+      '@/components/ui/button': { Button: 'button' },
+      '@/features/payments/bank-select': { BankSelect: 'banks', BankName: 'bank-name' },
+    },
+  )
+  const Page = load('features/facility/sepay-channel-page.tsx').SepayChannelPage
+  return { driver, render: () => driver.render(Page) }
+}
+const savedChannel = {
+  channelId: 'channel',
+  provider: 'SEPAY',
+  version: 3,
+  status: 'READY',
+  bankBin: '970436',
+  maskedAccountNumber: '***6410',
+  accountName: 'FACILITY OWNER',
+  webhookUrl: 'https://hook.example/webhook',
+  lastWebhookAt: null,
+}
+const byText = (tree, pattern) => nodes(tree).find((n) => n.type === 'button' && pattern.test(text(n)))
+
+test('a configured channel reads as saved details until the Owner chooses to change the account', () => {
+  const page = sepayPage(savedChannel)
+  let tree = page.render()
+  assert.equal(nodes(tree).some((n) => n.type === 'form'), false)
+  assert.match(text(tree), /\*\*\*6410/)
+  assert.match(text(tree), /FACILITY OWNER/)
+  byText(tree, /Đổi tài khoản/).props.onClick()
+  tree = page.render()
+  assert.ok(nodes(tree).some((n) => n.type === 'form'))
+  const account = nodes(tree).find((n) => n.props?.name === 'accountNumber')
+  assert.equal(account.props.defaultValue, undefined)
+  byText(tree, /Hủy/).props.onClick()
+  assert.equal(nodes(page.render()).some((n) => n.type === 'form'), false)
+  page.driver.unmount()
+})
+
+test('saved is not reported as working until a webhook arrived with the current key', () => {
+  const waiting = text(sepayPage(savedChannel).render())
+  assert.match(waiting, /chưa nhận webhook/)
+  assert.doesNotMatch(waiting, /Đã nhận webhook/)
+  const received = text(
+    sepayPage({ ...savedChannel, lastWebhookAt: '2026-10-31T10:00:00Z' }).render(),
+  )
+  assert.match(received, /Đã nhận webhook/)
+  assert.doesNotMatch(received, /chưa nhận webhook/)
+})
+
+test('the webhook address appears only once the channel exists', () => {
+  assert.match(text(sepayPage(null).render()), /sau khi lưu bước 2/)
+  assert.match(text(sepayPage(savedChannel).render()), /https:\/\/hook\.example\/webhook/)
+})
+
+test('the generated webhook key satisfies the server rule and differs each time', () => {
+  const page = sepayPage(null)
+  let tree = page.render()
+  const keyOf = (t) => nodes(t).find((n) => n.props?.name === 'webhookApiKey')
+  assert.equal(keyOf(tree).props.defaultValue, undefined)
+  byText(tree, /Tạo khóa tự động/).props.onClick()
+  tree = page.render()
+  const first = keyOf(tree).props.defaultValue
+  assert.match(first, /^[A-Za-z0-9_.:-]{32,200}$/)
+  assert.equal(keyOf(tree).props.type, 'password')
+  byText(tree, /Tạo khóa tự động/).props.onClick()
+  assert.notEqual(keyOf(page.render()).props.defaultValue, first)
+  page.driver.unmount()
 })
 
 for (const provider of ['SEPAY', 'DEMO']) {
@@ -233,6 +314,7 @@ for (const component of ['HeaderAccountMenu', 'HeaderMobileMenu']) {
       {
         'react/jsx-runtime': { jsx, jsxs: jsx },
         'next/link': { default: 'a' },
+        '@/components/user-avatar': { UserAvatar: 'user-avatar' },
         'lucide-react': new Proxy({}, { get: (_, name) => String(name) }),
       },
     )
@@ -262,7 +344,7 @@ for (const component of ['HeaderAccountMenu', 'HeaderMobileMenu']) {
   })
 }
 
-test('Customer bank settings explain that only selling a booking requires bank registration', () => {
+test('Customer bank settings show the photo above the read-only bank account', () => {
   const driver = hookDriver()
   const load = moduleLoader(
     {},
@@ -273,12 +355,12 @@ test('Customer bank settings explain that only selling a booking requires bank r
       '@/lib/auth-context': { useAuth: () => ({ user: { id: 'customer' } }) },
       '@/features/auth/require-auth': { RequireAuth: 'auth' },
       '@/features/payments/bank-destination-form': { BankDestinationForm: 'bank-form' },
+      '@/features/profile/avatar-uploader': { AvatarUploader: 'avatar-uploader' },
     },
   )
   const wrapper = load('app/customer/profile/bank/page.tsx').default()
   const tree = driver.render(wrapper.props.children.type)
-  assert.match(text(tree), /không cần khai tài khoản ngân hàng để đặt sân hoặc mua lại/)
-  assert.match(text(tree), /100% giá đã chốt trực tiếp/)
-  assert.equal(nodes(tree).filter((n) => n.type === 'bank-form').length, 1)
+  assert.equal(nodes(tree).filter((n) => n.type === 'avatar-uploader').length, 1)
+  assert.equal(nodes(tree).find((n) => n.type === 'bank-form').props.summary, true)
   driver.unmount()
 })

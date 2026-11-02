@@ -18,7 +18,7 @@ export function QrCheckinUpload({ model }: { model: QrCheckinModel }) {
   return (
     <>
       {/* Quick Camera Bar */}
-      <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3">
+      <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3">
         <div className="flex items-center gap-2 text-xs text-slate-600">
           <Camera className="h-4 w-4 text-emerald-600" />
           <span>Hoặc quét trực tiếp từ thiết bị</span>
@@ -77,7 +77,7 @@ export function QrCheckinUpload({ model }: { model: QrCheckinModel }) {
             fileInputRef.current?.click()
           }
         }}
-        className={`relative flex min-h-[170px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition ${
+        className={`relative flex min-h-[170px] cursor-pointer flex-col items-center justify-center border-2 border-dashed p-6 text-center transition rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise${
           isDragging
             ? 'border-emerald-500 bg-emerald-50/70 scale-[0.99]'
             : 'border-slate-200 bg-slate-50/50 hover:border-emerald-400 hover:bg-emerald-50/20'
@@ -133,8 +133,10 @@ export function QrCheckinUpload({ model }: { model: QrCheckinModel }) {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-800">
-                <span className="text-emerald-700 underline">Bấm để tải ảnh QR</span> hoặc kéo thả
-                vào đây
+                <span className="font-semibold text-emerald-700 hover:underline">
+                  Bấm để tải ảnh QR
+                </span>{' '}
+                hoặc kéo thả vào đây
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Hỗ trợ PNG, JPG, WEBP, SVG hoặc nhấn{' '}

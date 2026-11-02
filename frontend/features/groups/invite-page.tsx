@@ -1,4 +1,6 @@
 'use client'
+import { bannerLink } from '@/features/transfers/transfer-styles'
+import { BannerPage } from '@/components/page-banner'
 import { Button } from '@/components/ui/button'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { useApi } from '@/lib/use-api'
@@ -26,11 +28,15 @@ function Loaded({ id }: { id: string }) {
     }
   }
   return (
-    <div className="mx-auto max-w-xl px-5 py-10">
-      <Link className="text-sm text-slate-500" href={`/customer/groups/${id}`}>
-        Nhóm / Mời thành viên
-      </Link>
-      <h1 className="mt-5 text-3xl font-black">Mời bạn cùng chơi</h1>
+    <BannerPage
+      eyebrow={
+        <Link className={bannerLink} href={`/customer/groups/${id}`}>
+          Nhóm / Mời thành viên
+        </Link>
+      }
+      title="Mời bạn cùng chơi"
+      width="max-w-xl"
+    >
       {r.loading && (
         <p className="mt-6" role="status">
           Đang tạo lời mời…
@@ -42,7 +48,7 @@ function Loaded({ id }: { id: string }) {
         </p>
       )}
       {r.data && (
-        <section className="mt-6 space-y-5 rounded-2xl border p-6">
+        <section className="mt-6 space-y-5 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
           <div className="flex justify-center">
             <Image
               unoptimized
@@ -60,12 +66,12 @@ function Loaded({ id }: { id: string }) {
           </Button>
           <details className="text-sm">
             <summary>Mã mời để nhập thủ công</summary>
-            <p className="mt-3 break-all rounded-lg bg-slate-50 p-3 font-mono text-xs">
+            <p className="mt-3 break-all rounded-2xl bg-slate-50 p-3 font-mono text-xs">
               {r.data.code}
             </p>
           </details>
           <a
-            className="block text-center text-sm text-emerald-700 underline"
+            className="block text-center text-sm font-semibold text-emerald-700 hover:underline"
             download={`sporthub-group-${id}.${r.data.qrPngDataUrl ? 'png' : 'svg'}`}
             href={r.data.qrPngDataUrl || `data:image/svg+xml,${encodeURIComponent(r.data.qrSvg)}`}
           >
@@ -78,6 +84,6 @@ function Loaded({ id }: { id: string }) {
           )}
         </section>
       )}
-    </div>
+    </BannerPage>
   )
 }

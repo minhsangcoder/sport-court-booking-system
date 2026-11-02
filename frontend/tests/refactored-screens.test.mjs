@@ -18,16 +18,23 @@ const content = node => !node || typeof node === 'boolean' ? '' : typeof node !=
 
 test('profile edits preserve PATCH fields, nullable avatar/date, session notification, copy and server validation', async () => {
   const driver = hookDriver(), calls = [], notifications = [], copied = []
-  let reject = false
+  let reject = false, sessionUser = user
   class ApiError extends Error {}
   const load = moduleLoader({ navigator: { clipboard: { writeText: value => copied.push(value) } }, window: { dispatchEvent: event => notifications.push(event.detail) }, CustomEvent: class { constructor(_, { detail }) { this.detail = detail } } }, {
-    ...ui, react: driver.react, '@/lib/auth-context': { useAuth: () => ({ user }) },
+    ...ui, react: driver.react, '@/lib/auth-context': { useAuth: () => ({ user: sessionUser }) },
     '@/lib/api': { ApiError, api: async (path, options) => { calls.push({ path, ...options }); if (reject) throw new ApiError('Họ tên không hợp lệ.'); return { ...user, fullName: 'Tên mới' } } },
   })
   const hook = load('features/profile/use-profile.ts').useProfile
   driver.render(hook); let model = driver.render(hook)
   assert.equal(model.fullName, user.fullName)
   model.setFullName(' Tên mới '); model.setAvatarUrl(' '); model.setDateOfBirth('')
+  model = driver.render(hook)
+  // A session refresh from a photo upload keeps unsaved edits and takes the new photo.
+  sessionUser = { ...user, avatarUrl: '/api/v1/users/avatars/new' }
+  model = driver.render(hook); model = driver.render(hook)
+  assert.equal(model.fullName, ' Tên mới ')
+  assert.equal(model.avatarUrl, '/api/v1/users/avatars/new')
+  model.setAvatarUrl(' ')
   model = driver.render(hook); await model.handleSave({ preventDefault() {} })
   assert.equal(calls[0].path, '/users/me'); assert.equal(calls[0].method, 'PATCH')
   assert.deepEqual(JSON.parse(calls[0].body), { fullName: 'Tên mới', avatarUrl: null, dateOfBirth: null })

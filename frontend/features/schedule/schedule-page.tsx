@@ -1,5 +1,14 @@
 'use client'
 import { useFacility } from '@/features/facility/facility-store'
+import {
+  OwnerPageHead,
+  Panel,
+  emeraldNotice,
+  fieldLabel,
+  outlinePill,
+  redNotice,
+} from '@/features/facility/owner-ui'
+import { Eye } from 'lucide-react'
 import type { Court } from '@/features/facility/types'
 import { Exceptions } from '@/features/schedule/date-exceptions'
 import { HoursEditor } from '@/features/schedule/hours-editor'
@@ -16,24 +25,20 @@ export function SchedulePage() {
   const [feedback, setFeedback] = useState('')
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Lịch mở cửa</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Giờ theo {timezoneLabel(facility.timezone)}. Sân dùng lịch cơ sở khi chưa có lịch riêng.
-          </p>
-        </div>
-        <Link
-          className="rounded-full bg-emerald-600 px-5 py-2 text-sm text-white"
-          href={`${basePath}/schedule/preview`}
-        >
-          Xem trước lịch và giá
-        </Link>
-      </div>
-      <label className="grid max-w-sm gap-2 text-sm">
+      <OwnerPageHead
+        title="Lịch mở cửa"
+        description={`Giờ theo ${timezoneLabel(facility.timezone)}. Sân dùng lịch cơ sở khi chưa có lịch riêng.`}
+        actions={
+          <Link className={outlinePill} href={`${basePath}/schedule/preview`}>
+            <Eye className="size-4" />
+            Xem trước lịch và giá
+          </Link>
+        }
+      />
+      <label className={`${fieldLabel} max-w-sm`}>
         Phạm vi lịch
         <select
-          className="rounded-lg border bg-white p-3"
+          className="rounded-xl border bg-white px-3.5 dark:bg-slate-800"
           value={scope}
           onChange={(e) => {
             setScope(e.target.value)
@@ -49,7 +54,7 @@ export function SchedulePage() {
         </select>
       </label>
       {(hours.error || courts.error) && (
-        <p role="alert" className="text-red-700">
+        <p role="alert" className={redNotice}>
           {hours.error || courts.error}
           <button
             className="ml-3 underline"
@@ -77,11 +82,13 @@ export function SchedulePage() {
         )
       )}
       {feedback && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" className={emeraldNotice}>
           {feedback}
         </p>
       )}
-      <Exceptions key={scope} facilityId={facility.id} courtId={scope} />
+      <Panel>
+        <Exceptions key={scope} facilityId={facility.id} courtId={scope} />
+      </Panel>
     </section>
   )
 }

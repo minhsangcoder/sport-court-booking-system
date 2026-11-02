@@ -1,35 +1,52 @@
 'use client'
+import { BannerPage } from '@/components/page-banner'
 import Link from 'next/link'
+import type { ComponentProps } from 'react'
+
+const sections = [
+  ['reports', 'Báo cáo'],
+  ['accounts', 'Tài khoản'],
+  ['owner-applications', 'Đăng ký chủ cơ sở'],
+  ['facilities', 'Cơ sở'],
+  ['bookings', 'Lượt đặt'],
+  ['bookings/reconciliation', 'Đối soát'],
+  ['payments', 'Giao dịch'],
+  ['sports', 'Môn thể thao'],
+  ['disputes', 'Hỗ trợ'],
+  ['refunds', 'Rà soát hoàn tiền'],
+]
 
 export function AdminNav({ active }: { active: string }) {
   return (
-    <nav
-      aria-label="Quản trị nền tảng"
-      className="my-6 flex gap-2 overflow-x-auto border-b border-slate-200 pb-4 dark:border-slate-800"
-    >
-      {[
-        ['accounts', 'Tài khoản'],
-        ['owner-applications', 'Đăng ký chủ cơ sở'],
-        ['facilities', 'Cơ sở'],
-        ['bookings', 'Lượt đặt'],
-        ['payments', 'Giao dịch'],
-        ['sports', 'Môn thể thao'],
-        ['disputes', 'Hỗ trợ'],
-        ['refunds', 'Rà soát hoàn tiền'],
-        ['reports', 'Báo cáo'],
-      ].map(([key, label]) => (
+    <nav aria-label="Quản trị nền tảng" className="mb-6 flex flex-wrap gap-2">
+      {sections.map(([key, label]) => (
         <Link
           key={key}
           href={`/admin/${key}`}
-          className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold transition ${
+          aria-current={active === key ? 'page' : undefined}
+          className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
             active === key
-              ? 'bg-amber-500 text-slate-950 shadow-sm'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+              : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-emerald-400 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700'
           }`}
         >
           {label}
         </Link>
       ))}
     </nav>
+  )
+}
+
+/** Banner, section pills and content column shared by the admin list screens. */
+export function AdminPage({
+  active,
+  children,
+  ...page
+}: ComponentProps<typeof BannerPage> & { active: string }) {
+  return (
+    <BannerPage eyebrow="Quản trị SportHub" {...page}>
+      <AdminNav active={active} />
+      {children}
+    </BannerPage>
   )
 }

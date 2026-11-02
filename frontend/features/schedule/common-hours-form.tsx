@@ -13,9 +13,9 @@ export function CommonHoursForm({
   const { courtId, initial, ranges, busy, removeRange, updateRange, addRange } = model
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
         <div>
-          <h3 className="text-base font-bold text-slate-900">
+          <h3 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
             Các khoảng mở cửa chung (Toàn bộ tuần)
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
@@ -29,7 +29,7 @@ export function CommonHoursForm({
       </div>
 
       {courtId && initial.length === 0 && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
           Sân này hiện đang kế thừa lịch mở cửa của toàn cơ sở. Bạn có thể chỉnh sửa và nhấn{' '}
           <strong>&quot;Lưu lịch&quot;</strong> để đặt lịch riêng cho sân này.
         </div>
@@ -37,7 +37,10 @@ export function CommonHoursForm({
 
       <div className="space-y-3">
         {ranges.map((row, i) => (
-          <div key={i} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div
+            key={i}
+            className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/40"
+          >
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 {i === 0
@@ -56,7 +59,7 @@ export function CommonHoursForm({
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-1.5 text-xs font-medium text-slate-700">
+              <label className="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
                 Mở cửa
                 <Input
                   type="time"
@@ -66,7 +69,7 @@ export function CommonHoursForm({
                   disabled={busy}
                 />
               </label>
-              <label className="grid gap-1.5 text-xs font-medium text-slate-700">
+              <label className="grid gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
                 Đóng cửa
                 <Input
                   type="time"

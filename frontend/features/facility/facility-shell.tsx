@@ -1,14 +1,15 @@
 'use client'
 import { RequireAuth } from '@/features/auth/require-auth'
 import { useApi } from '@/lib/use-api'
-import { RefreshCw } from 'lucide-react'
+import { PageBanner, bannerGhost } from '@/components/page-banner'
+import { Menu, RefreshCw, X } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { FacilityBreadcrumb } from './facility-breadcrumb'
 import { facilityNavigation } from './facility-navigation'
 import { FacilitySidebar } from './facility-sidebar'
 import { FacilityContext } from './facility-store'
+import { displayLabel } from '@/lib/display-labels'
 import type { Facility, FacilityProfile } from './types'
 export function FacilityShell({
   id,
@@ -102,7 +103,52 @@ function LoadedShell({
     <FacilityContext.Provider
       value={{ facility: data, reload, basePath: base, editable, applicationId }}
     >
-      <div className="flex min-h-[calc(100vh-65px)] bg-slate-50 dark:bg-slate-950">
+      <PageBanner
+        icon="shuttle"
+        eyebrow={
+          <span className="flex flex-wrap items-center gap-1.5">
+            <Link
+              href={applicationId ? `/owner/application/${applicationId}` : '/owner/facilities'}
+              className="transition hover:text-emerald-200"
+            >
+              {applicationId ? 'Hồ sơ chủ cơ sở' : 'Cơ sở của tôi'}
+            </Link>
+            <span aria-hidden>/</span>
+            <span>{activeLabel}</span>
+          </span>
+        }
+        title={data.name}
+        description={[data.addressLine, data.ward, data.province].filter(Boolean).join(', ')}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              className={`${bannerGhost} lg:hidden`}
+              aria-label="Mở hoặc thu gọn thanh bên"
+            >
+              {sidebarOpen ? <X className="size-4" /> : <Menu className="size-4" />}
+              Menu
+            </button>
+            <span className="inline-flex h-10 items-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 text-sm font-bold text-emerald-200 backdrop-blur-md">
+              <span
+                className={`size-2 rounded-full ${data.status === 'ACTIVE' ? 'animate-pulse bg-emerald-400' : 'bg-amber-400'}`}
+              />
+              {displayLabel(data.status)}
+            </span>
+            <button
+              type="button"
+              onClick={reload}
+              title="Tải lại dữ liệu cơ sở"
+              aria-label="Tải lại dữ liệu cơ sở"
+              className="inline-flex size-10 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white backdrop-blur-md transition hover:bg-white/20"
+            >
+              <RefreshCw className="size-4" />
+            </button>
+          </>
+        }
+      />
+      <div className="owner-workspace mx-auto flex max-w-7xl items-start gap-6 px-4 py-7 sm:px-6 sm:py-9">
         {/* DESKTOP & MOBILE SIDEBAR */}
         <FacilitySidebar
           sidebarOpen={sidebarOpen}
@@ -120,23 +166,16 @@ function LoadedShell({
 
         {/* MAIN WORKSPACE CONTENT */}
         <div className="flex flex-1 flex-col min-w-0">
-          {/* Header Bar with Breadcrumbs & Status */}
-          <FacilityBreadcrumb
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-            activeLabel={activeLabel}
-          />
-
           {/* Notice for Readonly Mode when Pending Approval */}
           {applicationId && !editable && (
-            <div className="border-b border-amber-200 bg-amber-50 px-6 py-3 text-xs font-medium text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+            <div className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-sm text-amber-950/85 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-100/85">
               Hồ sơ đã gửi thẩm định được giữ nguyên để quản trị viên kiểm tra. Bạn sẽ nhận được
               thông báo khi được duyệt hoặc cần bổ sung.
             </div>
           )}
 
           {/* Children View Container */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <main className="min-w-0 flex-1">
             {applicationId ? (
               <fieldset disabled={!editable} className="min-w-0">
                 {children}

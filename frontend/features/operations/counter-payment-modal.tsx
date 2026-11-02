@@ -175,7 +175,7 @@ function PaymentForm({
       aria-labelledby="counter-payment-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
     >
-      <div className="relative w-full max-w-lg rounded-2xl border bg-white p-6 shadow-2xl dark:bg-slate-900">
+      <div className="relative w-full max-w-lg p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
         <button
           onClick={onClose}
           disabled={busy}
@@ -195,7 +195,7 @@ function PaymentForm({
             </p>
           </div>
         </div>
-        <div className="my-4 space-y-2 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
+        <div className="my-4 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
           <p>
             Lượt đặt: <strong>#{booking.id.slice(0, 8).toUpperCase()}</strong>
           </p>
@@ -213,12 +213,12 @@ function PaymentForm({
         </div>
         <RefundPolicyNotice />
         {error && (
-          <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <p role="alert" className="mb-4 rounded-2xl bg-red-50 p-3 text-sm text-red-700">
             {error}
           </p>
         )}
         {message && (
-          <p role="status" className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          <p role="status" className="mb-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
             {message}
           </p>
         )}

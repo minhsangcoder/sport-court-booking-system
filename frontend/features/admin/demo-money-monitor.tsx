@@ -33,8 +33,8 @@ export function AdminDemoMoneyMonitor({ query }: { query: string }) {
       ? resource.data
       : null
   return (
-    <section className="mt-8 space-y-4 rounded-2xl border p-6">
-      <h2 className="text-xl font-bold">Giao dịch mô phỏng của các cơ sở</h2>
+    <section className="mt-8 space-y-4 p-6 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+      <h2 className="text-lg font-extrabold tracking-tight">Giao dịch mô phỏng của các cơ sở</h2>
       <p className="text-sm text-slate-600">
         Tiền sân, phí chuyển nhượng và nghĩa vụ trả/hoàn thuộc cơ sở. SportHub không hưởng doanh thu
         này. quản trị viên chỉ theo dõi; chủ cơ sở hoặc nhân viên có quyền thực hiện tiền mô phỏng.
@@ -77,7 +77,7 @@ export function AdminDemoMoneyMonitor({ query }: { query: string }) {
                     <td className="p-3">{states[item.payoutState] || 'Đang đồng bộ'}</td>
                     <td className="p-3">
                       <Link
-                        className="text-emerald-700 underline"
+                        className="font-semibold text-emerald-700 hover:underline"
                         href={`/admin/bookings/${item.bookingId}`}
                       >
                         Xem lượt đặt
@@ -96,7 +96,7 @@ export function AdminDemoMoneyMonitor({ query }: { query: string }) {
                     <td className="p-3">{states[item.state] || 'Đang đồng bộ'}</td>
                     <td className="p-3">
                       <Link
-                        className="text-emerald-700 underline"
+                        className="font-semibold text-emerald-700 hover:underline"
                         href={`/admin/bookings/${item.bookingId}`}
                       >
                         Xem lượt đặt

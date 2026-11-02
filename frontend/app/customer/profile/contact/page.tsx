@@ -12,31 +12,31 @@ export default function ContactPage() {
   const { error, busy, setLoading, load, setError, message } = model
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-slate-50/70 pb-20 dark:bg-slate-950/40">
+      <div className="min-h-screen pb-20">
         {/* Cover Hero Header */}
         <ContactHero />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           {/* Sub Navigation Tabs */}
-          <div className="mt-6 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
-            <nav className="flex space-x-6">
+          <div className="mt-7">
+            <nav className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <Link
                 href="/customer/profile"
-                className="border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-2 transition-colors"
+                className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:ring-emerald-400 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
               >
                 <User size={16} />
                 Thông tin cá nhân
               </Link>
               <Link
                 href="/customer/profile/contact"
-                className="border-b-2 border-emerald-600 pb-3 text-sm font-bold text-emerald-600 flex items-center gap-2"
+                className="flex items-center gap-2 whitespace-nowrap rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-900"
               >
                 <Key size={16} />
                 Bảo mật & Liên hệ
               </Link>
               <Link
                 href="/customer/bookings"
-                className="border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-2 transition-colors"
+                className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:ring-emerald-400 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
               >
                 <Clock size={16} />
                 Lịch sử đặt sân
@@ -46,7 +46,7 @@ export default function ContactPage() {
 
           {/* Feedback Alerts */}
           {error && (
-            <div className="mt-6 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-200">
+            <div className="mt-6 flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-200">
               <div className="flex items-center gap-2">
                 <AlertCircle size={18} className="text-rose-600 shrink-0" />
                 <span>{error}</span>
@@ -72,14 +72,14 @@ export default function ContactPage() {
           )}
 
           {message && (
-            <div className="mt-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <div className="mt-6 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-200">
               <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
               <span>{message}</span>
             </div>
           )}
 
           {/* Notice info banner */}
-          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mt-6 flex items-start gap-3 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60">
               <ShieldCheck size={20} />
             </div>

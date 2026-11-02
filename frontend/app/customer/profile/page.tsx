@@ -12,7 +12,7 @@ export default function ProfilePage() {
 
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-slate-50/70 pb-20 dark:bg-slate-950/40">
+      <div className="min-h-screen pb-20">
         {/* Cover Hero Banner */}
         <ProfileHero />
 
@@ -21,31 +21,31 @@ export default function ProfilePage() {
           <ProfileIdentity model={model} />
 
           {/* Sub Navigation Tabs */}
-          <div className="mt-8 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
-            <nav className="flex space-x-6">
+          <div className="mt-7">
+            <nav className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <Link
                 href="/customer/profile/bank"
-                className="pb-3 text-sm font-medium text-emerald-700"
+                className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:ring-emerald-400 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
               >
                 Ngân hàng nhận tiền
               </Link>
               <Link
                 href="/customer/profile"
-                className="border-b-2 border-emerald-600 pb-3 text-sm font-bold text-emerald-600 flex items-center gap-2"
+                className="flex items-center gap-2 whitespace-nowrap rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-white dark:text-slate-900"
               >
                 <User size={16} />
                 Thông tin cá nhân
               </Link>
               <Link
                 href="/customer/profile/contact"
-                className="border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-2 transition-colors"
+                className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:ring-emerald-400 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
               >
                 <Key size={16} />
                 Bảo mật & Liên hệ
               </Link>
               <Link
                 href="/customer/bookings"
-                className="border-b-2 border-transparent pb-3 text-sm font-medium text-slate-500 hover:text-slate-800 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-2 transition-colors"
+                className="flex items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:ring-emerald-400 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
               >
                 <Clock size={16} />
                 Lịch sử đặt sân

@@ -42,7 +42,7 @@ class SepayChannelControllerTest {
     var channel =
         new SepayChannels.Channel(
             UUID.randomUUID(), facility, UUID.randomUUID(), 1, "READY", "SEPAY", "970436",
-            "******6789", "FACILITY OWNER", "https://sporthub.example/webhook");
+            "******6789", "FACILITY OWNER", "https://sporthub.example/webhook", null);
     when(channels.own(facility, owner, "Bearer owner")).thenReturn(channel);
     http.perform(get(path()).header("Authorization", "Bearer owner"))
         .andExpect(status().isOk())

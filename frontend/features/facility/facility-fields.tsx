@@ -106,7 +106,7 @@ export function FacilityFields({
               wardCode: '',
             }))
           }
-          className="h-10 w-full min-w-0 rounded-lg border px-3"
+          className="h-11 w-full min-w-0 rounded-xl border px-3.5"
           required
           disabled={busy || frozen}
           aria-invalid={!!provinceError}
@@ -135,7 +135,7 @@ export function FacilityFields({
           onChange={(event) =>
             setAddress((current) => ({ ...current, wardCode: event.target.value }))
           }
-          className="h-10 w-full min-w-0 rounded-lg border px-3"
+          className="h-11 w-full min-w-0 rounded-xl border px-3.5"
           required
           disabled={!province || busy || frozen}
           aria-invalid={!!wardError}
@@ -186,7 +186,7 @@ export function FacilityFields({
           Mô tả giới thiệu <span className="font-normal text-slate-400">(tùy chọn)</span>
         </span>
         <textarea
-          className="min-h-28 rounded-lg border p-3"
+          className="min-h-28 rounded-2xl border border-slate-200/90 p-3"
           name="description"
           defaultValue={facility?.description}
           maxLength={5000}
