@@ -289,6 +289,6 @@ test("configuration impact details survive the real client error envelope and ac
 });
 test("current fallback route grammar includes new scoped screens and excludes invented paths",()=>{
   const current=load("lib/routes.ts"),id="11111111-2222-4333-8444-555555555555";
-  for(const p of ["/customer/favorites","/customer/staff-invitations",`/customer/groups/play-groups/${id}`,`/owner/facilities/${id}/court-types`,`/owner/application/${id}/facility/court-types`,`/staff/bookings/${id}`,`/staff/facilities/${id}/schedule`,`/staff/facilities/${id}/schedule/preview`,`/admin/bookings/reconciliation/${id}`,"/admin/sports"])assert.equal(current.isFrontendRoute(p),true,p);
+  for(const p of ["/customer/favorites","/customer/staff-invitations",`/customer/groups/play-groups/${id}`,`/owner/facilities/${id}/court-types`,`/owner/application/${id}/facility/court-types`,`/staff/bookings/${id}`,`/staff/facilities/${id}/schedule`,`/staff/facilities/${id}/schedule/preview`,"/admin/sports"])assert.equal(current.isFrontendRoute(p),true,p);
   for(const p of ["/admin/execute-refund", "/owner/facilities/invalid/court-types",`/staff/bookings/${id}/extra`])assert.equal(current.isFrontendRoute(p),false,p);
 });

@@ -1,4 +1,5 @@
 'use client'
+import { confirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { canPayBooking } from '@/features/booking/ownership'
@@ -119,10 +120,10 @@ export function OperationCards({
                         disabled={busy}
                       />
                       <QrUploadButton
-                        onTokenDetected={(token, bookingId) => {
+                        onTokenDetected={async (token, bookingId) => {
                           if (bookingId && bookingId.toLowerCase() !== b.id.toLowerCase()) {
                             if (
-                              window.confirm(
+                              await confirmDialog(
                                 `Ảnh QR này thuộc lượt đặt #${bookingId.slice(0, 8).toUpperCase()} (khác với lượt đặt hiện tại #${b.id.slice(0, 8).toUpperCase()}). Bạn có muốn xác nhận vào sân cho lượt đặt #${bookingId.slice(0, 8).toUpperCase()} không?`,
                               )
                             ) {

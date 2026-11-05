@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { type ScheduleException } from '@/features/schedule/types'
@@ -44,7 +45,7 @@ export function Exceptions({ facilityId, courtId }: { facilityId: string; courtI
     }
   }
   async function remove(id: string) {
-    if (!window.confirm('Bỏ ngoại lệ này?')) return
+    if (!(await confirmDanger('Bỏ ngoại lệ này?'))) return
     setBusy(true)
     setError('')
     try {

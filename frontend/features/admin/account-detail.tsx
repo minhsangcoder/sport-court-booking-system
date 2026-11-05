@@ -13,6 +13,29 @@ import Link from 'next/link'
 import { useState } from 'react'
 import type { AdminAccount } from './admin-account-types'
 import { AdminPage } from './admin-nav'
+type StateAction = 'suspend' | 'deactivate' | 'reactivate'
+type Action = 'lock' | 'unlock' | 'roles' | StateAction
+const stateActions: Record<StateAction, { button: string; title: string; effect: string }> = {
+  suspend: {
+    button: 'Tạm ngừng tài khoản',
+    title: 'Tạm ngừng tài khoản',
+    effect:
+      'Người dùng bị đăng xuất khỏi mọi thiết bị và không đăng nhập được cho đến khi được kích hoạt lại. Hệ thống gửi thư thông báo kèm lý do.',
+  },
+  deactivate: {
+    button: 'Vô hiệu hóa tài khoản',
+    title: 'Vô hiệu hóa tài khoản',
+    effect:
+      'Tài khoản ngừng hoạt động, mọi phiên đăng nhập bị thu hồi và không đăng nhập được cho đến khi được kích hoạt lại. Hệ thống gửi thư thông báo kèm lý do.',
+  },
+  reactivate: {
+    button: 'Kích hoạt lại tài khoản',
+    title: 'Kích hoạt lại tài khoản',
+    effect: 'Người dùng đăng nhập lại được. Hệ thống gửi thư thông báo cho người dùng.',
+  },
+}
+const isStateAction = (a: Action | null): a is StateAction =>
+  a === 'suspend' || a === 'deactivate' || a === 'reactivate'
 type AccountDetail = {
   account: AdminAccount
   sessions: {
@@ -43,7 +66,7 @@ function Loaded({ id }: { id: string }) {
   const { user } = useAuth()
   const r = useApi<AccountDetail>(`/admin/accounts/${id}`)
   const [tab, setTab] = useState('audit')
-  const [action, setAction] = useState<'lock' | 'unlock' | 'roles' | null>(null)
+  const [action, setAction] = useState<Action | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -55,6 +78,13 @@ function Loaded({ id }: { id: string }) {
     setError('')
     setSuccess('')
     try {
+      if (isStateAction(action)) {
+        await businessApi.accountState(id, action, String(f.get('reason')).trim())
+        setAction(null)
+        r.reload()
+        setSuccess('Đã cập nhật trạng thái tài khoản. Các phiên liên quan đã được thu hồi.')
+        return
+      }
       const body =
         action === 'roles'
           ? { reason: f.get('reason'), roles: f.getAll('roles') }
@@ -127,39 +157,20 @@ function Loaded({ id }: { id: string }) {
       </section>
       <div className="mt-5 flex flex-wrap gap-3">
         {!protectedAdmin &&
-          ['suspend', 'deactivate', 'reactivate']
+          (['suspend', 'deactivate', 'reactivate'] as const)
             .filter((op) => op !== 'reactivate' || ['SUSPENDED', 'DEACTIVATED'].includes(u.status))
             .map((op) => (
               <Button
                 key={op}
                 variant="outline"
                 disabled={busy}
-                onClick={async () => {
-                  const reason = window.prompt(
-                    'Lý do thay đổi trạng thái tài khoản (tối đa 500 ký tự)',
-                  )
-                  if (!reason?.trim()) return
-                  setBusy(true)
+                onClick={() => {
+                  setAction(op)
                   setError('')
-                  try {
-                    await businessApi.accountState(
-                      id,
-                      op as 'suspend' | 'deactivate' | 'reactivate',
-                      reason,
-                    )
-                    r.reload()
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : 'Không thể thay đổi trạng thái')
-                  } finally {
-                    setBusy(false)
-                  }
+                  setSuccess('')
                 }}
               >
-                {op === 'suspend'
-                  ? 'Tạm ngừng tài khoản'
-                  : op === 'deactivate'
-                    ? 'Vô hiệu hóa tài khoản'
-                    : 'Kích hoạt lại tài khoản'}
+                {stateActions[op].button}
               </Button>
             ))}
         {!protectedAdmin && (
@@ -203,12 +214,17 @@ function Loaded({ id }: { id: string }) {
       {action && (
         <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl bg-slate-50 p-6">
           <h2 className="text-lg font-extrabold tracking-tight">
-            {action === 'lock'
-              ? 'Khóa tài khoản và thu hồi mọi phiên'
-              : action === 'unlock'
-                ? 'Mở khóa tài khoản'
-                : 'Cập nhật vai trò và thu hồi mọi phiên'}
+            {isStateAction(action)
+              ? stateActions[action].title
+              : action === 'lock'
+                ? 'Khóa tài khoản và thu hồi mọi phiên'
+                : action === 'unlock'
+                  ? 'Mở khóa tài khoản'
+                  : 'Cập nhật vai trò và thu hồi mọi phiên'}
           </h2>
+          {isStateAction(action) && (
+            <p className="text-sm text-slate-600">{stateActions[action].effect}</p>
+          )}
           {action === 'lock' && (
             <label className="grid gap-2 text-sm">
               Thời hạn
@@ -240,7 +256,15 @@ function Loaded({ id }: { id: string }) {
           )}
           <label className="grid gap-2 text-sm">
             Lý do xử lý
-            <Input name="reason" minLength={2} maxLength={500} required disabled={busy} />
+            <Input
+              key={action}
+              name="reason"
+              minLength={2}
+              maxLength={500}
+              required
+              disabled={busy}
+              placeholder="Tối đa 500 ký tự"
+            />
           </label>
           {error && (
             <p role="alert" className="text-red-700">
@@ -251,7 +275,7 @@ function Loaded({ id }: { id: string }) {
             <Button type="submit" className="bg-emerald-600 text-white" disabled={busy}>
               Xác nhận cập nhật
             </Button>
-            <Button variant="outline" onClick={() => setAction(null)} disabled={busy}>
+            <Button type="button" variant="outline" onClick={() => setAction(null)} disabled={busy}>
               Đóng
             </Button>
           </div>

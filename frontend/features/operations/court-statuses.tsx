@@ -1,4 +1,5 @@
 'use client'
+import { confirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import type { Court } from '@/features/facility/types'
 import {
@@ -27,13 +28,13 @@ export function CourtStatuses({ id }: { id: string }) {
             type="button"
             variant="outline"
             disabled={a.busy}
-            onClick={() => {
+            onClick={async () => {
               if (
-                !window.confirm(
+                !(await confirmDialog(
                   c.enabled
                     ? 'Tạm ngừng nhận lượt đặt mới trên sân này?'
                     : 'Kích hoạt lại sân này?',
-                )
+                ))
               )
                 return
               setImpact(null)

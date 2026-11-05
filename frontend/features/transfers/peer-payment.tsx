@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger, confirmDialog } from '@/components/confirm-dialog'
 import { useApi } from '@/lib/use-api'
 import { Button } from '@/components/ui/button'
 import { outlinePill, primaryPill } from './transfer-styles'
@@ -78,8 +79,9 @@ export function PeerPayment({
               <Button
                 className={primaryPill}
                 disabled={command.busy || command.blocked}
-                onClick={() => {
-                  if (window.confirm('Bạn đã chuyển đủ tiền cho người bán?')) run('declare-payment')
+                onClick={async () => {
+                  if (await confirmDialog('Bạn đã chuyển đủ tiền cho người bán?'))
+                    run('declare-payment')
                 }}
               >
                 Tôi đã chuyển tiền
@@ -88,9 +90,9 @@ export function PeerPayment({
                 variant="outline"
                 className={outlinePill}
                 disabled={command.busy || command.blocked}
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
+                    await confirmDanger(
                       'Chỉ hủy nếu chưa chuyển tiền. Bạn muốn giải phóng lượt giữ này?',
                     )
                   )
@@ -106,23 +108,23 @@ export function PeerPayment({
       {a.phase === 'PAYMENT_DECLARED' &&
         (buyer ? (
           <p>
-            Đang chờ người bán kiểm tra tiền. Sân chỉ thuộc về bạn khi người bán bấm đã nhận; nếu người
-            bán báo chưa nhận hoặc chưa xác nhận trước giờ chơi, sân vẫn thuộc người bán và hai bên tự
-            giải quyết với nhau qua chủ sân.
+            Đang chờ người bán kiểm tra tiền. Sân chỉ thuộc về bạn khi người bán bấm đã nhận; nếu
+            người bán báo chưa nhận hoặc chưa xác nhận trước giờ chơi, sân vẫn thuộc người bán và
+            hai bên tự giải quyết với nhau qua chủ sân.
           </p>
         ) : (
           <div className="space-y-3">
             <p>
-              Người mua báo đã chuyển tiền. Kiểm tra đủ {money(Number(a.amount), a.currency)} trong tài
-              khoản của bạn trước khi xác nhận.
+              Người mua báo đã chuyển tiền. Kiểm tra đủ {money(Number(a.amount), a.currency)} trong
+              tài khoản của bạn trước khi xác nhận.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Button
                 className={primaryPill}
                 disabled={command.busy || command.blocked}
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
+                    await confirmDialog(
                       'Bạn đã nhận đủ tiền? Xác nhận sẽ bàn giao quyền sân và đổi mã vào sân cho người mua.',
                     )
                   )
@@ -135,9 +137,9 @@ export function PeerPayment({
                 variant="outline"
                 className={outlinePill}
                 disabled={command.busy || command.blocked}
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
+                    await confirmDanger(
                       'Báo chưa nhận tiền sẽ kết thúc phiên này; sân vẫn thuộc bạn và tin được mở lại. Tiếp tục?',
                     )
                   )
@@ -151,8 +153,8 @@ export function PeerPayment({
         ))}
       {a.phase === 'DISPUTED' && (
         <p className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-3.5">
-          Phiên này được mở theo quy trình cũ. Sân sẽ thuộc người bán khi đến giờ chơi; hai bên tự giải
-          quyết với nhau qua chủ sân.
+          Phiên này được mở theo quy trình cũ. Sân sẽ thuộc người bán khi đến giờ chơi; hai bên tự
+          giải quyết với nhau qua chủ sân.
         </p>
       )}
       {command.error && (

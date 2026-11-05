@@ -11,7 +11,7 @@ export function PricingHistory({ facility, rule }: { facility: string; rule: str
   >(open ? `/schedules/facilities/${facility}/pricing/${rule}/history` : null)
 
   return (
-    <details onToggle={(e) => setOpen(e.currentTarget.open)} className="w-full text-sm">
+    <details onToggle={(e) => setOpen(e.currentTarget.open)} className="w-full text-xs">
       <summary className="inline-flex cursor-pointer items-center gap-1.5 font-semibold text-emerald-700 hover:text-emerald-800 transition-colors select-none dark:text-emerald-400">
         <History size={13} />
         Lịch sử quy tắc giá

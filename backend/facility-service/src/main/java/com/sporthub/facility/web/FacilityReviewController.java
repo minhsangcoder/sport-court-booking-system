@@ -15,6 +15,10 @@ public class FacilityReviewController {
  @PostMapping("/owner/facilities/{id}/submit") public ApiResponse<FacilityReviewService.Review> submit(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.submit(id,identity.current(r),r.getHeader("Authorization")));}
  @GetMapping("/owner/facilities/{id}/reviews") public ApiResponse<List<FacilityReviewService.Review>> history(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.ownHistory(id,identity.current(r)));}
  @GetMapping("/admin/facilities") public ApiResponse<List<FacilityDtos.FacilityView>> search(@RequestParam(required=false) String q,@RequestParam(required=false) String status,HttpServletRequest r){return ApiResponse.success(service.search(q,status,identity.current(r)));}
+ @GetMapping("/admin/facilities/{id}/courts")
+ public ApiResponse<List<FacilityDtos.CourtView>> courts(@PathVariable UUID id, HttpServletRequest r) {
+  return ApiResponse.success(service.courts(id, identity.current(r)));
+ }
  @GetMapping("/admin/facilities/{id}") public ApiResponse<FacilityReviewService.Detail> detail(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.detail(id,identity.current(r)));}
  @PostMapping("/admin/facilities/{id}/decision") public ApiResponse<FacilityDtos.FacilityView> decide(@PathVariable UUID id,@Valid @RequestBody Decision input,HttpServletRequest r){return ApiResponse.success(service.decide(id,input.action(),input.reason(),identity.current(r)));}
 }

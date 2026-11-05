@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { displayLabel } from '@/lib/display-labels'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -70,7 +71,7 @@ function Loaded({ id }: { id: string }) {
     }
   }
   async function cancel() {
-    if (!window.confirm('Hủy lượt giữ chỗ chưa thanh toán và giải phóng khung giờ?')) return
+    if (!(await confirmDanger('Hủy lượt giữ chỗ chưa thanh toán và giải phóng khung giờ?'))) return
     setBusy(true)
     setError('')
     try {

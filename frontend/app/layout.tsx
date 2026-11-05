@@ -1,4 +1,5 @@
 import { PageBackdrop } from '@/components/page-backdrop'
+import { DialogHost } from '@/components/confirm-dialog'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
@@ -49,6 +50,7 @@ export default function RootLayout({
           <AppHeader />
           <main className="min-h-[calc(100vh-56px)]">{children}</main>
         </AuthProvider>
+        <DialogHost />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

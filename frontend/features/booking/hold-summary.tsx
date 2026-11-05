@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { BannerPage } from '@/components/page-banner'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -104,7 +105,7 @@ function Loaded({ id }: { id: string }) {
     }
   }
   async function cancel() {
-    if (!window.confirm('Hủy giữ chỗ này?')) return
+    if (!(await confirmDanger('Hủy giữ chỗ này?'))) return
     setBusy(true)
     setError('')
     try {

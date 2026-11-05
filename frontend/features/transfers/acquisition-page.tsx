@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { bannerLink } from '@/features/transfers/transfer-styles'
 import { BannerPage } from '@/components/page-banner'
 import Link from 'next/link'
@@ -98,7 +99,7 @@ function Loaded({ id }: { id: string }) {
     }
   }
   async function cancel() {
-    if (!window.confirm('Hủy giao dịch chưa hoàn tất và mở lại tin cho người khác?')) return
+    if (!(await confirmDanger('Hủy giao dịch chưa hoàn tất và mở lại tin cho người khác?'))) return
     setBusy(true)
     setError('')
     try {

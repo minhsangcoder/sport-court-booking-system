@@ -9,11 +9,8 @@ const sections = [
   ['owner-applications', 'Đăng ký chủ cơ sở'],
   ['facilities', 'Cơ sở'],
   ['bookings', 'Lượt đặt'],
-  ['bookings/reconciliation', 'Đối soát'],
   ['payments', 'Giao dịch'],
   ['sports', 'Môn thể thao'],
-  ['disputes', 'Hỗ trợ'],
-  ['refunds', 'Rà soát hoàn tiền'],
 ]
 
 export function AdminNav({ active }: { active: string }) {

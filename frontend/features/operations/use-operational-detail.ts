@@ -1,4 +1,5 @@
 'use client'
+import { informDialog } from '@/components/confirm-dialog'
 import { canPayBooking, operationsWorkspace } from '@/features/booking/ownership'
 import { useMutation } from '@/features/integration/shared'
 import { checkInBooking } from '@/features/operations/check-in'
@@ -66,9 +67,10 @@ export function useOperationalDetail({ id }: { id: string }) {
 
   function handleQrDetected(detectedToken: string, detectedBookingId: string | null) {
     if (detectedBookingId && detectedBookingId.toLowerCase() !== id.toLowerCase()) {
-      alert(
-        `Lưu ý: Mã QR này thuộc về lượt đặt #${detectedBookingId.slice(0, 8).toUpperCase()}, không khớp với lượt đặt #${id.slice(0, 8).toUpperCase()} hiện tại!`,
-      )
+      void informDialog({
+        title: 'Mã QR không khớp',
+        message: `Lưu ý: Mã QR này thuộc về lượt đặt #${detectedBookingId.slice(0, 8).toUpperCase()}, không khớp với lượt đặt #${id.slice(0, 8).toUpperCase()} hiện tại!`,
+      })
       return
     }
     setToken(detectedToken)

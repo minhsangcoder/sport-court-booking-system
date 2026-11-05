@@ -271,61 +271,6 @@ public class PaymentService {
     return result.payment();
   }
 
-  @Transactional
-  public Refund requestRefund(UUID id, RefundInput input, String key, Caller caller) {
-    checkKey(key);
-    if (input == null
-        || input.reason() == null
-        || input.reason().isBlank()
-        || input.reason().length() > 500)
-      throw new IllegalArgumentException("Supply a refund review reason of up to 500 characters");
-    repo.lock(caller.id());
-    var p = own(id, caller);
-    repo.lock(id);
-    if (!p.status().equals("SUCCESS"))
-      throw new ConflictException("Only successful payments can have refund requests");
-    var previous =
-        repo.jdbc()
-            .queryForList(
-                "SELECT id,payment_id,reason FROM refunds WHERE requester_id=? AND"
-                    + " idempotency_key=?",
-                caller.id(),
-                key);
-    if (!previous.isEmpty()) {
-      var r = previous.get(0);
-      if (!r.get("payment_id").equals(id) || !r.get("reason").equals(input.reason()))
-        throw new ConflictException("Refund key reused with different input");
-      return new Refund(
-          (UUID) r.get("id"),
-          id,
-          caller.id(),
-          input.reason(),
-          "BLOCKED_RULE",
-          null,
-          null,
-          p.payerId());
-    }
-    UUID refund = UUID.randomUUID();
-    repo.jdbc()
-        .update(
-            "INSERT INTO"
-                + " refunds(id,payment_id,requester_id,reason,state,idempotency_key,beneficiary_id)"
-                + " VALUES(?,?,?,?,'BLOCKED_RULE',?,?)",
-            refund,
-            id,
-            caller.id(),
-            input.reason(),
-            key,
-            p.payerId());
-    audit(
-        id,
-        caller.id(),
-        "REFUND_REQUESTED",
-        Map.of("refundId", refund, "policy", "BLOCKED_RULE", "beneficiaryId", p.payerId()));
-    return new Refund(
-        refund, id, caller.id(), input.reason(), "BLOCKED_RULE", null, null, p.payerId());
-  }
-
   private String write(Object value) {
     try {
       return json.writeValueAsString(value);

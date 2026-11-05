@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { GroupReuseForm } from '@/features/groups/group-reuse-form'
 import { usePlayWorkspace } from '@/features/groups/use-play-workspace'
@@ -125,9 +126,9 @@ export function PlayWorkspace({
           <Button
             variant="outline"
             disabled={a.busy}
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
+                await confirmDanger(
                   'Giải tán nhóm chơi và đóng gửi tin nhắn? Khoản đóng góp và lượt đặt đã thanh toán được giữ nguyên.',
                 )
               )
@@ -141,9 +142,9 @@ export function PlayWorkspace({
           <Button
             variant="outline"
             disabled={a.busy}
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
+                await confirmDanger(
                   'Rời nhóm chơi sẽ thu hồi đọc/gửi tin nhắn; không sửa khoản đã đóng cho lượt đặt.',
                 )
               )

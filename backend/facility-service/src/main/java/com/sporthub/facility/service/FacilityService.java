@@ -51,6 +51,8 @@ public class FacilityService {
  @Transactional public FacilityProfileView create(FacilityInput input,Caller caller){caller.requireRole("OWNER");var f=new Facility();f.setOwnerId(caller.id());assign(f,input);facilities.saveAndFlush(f);audit(f,caller,"FACILITY_CREATED");return profileView(f);}
  @Transactional public FacilityProfileView update(UUID id,FacilityInput input,Caller caller){var f=mutableOwnedEntity(id,caller);var before=f.getContactEmail();var latitude=f.getLatitude();var longitude=f.getLongitude();if(!f.getTimezone().equals(input.timezone())){var affected=configuration.begin(id);if(!affected.isEmpty())throw new ConfigurationImpactException(affected);}assign(f,input);facilities.saveAndFlush(f);jdbc.update("INSERT INTO facility_audit(id,actor_id,facility_id,action,details) VALUES(?,?,?,'FACILITY_UPDATED',?)",UUID.randomUUID(),caller.id(),id,editDetails(before,latitude,longitude,f));return profileView(f);}
  public List<CourtView> ownedCourts(UUID id,Caller caller){operationalRead(id,caller);return courts.findByFacilityIdOrderByNameAsc(id).stream().map(this::courtView).toList();}
+ /** Every court of a facility in any status, for Admin monitoring. */
+ public List<CourtView> allCourts(UUID id){find(id);return courts.findByFacilityIdOrderByNameAsc(id).stream().map(this::courtView).toList();}
  public List<CourtView> publicCourts(UUID id){return publicCourts(id,false);}
  public List<CourtView> publicCourts(UUID id,boolean includeDisabled){publicDetail(id);return courts.findByFacilityIdOrderByNameAsc(id).stream().filter(c->includeDisabled||c.isEnabled()).map(this::courtView).toList();}
  public Court courtEntity(UUID id){return courts.findById(id).orElseThrow(()->new ResourceNotFoundException("Court not found"));}

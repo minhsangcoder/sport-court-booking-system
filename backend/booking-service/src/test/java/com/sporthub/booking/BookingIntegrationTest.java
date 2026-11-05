@@ -775,11 +775,11 @@ class BookingIntegrationTest {
     consumer.apply(success(b, UUID.randomUUID()));
     var request = new org.springframework.mock.web.MockHttpServletRequest();
     when(identity.current(request)).thenReturn(user);
-    assertThatThrownBy(() -> monitoring.list(b.id(), null, null, request))
+    assertThatThrownBy(() -> monitoring.list(b.id(), null, null, null, request))
         .isInstanceOf(ForbiddenException.class);
     var admin = new Caller(UUID.randomUUID(), "Admin", Set.of("ADMIN"), Map.of());
     when(identity.current(request)).thenReturn(admin);
-    assertThat(monitoring.list(b.id(), null, null, request).getData()).hasSize(1);
+    assertThat(monitoring.list(b.id(), null, null, null, request).getData()).hasSize(1);
     assertThat(monitoring.detail(b.id(), request).getData().checkinToken()).isNull();
     assertThat(monitoring.statistics(null, null, request).getData().get("states"))
         .isInstanceOf(List.class);
@@ -4262,7 +4262,6 @@ class BookingIntegrationTest {
   }
 
   @Autowired OperationalBookingService operations;
-  @Autowired OperationalReconciliationService reconciliation;
 
   Caller counterStaff(String... permissions) {
     return new Caller(
@@ -4937,102 +4936,6 @@ class BookingIntegrationTest {
   }
 
   @Test
-  void reconciliationReviewIsAdminOnlyIdempotentAuditedAndNeverResolvesMoney() {
-    var b = pendingBooking();
-    var payment = UUID.randomUUID();
-    var event = (com.fasterxml.jackson.databind.node.ObjectNode) success(b, payment);
-    ((com.fasterxml.jackson.databind.node.ObjectNode) event.path("payload")).put("amount", 1);
-    consumer.apply(event);
-    UUID id =
-        repo.jdbc()
-            .queryForObject(
-                "SELECT id FROM payment_reconciliation WHERE payment_id=?", UUID.class, payment);
-    var admin = new Caller(UUID.randomUUID(), "Admin", Set.of("ADMIN"), Map.of());
-    String request = key();
-    var review =
-        reconciliation.review(
-            id,
-            new OperationalReconciliationService.Input("Provider amount needs verification"),
-            request,
-            admin);
-    assertThat(
-            reconciliation
-                .review(
-                    id,
-                    new OperationalReconciliationService.Input(
-                        "Provider amount needs verification"),
-                    request,
-                    admin)
-                .id())
-        .isEqualTo(review.id());
-    assertThatThrownBy(
-            () ->
-                reconciliation.review(
-                    id, new OperationalReconciliationService.Input("Changed note"), request, admin))
-        .isInstanceOf(ConflictException.class);
-    assertThatThrownBy(() -> reconciliation.detail(id, user))
-        .isInstanceOf(ForbiddenException.class);
-    assertThat(reconciliation.detail(id, admin).state()).isEqualTo("REQUIRES_REVIEW");
-    assertThat(paymentReceipts.find(payment).decision()).isEqualTo("REQUIRES_REVIEW");
-    assertThat(repo.find(b.id()).status()).isEqualTo("PENDING");
-    assertThat(
-            repo.history(b.id()).stream()
-                .filter(h -> h.action().equals("RECONCILIATION_REVIEWED"))
-                .count())
-        .isEqualTo(1);
-    assertThatThrownBy(
-            () ->
-                repo.jdbc()
-                    .update(
-                        "UPDATE booking_reconciliation_reviews SET note='Changed' WHERE id=?",
-                        review.id()))
-        .isInstanceOf(org.springframework.dao.DataAccessException.class);
-  }
-
-  @Test
-  void concurrentReconciliationReviewsWithSameKeyCreateOneAnnotation() throws Exception {
-    var b = pendingBooking();
-    service.cancel(b.id(), new CancelInput("Callback after cancellation"), user, "token");
-    consumer.apply(success(b, UUID.randomUUID()));
-    UUID id =
-        repo.jdbc()
-            .queryForObject(
-                "SELECT id FROM payment_reconciliation WHERE booking_id=?", UUID.class, b.id());
-    var admin = new Caller(UUID.randomUUID(), "Admin", Set.of("ADMIN"), Map.of());
-    String request = key();
-    try (var pool = Executors.newFixedThreadPool(2)) {
-      var go = new CountDownLatch(1);
-      var a =
-          pool.submit(
-              () -> {
-                go.await();
-                return reconciliation
-                    .review(
-                        id,
-                        new OperationalReconciliationService.Input("Review only"),
-                        request,
-                        admin)
-                    .id();
-              });
-      var c =
-          pool.submit(
-              () -> {
-                go.await();
-                return reconciliation
-                    .review(
-                        id,
-                        new OperationalReconciliationService.Input("Review only"),
-                        request,
-                        admin)
-                    .id();
-              });
-      go.countDown();
-      assertThat(a.get(10, TimeUnit.SECONDS)).isEqualTo(c.get(10, TimeUnit.SECONDS));
-    }
-    assertThat(reconciliation.detail(id, admin).reviews()).hasSize(1);
-  }
-
-  @Test
   void handoffRotatesManualCodeAndDoesNotExposeNewCodeToPreviousHolder() {
     scopedPermissions();
     var fixture = handoffFixture();
@@ -5450,8 +5353,6 @@ class BookingIntegrationTest {
 
   @Autowired GroupAttendanceService attendance;
   @Autowired PlayGroupService play;
-  @Autowired ComplaintCaseService cases;
-  @MockBean ComplaintReferences caseReferences;
 
   Caller scopedStaff() {
     return new Caller(
@@ -5845,160 +5746,6 @@ class BookingIntegrationTest {
     groups.join(new JoinGroup(groups.invite(reused.bookingGroup().id(), user).code()), second);
     assertThat(groups.detail(reused.bookingGroup().id(), second).members()).hasSize(2);
     assertThat(repo.find(g.id()).amount()).isEqualByComparingTo("150000");
-  }
-
-  Caller caseAdmin() {
-    return new Caller(UUID.randomUUID(), "Support admin", Set.of("ADMIN"), Map.of());
-  }
-
-  ComplaintCaseService.Create caseInput(UUID booking) {
-    return new ComplaintCaseService.Create(
-        booking,
-        null,
-        "FACILITY_QUALITY",
-        "Facility quality report",
-        "Customer reports an issue with the booked court",
-        "Evidence recorded privately by support",
-        null,
-        null);
-  }
-
-  @Test
-  void adminComplaintIntakeAndDecisionRecordsNeverExecuteRefundOrLeakEvidenceToBookingHistory() {
-    var b = pendingBooking();
-    var admin = caseAdmin();
-    var input = caseInput(b.id());
-    String request = key();
-    var opened = cases.create(input, request, admin, "token");
-    UUID id = (UUID) opened.get("id");
-    assertThat(cases.create(input, request, admin, "token").get("id")).isEqualTo(id);
-    for (var actor :
-        List.of(
-            user,
-            new Caller(UUID.randomUUID(), "Owner", Set.of("OWNER"), Map.of()),
-            scopedStaff())) {
-      assertThatThrownBy(() -> cases.detail(id, actor)).isInstanceOf(ForbiddenException.class);
-      assertThatThrownBy(() -> cases.create(input, key(), actor, "token"))
-          .isInstanceOf(ForbiddenException.class);
-    }
-    cases.decide(
-        id,
-        new ComplaintCaseService.Decision(
-            "START_REVIEW", "Support is investigating the original court issue", 0L),
-        admin);
-    var decided =
-        cases.decide(
-            id,
-            new ComplaintCaseService.Decision(
-                "RECORD_DECISION", "The review records a finding without moving money", 1L),
-            admin);
-    assertThat(decided.get("state")).isEqualTo("DECISION_RECORDED");
-    assertThat(decided.get("financialExecution").toString()).contains("NOT_SUPPORTED");
-    assertThat(repo.find(b.id()).status()).isEqualTo("PENDING");
-    assertThat(json.valueToTree(repo.history(b.id())).toString())
-        .doesNotContain(input.evidence(), input.description());
-    assertThatThrownBy(
-            () ->
-                cases.decide(
-                    id,
-                    new ComplaintCaseService.Decision(
-                        "START_REVIEW", "Cannot reopen a recorded decision without new policy", 2L),
-                    admin))
-        .isInstanceOf(ConflictException.class);
-    assertThatThrownBy(
-            () ->
-                repo.jdbc()
-                    .update(
-                        "UPDATE booking_complaint_cases SET description='rewritten' WHERE id=?",
-                        id))
-        .isInstanceOf(org.springframework.dao.DataAccessException.class);
-    assertThatThrownBy(
-            () -> repo.jdbc().update("DELETE FROM booking_complaint_history WHERE case_id=?", id))
-        .isInstanceOf(org.springframework.dao.DataAccessException.class);
-  }
-
-  @Test
-  void complaintOriginalPaymentReferenceMustMatchBookingAndRemoteFailureCreatesNoPartialCase() {
-    var b = pendingBooking();
-    var admin = caseAdmin();
-    UUID payment = UUID.randomUUID();
-    var input =
-        new ComplaintCaseService.Create(
-            b.id(),
-            null,
-            "PAYMENT_REVIEW",
-            "Payment review",
-            "Investigate the original successful payment reference",
-            null,
-            payment,
-            null);
-    when(caseReferences.payment(payment, "token"))
-        .thenReturn(
-            json.valueToTree(
-                Map.of("id", payment, "bookingId", UUID.randomUUID(), "purpose", "BOOKING")));
-    assertThatThrownBy(() -> cases.create(input, key(), admin, "token"))
-        .isInstanceOf(IllegalArgumentException.class);
-    when(caseReferences.payment(payment, "token"))
-        .thenThrow(
-            new org.springframework.web.server.ResponseStatusException(
-                org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
-                "Original payment unavailable"));
-    assertThatThrownBy(() -> cases.create(input, key(), admin, "token"))
-        .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
-    assertThat(cases.list(null, b.id(), admin)).isEmpty();
-    doReturn(
-            json.valueToTree(
-                Map.of(
-                    "id",
-                    payment,
-                    "bookingId",
-                    b.id(),
-                    "purpose",
-                    "BOOKING",
-                    "status",
-                    "SUCCESS",
-                    "payerId",
-                    user.id(),
-                    "provider",
-                    "DEMO",
-                    "secret",
-                    "sensitive")))
-        .when(caseReferences)
-        .payment(payment, "token");
-    var created = cases.create(input, key(), admin, "token");
-    assertThat(json.valueToTree(created).toString()).doesNotContain("sensitive", "secret");
-  }
-
-  @Test
-  void concurrentComplaintDecisionsHonorExpectedVersion() throws Exception {
-    var b = pendingBooking();
-    var admin = caseAdmin();
-    UUID id = (UUID) cases.create(caseInput(b.id()), key(), admin, "token").get("id");
-    var go = new CountDownLatch(1);
-    try (var pool = Executors.newFixedThreadPool(2)) {
-      var jobs = new ArrayList<Future<String>>();
-      for (int i = 0; i < 2; i++)
-        jobs.add(
-            pool.submit(
-                () -> {
-                  go.await();
-                  try {
-                    cases.decide(
-                        id,
-                        new ComplaintCaseService.Decision(
-                            "START_REVIEW", "Concurrent support review starts investigation", 0L),
-                        admin);
-                    return "OK";
-                  } catch (ConflictException ex) {
-                    return "CONFLICT";
-                  }
-                }));
-      go.countDown();
-      assertThat(
-              List.of(jobs.get(0).get(10, TimeUnit.SECONDS), jobs.get(1).get(10, TimeUnit.SECONDS)))
-          .containsExactlyInAnyOrder("OK", "CONFLICT");
-    }
-    assertThat(((List<?>) cases.detail(id, admin).get("history"))).hasSize(2);
   }
 
   @Test

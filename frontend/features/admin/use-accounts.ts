@@ -17,13 +17,16 @@ export function useAccounts() {
     setPath(`/admin/accounts?${p.toString()}`)
   }
 
-  // Calculate quick stats from loaded results
-  const totalUsers = r.data?.length ?? 0
-  const activeUsers = r.data?.filter((u) => u.status === 'ACTIVE').length ?? 0
-  const lockedUsers =
-    r.data?.filter((u) => u.status === 'LOCKED' || u.status === 'SUSPENDED').length ?? 0
-  const privilegedUsers =
-    r.data?.filter((u) => u.roles.includes('OWNER') || u.roles.includes('ADMIN')).length ?? 0
+  // Platform-wide counts by status, independent of the 100-row list and its filters.
+  const stats = useApi<{ status: string; total: number }[]>('/admin/accounts/statistics')
+  const count = (...statuses: string[]) =>
+    stats.data
+      ?.filter((x) => statuses.includes(x.status))
+      .reduce((n, x) => n + Number(x.total), 0) ?? 0
+  const totalUsers = stats.data?.reduce((n, x) => n + Number(x.total), 0) ?? 0
+  const activeUsers = count('ACTIVE')
+  const restrictedUsers = count('LOCKED', 'SUSPENDED', 'DEACTIVATED')
+  const pendingUsers = count('PENDING_VERIFICATION')
 
-  return { path, setPath, r, search, totalUsers, activeUsers, lockedUsers, privilegedUsers }
+  return { path, setPath, r, search, stats, totalUsers, activeUsers, restrictedUsers, pendingUsers }
 }

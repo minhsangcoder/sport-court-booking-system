@@ -16,6 +16,8 @@ function application({
   fetch = async () => {
     throw Error('Unexpected request')
   },
+  sessionStorage,
+  stubs: extraStubs = {},
 } = {}) {
   const cache = new Map()
   const stubs = {
@@ -33,6 +35,7 @@ function application({
     '@/components/ui/input': { Input: 'input' },
     './account-list': { AdminNav: () => null },
     'lucide-react': new Proxy({}, { get: () => () => null }),
+    ...extraStubs,
   }
   function load(relative) {
     const file = path.resolve(root, relative)
@@ -64,6 +67,7 @@ function application({
         // A stale English preference must not switch part of this Vietnamese-only UI back to English.
         window: {},
         localStorage: { getItem: () => 'en' },
+        ...(sessionStorage ? { sessionStorage } : {}),
         require(name) {
           if (Object.hasOwn(stubs, name)) return stubs[name]
           let resolved = name.startsWith('@/')
@@ -228,10 +232,25 @@ test('the real schedule displays the translated policy error and Vietnamese time
   assert.doesNotMatch(html, /The Owner|Asia\/Ho_Chi_Minh|\bslot\b/)
 })
 
-test('payment filters and records display Vietnamese while submitting original status values', () => {
+test('payment monitor asks for a facility before loading any transaction', () => {
   const app = application({
     resources: {
-      '/admin/payments': {
+      '/admin/payments': { data: [{ id: 'khong-duoc-tai', providerReference: 'REF-ALL' }] },
+    },
+  })
+  const html = app.render(app.load('features/admin/payment-monitor.tsx').PaymentMonitor)
+  assert.match(html, /Chọn cơ sở cần giám sát/)
+  assert.match(html, /placeholder="Nhập tên hoặc mã cơ sở"/)
+  assert.doesNotMatch(html, /REF-ALL|name="status"/)
+})
+
+test('payment filters and records display Vietnamese while submitting original status values', () => {
+  const app = application({
+    sessionStorage: {
+      getItem: () => JSON.stringify({ id: 'co-so-1', name: 'Sân Cầu Giấy', status: 'ACTIVE' }),
+    },
+    resources: {
+      '/admin/payments?facilityId=co-so-1': {
         data: [
           {
             id: 'thanh-toan',
@@ -247,6 +266,8 @@ test('payment filters and records display Vietnamese while submitting original s
     },
   })
   const html = app.render(app.load('features/admin/payment-monitor.tsx').PaymentMonitor)
+  assert.match(html, /Sân Cầu Giấy/)
+  assert.match(html, />Đổi cơ sở</)
   assert.match(html, /value="PENDING">Chờ thanh toán/)
   assert.match(html, /value="SUCCESS">Thành công/)
   assert.match(html, /value="TRANSFER">Chuyển nhượng/)
@@ -321,4 +342,87 @@ test('legacy cancellation errors no longer advertise refunds for resold bookings
     ),
     /không hỗ trợ hủy trực tiếp/,
   )
+})
+
+test('admin booking monitor starts by choosing a facility and loads nothing before that', () => {
+  const app = application({
+    resources: { '/admin/bookings': { data: [{ id: 'khong-duoc-tai' }] } },
+  })
+  const html = app.render(app.load('features/admin/booking-monitor.tsx').BookingMonitor)
+  assert.match(html, /Bước 1 · Chọn cơ sở/)
+  assert.doesNotMatch(html, /KHONG-DU|name="status"/)
+})
+
+test('admin booking monitor lists only the chosen court bookings', () => {
+  const scope = {
+    facility: { id: 'co-so-1', name: 'Sân Cầu Giấy', status: 'ACTIVE' },
+    court: { id: 'san-2', name: 'Sân số 2', code: 'S2' },
+  }
+  const app = application({
+    sessionStorage: { getItem: () => JSON.stringify(scope) },
+    resources: {
+      '/admin/bookings?facilityId=co-so-1&courtId=san-2': {
+        data: [
+          {
+            id: 'abcdef12-0000',
+            status: 'CONFIRMED',
+            startsAt: '2026-11-05T00:30:00Z',
+            amount: 120000,
+            currency: 'VND',
+            priceSnapshot: { timezone: 'Asia/Ho_Chi_Minh' },
+          },
+        ],
+      },
+    },
+  })
+  const html = app.render(app.load('features/admin/booking-monitor.tsx').BookingMonitor)
+  assert.match(html, /Sân Cầu Giấy › Sân số 2/)
+  assert.match(html, />Đổi sân</)
+  assert.match(html, /ABCDEF12 · Đã xác nhận/)
+})
+
+test('first facility review points the Admin to its Owner application instead of offering decisions', () => {
+  const facility = {
+    id: 'ab12cd34-0000-0000-0000-000000000000',
+    ownerId: 'chu-san',
+    name: 'Sân Tây Hồ',
+    phone: '0900000000',
+    addressLine: '1 Quảng An',
+    ward: 'Tây Hồ',
+    province: 'Hà Nội',
+    timezone: 'Asia/Ho_Chi_Minh',
+    status: 'PENDING_APPROVAL',
+    amenities: [],
+  }
+  const detail = (applicationId) => ({
+    data: {
+      facility,
+      courts: [],
+      reviews: [],
+      audit: [
+        {
+          id: 'a1',
+          action: 'REFUND_POLICY_UPDATED',
+          occurred_at: '2026-10-23T00:00:00Z',
+          details: '{"rateBps":500}',
+        },
+        { id: 'a2', action: 'COURT_CREATED', occurred_at: '2026-10-23T00:00:00Z', details: null },
+      ],
+      possibleDuplicates: [],
+      applicationId,
+    },
+  })
+  const render = (applicationId) => {
+    const app = application({
+      resources: { [`/admin/facilities/${facility.id}`]: detail(applicationId) },
+      stubs: { './facility-status': { FacilityStatus: () => null } },
+    })
+    const Page = app.load('features/admin/facility-review.tsx').AdminFacilityReview
+    return app.render(() => Page({ id: facility.id }))
+  }
+  const linked = render('ho-so-1')
+  assert.match(linked, /href="\/admin\/owner-applications\/ho-so-1"/)
+  assert.doesNotMatch(linked, /Phê duyệt cơ sở/)
+  assert.match(linked, /AB12CD34/)
+  assert.match(render(null), /Phê duyệt cơ sở/)
 })

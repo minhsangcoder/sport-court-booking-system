@@ -98,8 +98,8 @@ test('facility gallery mutations keep multipart uploads, replacement paths and o
   form.set('file', new File(['synthetic'], 'court.png', { type: 'image/png' }))
   form.reset = () => calls.push({ reset: true })
   class CopyForm extends FormData { constructor(source) { super(); for (const [key, value] of source) this.append(key, value) } }
-  const load = moduleLoader({ FormData: CopyForm, window: { confirm: () => true } }, {
-    ...ui, react: driver.react, '@/features/facility/facility-store': { useFacility: () => ({ facility: { id: 'A' }, basePath: '/owner/facilities/A', editable: true }) },
+  const load = moduleLoader({ FormData: CopyForm }, {
+    ...ui, react: driver.react, '@/components/confirm-dialog': { confirmDanger: async () => true, confirmDialog: async () => true }, '@/features/facility/facility-store': { useFacility: () => ({ facility: { id: 'A' }, basePath: '/owner/facilities/A', editable: true }) },
     '@/lib/use-api': { useApi: path => { reads.push(path); return { data: [], reload: () => reloads.push(path) } } },
     '@/lib/api': { api: async (path, options) => calls.push({ path, ...options }) },
   })

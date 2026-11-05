@@ -558,68 +558,6 @@
         ]
       }
     },
-    "/admin/bookings/reconciliation": {
-      "get": {
-        "operationId": "adminBookingReconciliation",
-        "description": "Admin role and a live non-revoked session are required.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "integer"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Reconciliation"
-                      }
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  },
-                  "required": [
-                    "status",
-                    "message",
-                    "data",
-                    "timestamp"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid input"
-          },
-          "401": {
-            "description": "Invalid/revoked session"
-          },
-          "403": {
-            "description": "Forbidden actor/scope"
-          },
-          "404": {
-            "description": "Not found"
-          },
-          "409": {
-            "description": "Conflict or BLOCKED_RULE"
-          }
-        }
-      }
-    },
     "/admin/bookings/statistics": {
       "get": {
         "operationId": "adminBookingStatistics",
@@ -1916,39 +1854,6 @@
           "courts",
           "financialPolicy"
         ]
-      },
-      "Reconciliation": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "booking_id": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "payment_id": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
-          "reason": {
-            "type": "string"
-          },
-          "payload": {
-            "type": "object"
-          },
-          "state": {
-            "type": "string"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": []
       },
       "DemoFinanceMonitor": {
         "type": "object",

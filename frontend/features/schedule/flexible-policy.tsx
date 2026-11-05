@@ -3,7 +3,6 @@ import { useRef, useState } from 'react'
 import { api, ApiError } from '@/lib/api'
 import { useApi } from '@/lib/use-api'
 import { Button } from '@/components/ui/button'
-import { outlinePill, primaryPill, redNotice } from '@/features/facility/owner-ui'
 
 type Policy = {
   enabled: boolean
@@ -59,7 +58,7 @@ export function FlexiblePolicy({ facilityId }: { facilityId: string }) {
     }
   }
   return (
-    <section className="home-rise relative overflow-hidden rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-5 shadow-xl shadow-slate-900/5 sm:p-6 dark:border-emerald-900/60 dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900">
+    <section className="relative overflow-hidden rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/40 p-6 shadow-xs dark:border-emerald-900/60 dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="flex size-3 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-700">
@@ -67,9 +66,7 @@ export function FlexiblePolicy({ facilityId }: { facilityId: string }) {
               className={`size-1.5 rounded-full ${policy.data?.enabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}
             />
           </span>
-          <h3 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-white">
-            Đặt giờ tự chọn
-          </h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Đặt giờ tự chọn</h3>
         </div>
         {policy.data && (
           <span
@@ -97,13 +94,20 @@ export function FlexiblePolicy({ facilityId }: { facilityId: string }) {
       </p>
 
       {(error || policy.error) && (
-        <p role="alert" className={`${redNotice} mt-3`}>
+        <p
+          role="alert"
+          className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+        >
           {error || policy.error}
         </p>
       )}
 
       <Button
-        className={`mt-4 ${policy.data?.enabled ? outlinePill : primaryPill}`}
+        className={`mt-4 h-11 rounded-xl px-5 font-bold transition-all ${
+          policy.data?.enabled
+            ? 'border border-slate-300 bg-white text-slate-700 shadow-2xs hover:bg-slate-100 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+            : 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/20 hover:from-emerald-500 hover:to-teal-500 hover:scale-[1.01] active:scale-[0.99]'
+        }`}
         disabled={busy || policy.loading || !policy.data}
         onClick={publish}
       >

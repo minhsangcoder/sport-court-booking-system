@@ -4244,6 +4244,12 @@
             "items": {
               "$ref": "#/components/schemas/FacilityView"
             }
+          },
+          "applicationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Owner application of a first facility; decide that application instead of this facility."
           }
         },
         "required": [

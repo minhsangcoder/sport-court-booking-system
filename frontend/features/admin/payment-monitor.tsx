@@ -13,6 +13,8 @@ import { useApi } from '@/lib/use-api'
 import Link from 'next/link'
 import { useState } from 'react'
 import { AdminPage } from './admin-nav'
+import { FacilityPicker, facilityCode, type PickedFacility } from './facility-picker'
+const FACILITY_KEY = 'sporthub.admin.payments.facility'
 export function PaymentMonitor() {
   return (
     <RequireAuth roles={['ADMIN']}>
@@ -21,8 +23,28 @@ export function PaymentMonitor() {
   )
 }
 function Loaded() {
-  const [path, setPath] = useState('/admin/payments')
-  const r = useApi<Payment[]>(path)
+  // Keep the chosen facility when the Admin comes back from a transaction detail.
+  // RequireAuth renders this only in the browser, after the session is ready.
+  const [facility, setFacility] = useState<PickedFacility | null>(() => {
+    try {
+      const saved = sessionStorage.getItem(FACILITY_KEY)
+      return saved ? (JSON.parse(saved) as PickedFacility) : null
+    } catch {
+      return null
+    }
+  })
+  function choose(next: PickedFacility | null) {
+    setFacility(next)
+    if (next) sessionStorage.setItem(FACILITY_KEY, JSON.stringify(next))
+    else sessionStorage.removeItem(FACILITY_KEY)
+    setFilters('')
+  }
+  const [filters, setFilters] = useState('')
+  const r = useApi<Payment[]>(
+    facility
+      ? `/admin/payments?${new URLSearchParams([['facilityId', facility.id], ...new URLSearchParams(filters)])}`
+      : null,
+  )
   function search(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget),
@@ -31,7 +53,7 @@ function Loaded() {
       const v = String(f.get(key) || '')
       if (v) p.set(key, v)
     }
-    setPath(`/admin/payments?${p}`)
+    setFilters(p.toString())
   }
   function exportRows() {
     if (!r.data) return
@@ -63,7 +85,7 @@ function Loaded() {
     )
     const a = document.createElement('a')
     a.href = url
-    a.download = 'sporthub-thanh-toan.csv'
+    a.download = `sporthub-thanh-toan-${facility?.id ?? 'co-so'}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -77,76 +99,101 @@ function Loaded() {
         </Button>
       }
     >
-      <form
-        onSubmit={search}
-        className="mt-6 grid gap-4 p-5 md:grid-cols-4 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
-      >
-        <label className="grid gap-2 text-sm">
-          Mã hoặc tham chiếu
-          <Input name="q" placeholder="Thanh toán, lượt đặt, mã cổng" />
-        </label>
-        <label className="grid gap-2 text-sm">
-          Trạng thái
-          <select name="status" className="h-11 rounded-xl border bg-white px-3.5">
-            <option value="">Tất cả</option>
-            {['PENDING', 'SUCCESS', 'FAILED', 'EXPIRED'].map((s) => (
-              <option key={s} value={s}>
-                {displayLabel(s)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-2 text-sm">
-          Nghiệp vụ
-          <select name="purpose" className="h-11 rounded-xl border bg-white px-3.5">
-            <option value="">Tất cả</option>
-            <option value="BOOKING">Đặt sân</option>
-            <option value="GROUP_CONTRIBUTION">Góp tiền nhóm</option>
-            <option value="TRANSFER">Chuyển nhượng</option>
-          </select>
-        </label>
-        <Button type="submit" className="mt-auto bg-emerald-600 text-white">
-          Tra cứu
-        </Button>
-      </form>
-      {r.loading && (
-        <p role="status" className="mt-6">
-          Đang tải giao dịch…
-        </p>
-      )}
-      {r.error && (
-        <p role="alert" className="mt-6 text-red-700">
-          {r.error}
-          <button className="ml-4 underline" onClick={r.reload}>
-            Thử lại
-          </button>
-        </p>
-      )}
-      {r.data?.length === 0 && (
-        <p className="mt-6 p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
-          Không có giao dịch phù hợp.
-        </p>
-      )}
-      <div className="mt-6 divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
-        {r.data?.map((p) => (
-          <Link
-            key={p.id}
-            href={`/admin/payments/${p.id}`}
-            className="flex flex-wrap justify-between gap-4 p-5 hover:bg-emerald-50"
-          >
+      {!facility ? (
+        <section className="mt-6 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+          <h2 className="text-lg font-extrabold tracking-tight">Chọn cơ sở cần giám sát</h2>
+          <p className="mt-1 mb-4 text-sm text-slate-500">
+            Giao dịch được xem theo từng cơ sở. Chọn trong danh sách hoặc tìm theo tên, mã cơ sở.
+          </p>
+          <FacilityPicker onPick={choose} />
+        </section>
+      ) : (
+        <>
+          <section className="mt-6 flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
             <div>
-              <p className="font-bold">{p.providerReference}</p>
-              <p className="mt-2 text-sm text-slate-500">
-                {displayLabel(p.purpose)} · {displayLabel(p.status)}
+              <p className="text-sm text-slate-500">Cơ sở đang xem</p>
+              <p className="mt-1 text-lg font-bold">{facility.name}</p>
+              <p className="mt-1 break-all text-xs text-slate-500">
+                Mã {facilityCode(facility.id)} · {displayLabel(facility.status)}
               </p>
             </div>
-            <strong className="text-emerald-700">{money(p.amount, p.currency)}</strong>
-          </Link>
-        ))}
-      </div>
-      <p className="mt-4 text-xs text-slate-500">
-        Tối đa 200 kết quả. Xuất CSV áp dụng cho danh sách đang hiển thị.
-      </p>
+            <Button variant="outline" onClick={() => choose(null)}>
+              Đổi cơ sở
+            </Button>
+          </section>
+          <form
+            key={facility.id}
+            onSubmit={search}
+            className="mt-6 grid gap-4 p-5 md:grid-cols-4 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise"
+          >
+            <label className="grid gap-2 text-sm">
+              Mã hoặc tham chiếu
+              <Input name="q" placeholder="Thanh toán, lượt đặt, mã cổng" />
+            </label>
+            <label className="grid gap-2 text-sm">
+              Trạng thái
+              <select name="status" className="h-11 rounded-xl border bg-white px-3.5">
+                <option value="">Tất cả</option>
+                {['PENDING', 'SUCCESS', 'FAILED', 'EXPIRED'].map((s) => (
+                  <option key={s} value={s}>
+                    {displayLabel(s)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-2 text-sm">
+              Nghiệp vụ
+              <select name="purpose" className="h-11 rounded-xl border bg-white px-3.5">
+                <option value="">Tất cả</option>
+                <option value="BOOKING">Đặt sân</option>
+                <option value="GROUP_CONTRIBUTION">Góp tiền nhóm</option>
+                <option value="TRANSFER">Chuyển nhượng</option>
+              </select>
+            </label>
+            <Button type="submit" className="mt-auto bg-emerald-600 text-white">
+              Tra cứu
+            </Button>
+          </form>
+          {r.loading && (
+            <p role="status" className="mt-6">
+              Đang tải giao dịch…
+            </p>
+          )}
+          {r.error && (
+            <p role="alert" className="mt-6 text-red-700">
+              {r.error}
+              <button className="ml-4 underline" onClick={r.reload}>
+                Thử lại
+              </button>
+            </p>
+          )}
+          {r.data?.length === 0 && (
+            <p className="mt-6 p-6 text-slate-500 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+              Cơ sở này chưa có giao dịch phù hợp.
+            </p>
+          )}
+          <div className="mt-6 divide-y rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
+            {r.data?.map((p) => (
+              <Link
+                key={p.id}
+                href={`/admin/payments/${p.id}`}
+                className="flex flex-wrap justify-between gap-4 p-5 hover:bg-emerald-50"
+              >
+                <div>
+                  <p className="font-bold">{p.providerReference}</p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    {displayLabel(p.purpose)} · {displayLabel(p.status)}
+                  </p>
+                </div>
+                <strong className="text-emerald-700">{money(p.amount, p.currency)}</strong>
+              </Link>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-slate-500">
+            Tối đa 200 kết quả. Xuất CSV áp dụng cho danh sách đang hiển thị.
+          </p>
+        </>
+      )}
     </AdminPage>
   )
 }

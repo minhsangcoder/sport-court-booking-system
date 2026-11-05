@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { useFacility } from '@/features/facility/facility-store'
 import type { Court, Media } from '@/features/facility/types'
 import { api } from '@/lib/api'
@@ -39,7 +40,7 @@ export function useFacilityOverview() {
   }
 
   async function remove(id: string) {
-    if (!window.confirm('Bạn có chắc muốn xóa ảnh này khỏi cơ sở?')) return
+    if (!(await confirmDanger('Bạn có chắc muốn xóa ảnh này khỏi cơ sở?'))) return
     setBusy(true)
     setError('')
     try {

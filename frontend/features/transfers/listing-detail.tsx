@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -211,9 +212,9 @@ function Loaded({ id }: { id: string }) {
                     variant="outline"
                     className={`${outlinePill} w-full`}
                     disabled={command.busy || command.blocked || blocked}
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
+                        await confirmDanger(
                           'Rút tin chưa có khai chuyển tiền? Lượt đặt gốc vẫn giữ nguyên.',
                         )
                       )

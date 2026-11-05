@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -59,7 +60,7 @@ export function MaintenancePage() {
     }
   }
   async function cancel(id: string) {
-    if (!window.confirm('Hủy thời gian bảo trì này?')) return
+    if (!(await confirmDanger('Hủy thời gian bảo trì này?'))) return
     setBusy(true)
     setError('')
     try {

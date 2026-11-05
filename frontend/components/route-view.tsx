@@ -19,14 +19,6 @@ const KeptGroupPage = dynamic(
   () => import('@/features/groups/kept-group-page').then((module) => module.KeptGroupPage),
   { loading },
 )
-const SupportPage = dynamic(
-  () => import('@/features/admin/support-page').then((module) => module.SupportPage),
-  { loading },
-)
-const RefundReviews = dynamic(
-  () => import('@/features/admin/refund-reviews').then((module) => module.RefundReviews),
-  { loading },
-)
 const SportsPage = dynamic(
   () => import('@/features/admin/sports-page').then((module) => module.SportsPage),
   { loading },
@@ -62,11 +54,6 @@ const ReportPage = dynamic(
   () => import('@/features/admin/report-page').then((module) => module.ReportPage),
   { loading },
 )
-const ReconciliationReview = dynamic(
-  () =>
-    import('@/features/admin/reconciliation-review').then((module) => module.ReconciliationReview),
-  { loading },
-)
 const StaffConfiguration = dynamic(
   () =>
     import('@/features/integration/staff-configuration').then(
@@ -92,18 +79,7 @@ function ResolvedRoute({ parts: p }: { parts: string[] }) {
     )
   }
   if (p[0] === 'admin') {
-    const child =
-      p[1] === 'bookings' && p[2] === 'reconciliation' ? (
-        <ReconciliationReview id={p[3]} />
-      ) : p[1] === 'disputes' ? (
-        <SupportPage id={p[2]} />
-      ) : p[1] === 'refunds' ? (
-        <RefundReviews id={p[2]} />
-      ) : p[1] === 'sports' ? (
-        <SportsPage />
-      ) : (
-        <ReportPage />
-      )
+    const child = p[1] === 'sports' ? <SportsPage /> : <ReportPage />
     return <RequireAuth roles={['ADMIN']}>{child}</RequireAuth>
   }
   if (p[0] === 'owner' && p[1] === 'facilities') return <FacilityCourtTypesRoute id={p[2]} />

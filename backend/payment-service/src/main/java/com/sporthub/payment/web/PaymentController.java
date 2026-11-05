@@ -18,5 +18,4 @@ public class PaymentController {
  @GetMapping("/{id}") public ApiResponse<Payment> detail(@PathVariable UUID id,HttpServletRequest r){return ApiResponse.success(service.own(id,identity.current(r)));}
  @PostMapping("/{id}/demo/complete") public ApiResponse<Payment> demo(@PathVariable UUID id,@Valid @RequestBody DemoOutcome input,HttpServletRequest r){return ApiResponse.success(service.demo(id,input,identity.current(r)));}
  @PostMapping("/providers/demo/callback") public ApiResponse<Payment> callback(@Valid @RequestBody Callback input,@RequestHeader(value="X-Provider-Signature",required=false) String signature){return ApiResponse.success(service.callback(input,signature));}
- @PostMapping("/{id}/refunds") @ResponseStatus(HttpStatus.CREATED) public ApiResponse<Refund> refund(@PathVariable UUID id,@Valid @RequestBody RefundInput input,@RequestHeader("Idempotency-Key") String key,HttpServletRequest r){return ApiResponse.created(service.requestRefund(id,input,key,identity.current(r)));}
 }

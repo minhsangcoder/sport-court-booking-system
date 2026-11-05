@@ -1,4 +1,5 @@
 'use client'
+import { confirmDialog } from '@/components/confirm-dialog'
 import { readImpact, type ConfigurationImpact } from '@/features/integration/configuration-impact'
 import {
   Interval,
@@ -236,7 +237,7 @@ export function useHoursEditor({
 
   async function resetToFacility() {
     if (!courtId) return
-    if (!window.confirm('Kế thừa lịch mở cửa của toàn cơ sở cho sân này?')) return
+    if (!(await confirmDialog('Kế thừa lịch mở cửa của toàn cơ sở cho sân này?'))) return
     setBusy(true)
     setError('')
     try {

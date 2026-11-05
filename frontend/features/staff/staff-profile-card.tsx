@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger, confirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { Status } from '@/features/integration/shared'
 import { StaffPasswordForm } from '@/features/staff/staff-password-form'
@@ -79,9 +80,9 @@ export function StaffProfileCard({
             variant="outline"
             size="sm"
             disabled={a.busy}
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
+                await confirmDialog(
                   p.active
                     ? 'Xác nhận ngừng làm việc cho nhân viên này?'
                     : 'Kích hoạt lại nhân viên này?',
@@ -115,8 +116,8 @@ export function StaffProfileCard({
               variant="outline"
               size="sm"
               disabled={a.busy}
-              onClick={() => {
-                if (window.confirm('Thu hồi liên kết quyền của nhân viên này tại cơ sở?')) {
+              onClick={async () => {
+                if (await confirmDanger('Thu hồi liên kết quyền của nhân viên này tại cơ sở?')) {
                   void a.run(
                     () =>
                       import('@/lib/api').then(({ api }) =>

@@ -1,4 +1,5 @@
 'use client'
+import { confirmDanger } from '@/components/confirm-dialog'
 import { UserAvatar } from '@/components/user-avatar'
 import { amberNotice, outlinePill, primaryPill } from '@/features/transfers/transfer-styles'
 import { api, type UserProfile } from '@/lib/api'
@@ -87,8 +88,8 @@ export function AvatarUploader() {
     )
   }
 
-  function remove() {
-    if (!window.confirm('Xóa ảnh đại diện hiện tại?')) return
+  async function remove() {
+    if (!(await confirmDanger('Xóa ảnh đại diện hiện tại?'))) return
     void send(
       () => api<UserProfile>('/users/me/avatar', { method: 'DELETE' }),
       'Chưa xóa được ảnh đại diện.',

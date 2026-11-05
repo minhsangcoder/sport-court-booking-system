@@ -69,39 +69,6 @@ export type ChatMessage = {
   body: string
   created_at: string
 }
-export type RefundReview = {
-  id: string
-  payment_id: string
-  requester_id: string
-  beneficiary_id: string
-  state: string
-  amount?: number
-  reason: string
-  reviews?: { id: string; actor_id: string; note: string; created_at: string }[]
-}
-export type SupportCase = {
-  id: string
-  booking_id: string
-  category: string
-  subject: string
-  description?: string
-  evidence?: string
-  state: string
-  version: number
-  financialExecution?: string
-  notificationStatus?: string
-  history?: { id: number; action: string; note: string; occurred_at: string }[]
-}
-export type SupportInput = {
-  bookingId: string
-  reportedBy?: string
-  category: 'FACILITY_QUALITY' | 'PAYMENT_REVIEW' | 'TRANSFER_REVIEW'
-  subject: string
-  description: string
-  evidence?: string
-  paymentId?: string
-  listingId?: string
-}
 export type StatusImpact = {
   facilityId: string
   status: string
@@ -204,21 +171,6 @@ export const businessApi = {
       suggestedMembers: { user_id: string; display_name: string }[]
       participationPolicy: string
     }>(`/groups/play-groups/${id}/reuse`, { holdId, name, maxMembers }, key),
-  support: (body: SupportInput, key: string) =>
-    write<SupportCase>('/admin/bookings/complaints', body, key),
-  supportDecision: (
-    id: string,
-    action: 'START_REVIEW' | 'REQUEST_INFORMATION' | 'RECORD_DECISION',
-    note: string,
-    expectedVersion: number,
-  ) =>
-    write<SupportCase>(`/admin/bookings/complaints/${id}/decisions`, {
-      action,
-      note,
-      expectedVersion,
-    }),
-  refundNote: (id: string, note: string, key: string) =>
-    write(`/admin/payments/refunds/${id}/reviews`, { note }, key),
   statusDecision: (
     id: string,
     impact: StatusImpact,
