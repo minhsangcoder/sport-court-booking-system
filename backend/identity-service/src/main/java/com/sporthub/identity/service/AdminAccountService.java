@@ -17,6 +17,16 @@ import java.util.*;
 public class AdminAccountService {
  private final UserRepository users;private final JdbcTemplate jdbc;private final ObjectMapper json;private final UserSecurityLock securityLock;private final StaffRoleRevocation staffRoles;
  public AdminAccountService(UserRepository users,JdbcTemplate jdbc,ObjectMapper json,UserSecurityLock securityLock,StaffRoleRevocation staffRoles){this.users=users;this.jdbc=jdbc;this.json=json;this.securityLock=securityLock;this.staffRoles=staffRoles;}
+ /** One page of accounts matching the filters, newest first, with the full match count. */
+ public com.sporthub.common.dto.PageResponse<Account> searchPage(String q,AccountStatus status,Role role,int page,int size,AuthenticatedUser actor){
+  admin(actor);int pageSize=Math.max(1,Math.min(size,100));int pageNo=Math.max(0,page);
+  String pattern="%"+(q==null?"":q.trim().toLowerCase(Locale.ROOT))+"%";String st=status==null?null:status.name(),ro=role==null?null:role.name();
+  String where=" FROM users u LEFT JOIN user_profiles p ON p.user_id=u.id WHERE (lower(COALESCE(u.email,'')) LIKE ? OR COALESCE(u.phone,'') LIKE ? OR lower(COALESCE(p.full_name,'')) LIKE ?) AND (?::varchar IS NULL OR u.status=?::varchar) AND (?::varchar IS NULL OR EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role=?::varchar))";
+  long total=jdbc.queryForObject("SELECT count(*)"+where,Long.class,pattern,pattern,pattern,st,st,ro,ro);
+  int totalPages=(int)Math.max(1,(total+pageSize-1)/pageSize);
+  var items=jdbc.queryForList("SELECT u.id"+where+" ORDER BY u.created_at DESC,u.id LIMIT ? OFFSET ?",UUID.class,pattern,pattern,pattern,st,st,ro,ro,pageSize,(long)pageNo*pageSize).stream().map(id->view(load(id))).toList();
+  return com.sporthub.common.dto.PageResponse.<Account>builder().content(items).page(pageNo).size(pageSize).totalElements(total).totalPages(totalPages).first(pageNo==0).last(pageNo>=totalPages-1).build();
+ }
  public List<Account> search(String q,AccountStatus status,Role role,AuthenticatedUser actor){admin(actor);String pattern="%"+(q==null?"":q.trim().toLowerCase(Locale.ROOT))+"%";
   return jdbc.queryForList("SELECT u.id FROM users u LEFT JOIN user_profiles p ON p.user_id=u.id WHERE (lower(COALESCE(u.email,'')) LIKE ? OR COALESCE(u.phone,'') LIKE ? OR lower(COALESCE(p.full_name,'')) LIKE ?) AND (?::varchar IS NULL OR u.status=?::varchar) AND (?::varchar IS NULL OR EXISTS(SELECT 1 FROM user_roles r WHERE r.user_id=u.id AND r.role=?::varchar)) ORDER BY u.created_at DESC LIMIT 100",UUID.class,pattern,pattern,pattern,status==null?null:status.name(),status==null?null:status.name(),role==null?null:role.name(),role==null?null:role.name()).stream().map(id->view(load(id))).toList();
  }

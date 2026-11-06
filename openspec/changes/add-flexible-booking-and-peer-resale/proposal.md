@@ -166,3 +166,41 @@ Màn Kênh nhận tiền chia ba bước: liên kết ngân hàng trên SePay, n
 ## 44. Ảnh đại diện tải lên và màn tài khoản nhận tiền theo thiết kế Home (2026-11-01)
 
 Customer tải được ảnh đại diện từ thiết bị: chọn, xem trước, rồi mới lưu; có thể xóa. Ảnh JPG/PNG tối đa 10 MB, được cắt vuông, tối đa 512px, mã hóa lại để bỏ metadata, lưu trong cơ sở dữ liệu identity (V17) và phục vụ công khai qua địa chỉ ngẫu nhiên đổi theo mỗi lần tải. Màn `/customer/profile/bank` hiện ảnh đại diện ở trên, tài khoản ngân hàng chỉ đọc ở dưới kèm nút "Chỉnh sửa". Ô nhập địa chỉ ảnh ở hồ sơ được thay bằng nút tải ảnh; ảnh mẫu vẫn giữ. Thanh đầu trang hiện ảnh đại diện. Không đổi quy tắc khóa thay đổi ngân hàng hay nghiệp vụ chuyển nhượng.
+
+## 45. Báo cáo Admin tập trung vào hoạt động nền tảng (2026-11-06)
+
+Quyết định của người dùng ngày 06/11/2026. Mục này thay phần "màn giám sát Admin chỉ đọc" của mục 33 đối với giao diện.
+
+Trang `/admin/reports` chỉ hiển thị hoạt động của nền tảng, không hiển thị dòng tiền: SportHub không thu tiền sân, chuyển nhượng P2P đi thẳng giữa hai bên và Admin không xác nhận hay chi khoản nào. Trang gồm: số lượt đặt mới, lượt đặt thành công (đã xác nhận, đã vào sân, hoàn tất) và tỷ lệ hủy/hết hạn trong kỳ (theo lúc tạo, mặc định 30 ngày); lượt đặt theo trạng thái; tài khoản theo trạng thái; cơ sở đang hoạt động và cơ sở theo tỉnh/thành; số hồ sơ đăng ký chủ cơ sở đang chờ duyệt kèm lối vào trang duyệt. Bỏ khỏi trang: "Giao dịch theo nghiệp vụ", "Khoản giữ và yêu cầu xem xét trước đây", "Giao dịch mô phỏng của các cơ sở", "Giám sát giao dịch ngân hàng và nghĩa vụ của cơ sở", "Thanh toán thành công theo thời điểm trả tiền". Giao diện dùng banner, thẻ và số liệu kiểu Home.
+
+Chỉ đổi frontend, dùng các API thống kê đã có. Không xóa API, bảng hay dữ liệu tiền; trang Giao dịch của Admin giữ nguyên để tra cứu từng giao dịch.
+
+## 46. KPI, tách tỷ lệ hủy và biểu đồ tròn trong báo cáo Admin (2026-11-06)
+
+Quyết định của người dùng ngày 06/11/2026. Mục này bổ sung mục 45; phần "không hiển thị dòng tiền" của mục 45 được nới cho đúng một chỉ số doanh thu dưới đây.
+
+- Cụm KPI chính: lượt đặt mới, lượt đặt thành công, **tổng doanh thu** và tỷ lệ hủy hoặc hết hạn. Tổng doanh thu là tổng giá trị (`amount`) các lượt đặt thành công (đã xác nhận, đã vào sân, hoàn tất) tạo trong kỳ. Đây là giá trị đặt sân của các cơ sở, không phải tiền SportHub thu hay đã đối soát.
+- Mỗi KPI hiện mức thay đổi so với kỳ liền trước có cùng độ dài: phần trăm, hoặc điểm phần trăm với tỷ lệ hủy. Tăng hiện màu xanh, giảm màu đỏ; riêng tỷ lệ hủy thì ngược lại. Kèm mũi tên ▲/▼ để không phân biệt chỉ bằng màu. Tài khoản, cơ sở và hồ sơ chờ duyệt là số hiện tại, không so kỳ.
+- Tỷ lệ hủy tách thành: khách chủ động hủy (người thực hiện chuyển sang CANCELLED là người đang giữ lượt đặt), quá hạn chưa thanh toán (EXPIRED) và cơ sở hoặc Admin hủy (CANCELLED do người khác hoặc không rõ người thực hiện).
+- "Lượt đặt theo trạng thái" dùng biểu đồ tròn (donut), có chú giải bên cạnh gồm số lượt và phần trăm. Mỗi trạng thái giữ một màu cố định.
+
+API `GET /admin/bookings/statistics` thêm trường `cancellations: {by_customer, by_facility}`, đọc từ `booking_status_audit`. Không thêm bảng hay migration, không đổi quy tắc đặt sân hay tiền.
+
+## 47. Chọn nhanh kỳ, xuất báo cáo và biểu đồ cột cơ sở theo tỉnh (2026-11-06)
+
+Quyết định của người dùng ngày 06/11/2026. Mục này bổ sung mục 45 và 46.
+
+- Bộ lọc kỳ có các nút chọn nhanh: Hôm nay, 7 ngày qua, 30 ngày qua (mặc định), Tháng này, Quý này. Mọi kỳ tính theo ngày lịch giờ Việt Nam và tính đến hết hôm nay. Vẫn chọn được ngày tùy ý.
+- Góc phải đầu trang có nút "Xuất Excel" (.xlsx, mỗi bảng một sheet) và "Xuất CSV" (UTF-8 có BOM để Excel đọc đúng tiếng Việt). File gồm các số đang hiển thị trên trang: tổng quan kỳ này và kỳ trước kèm tách nguyên nhân hủy, lượt đặt theo trạng thái, tài khoản theo trạng thái, cơ sở theo tỉnh/thành. File được tạo ngay trên trình duyệt, không thêm API hay thư viện.
+- "Cơ sở theo tỉnh/thành" là biểu đồ cột ngang xếp hạng từ cao xuống thấp theo số cơ sở đang hoạt động. Mỗi cột có phần đang hoạt động và phần chưa hoạt động nối tiếp, kèm số lượng và tỷ trọng. Mặc định hiện 10 tỉnh đầu, có nút xem tất cả.
+
+## 48. Định dạng tiền, lượt đặt theo môn và top 5 cơ sở theo doanh thu (2026-11-06)
+
+Quyết định của người dùng ngày 06/11/2026. Mục này bổ sung mục 46 và 47.
+
+- Mọi số tiền trên báo cáo Admin viết đầy đủ theo định dạng tiền Việt Nam, ví dụ `2.900.000 ₫`, không rút gọn thành "triệu" hay "tỷ".
+- Thêm "Lượt đặt theo môn thể thao": biểu đồ tròn tỷ lệ lượt đặt tạo trong kỳ theo môn của sân (Pickleball, Cầu lông, Bóng đá, Tennis, cùng môn khác Admin thêm sau). Chú giải giữ cả môn có 0 lượt. Mỗi môn giữ màu cố định theo thứ tự chữ cái.
+- Thêm "Top 5 cơ sở doanh thu cao nhất": tên cơ sở (mở trang chi tiết Admin), địa chỉ, doanh thu, tỷ trọng trên tổng doanh thu và số lượt. Doanh thu cùng định nghĩa với mục 46.
+- Hai khối mới nằm dưới "Tài khoản theo trạng thái" và "Cơ sở theo tỉnh/thành". File xuất thêm sheet "Lượt đặt theo môn" và "Doanh thu theo cơ sở" (đầy đủ các cơ sở có doanh thu).
+
+API: `GET /admin/bookings/statistics` thêm `courts: [{facility_id, court_id, count, revenue}]`. Thêm `GET /admin/facilities/court-directory` (chỉ ADMIN) trả mỗi sân kèm môn, tên, địa chỉ và trạng thái cơ sở. Frontend ghép hai nguồn. Không thêm bảng hay migration, không đổi quy tắc đặt sân hay tiền.

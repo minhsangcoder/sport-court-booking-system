@@ -350,3 +350,25 @@ Kết quả mục 33 (30/10/2026): toàn bộ backend 2.700 test case đã chạ
 
 - [x] 44.1 Backend: V17, tải/xóa/đọc ảnh đại diện, gateway cho phép đọc công khai.
 - [x] 44.2 Frontend: chọn, xem trước, lưu ảnh; thông tin ngân hàng chỉ đọc kèm "Chỉnh sửa"; đầu trang hiện ảnh.
+
+## 45. Báo cáo Admin tập trung vào hoạt động nền tảng (2026-11-06)
+
+- [x] 45.1 Frontend: bỏ các khối tiền, giữ/hoàn, mô phỏng và nghĩa vụ cơ sở khỏi `/admin/reports`.
+- [x] 45.2 Frontend: chỉ số lượt đặt, tài khoản, cơ sở theo tỉnh và hồ sơ chờ duyệt theo thiết kế Home.
+
+## 46. KPI, tách tỷ lệ hủy và biểu đồ tròn trong báo cáo Admin (2026-11-06)
+
+- [x] 46.1 Backend/contract: `/admin/bookings/statistics` trả `cancellations.by_customer` và `by_facility`.
+- [x] 46.2 Frontend: KPI có tổng doanh thu và mức thay đổi so với kỳ trước; tỷ lệ hủy tách theo nguyên nhân.
+- [x] 46.3 Frontend: lượt đặt theo trạng thái dạng donut kèm chú giải, màu cố định theo trạng thái.
+
+## 47. Chọn nhanh kỳ, xuất báo cáo và biểu đồ cột cơ sở theo tỉnh (2026-11-06)
+
+- [x] 47.1 Frontend: nút chọn nhanh Hôm nay, 7 ngày, 30 ngày, Tháng này, Quý này (giờ Việt Nam).
+- [x] 47.2 Frontend: xuất Excel (.xlsx) và CSV ở góc phải đầu trang.
+- [x] 47.3 Frontend: cơ sở theo tỉnh/thành dạng cột ngang xếp hạng, 10 tỉnh đầu kèm "xem tất cả".
+
+## 48. Định dạng tiền, lượt đặt theo môn và top 5 cơ sở theo doanh thu (2026-11-06)
+
+- [x] 48.1 Backend/contract: `courts` trong thống kê lượt đặt; `/admin/facilities/court-directory`.
+- [x] 48.2 Frontend: tiền dạng `2.900.000 ₫`; donut lượt đặt theo môn; top 5 cơ sở theo doanh thu; thêm hai sheet xuất.

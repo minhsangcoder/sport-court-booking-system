@@ -1,10 +1,19 @@
 'use client'
-import type { useAccounts } from '@/features/admin/use-accounts'
+import { ACCOUNTS_PAGE_SIZE, type useAccounts } from '@/features/admin/use-accounts'
 import { displayLabel } from '@/lib/display-labels'
-import { ArrowRight, CheckCircle, RefreshCw, Users } from 'lucide-react'
+import { ArrowRight, CheckCircle, ChevronLeft, ChevronRight, RefreshCw, Users } from 'lucide-react'
 import Link from 'next/link'
-export function AccountTable({ model }: { model: Pick<ReturnType<typeof useAccounts>, 'r'> }) {
-  const { r } = model
+export function AccountTable({
+  model,
+}: {
+  model: Pick<ReturnType<typeof useAccounts>, 'r' | 'page' | 'setPage'>
+}) {
+  const { r, page, setPage } = model
+  const rows = r.data?.content
+  const total = r.data?.totalElements ?? 0
+  const pages = r.data?.totalPages ?? 1
+  const from = total === 0 ? 0 : page * ACCOUNTS_PAGE_SIZE + 1
+  const to = Math.min(total, (page + 1) * ACCOUNTS_PAGE_SIZE)
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-slate-800">
@@ -12,11 +21,15 @@ export function AccountTable({ model }: { model: Pick<ReturnType<typeof useAccou
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">Danh sách tài khoản</h3>
           {r.data && (
             <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              {r.data.length}
+              {total}
             </span>
           )}
         </div>
-        <p className="text-xs text-slate-400">Tối đa 100 kết quả gần nhất</p>
+        <p className="text-xs text-slate-400">
+          {total > 0
+            ? `Hiển thị ${from}–${to} / ${total} tài khoản · mới nhất trước`
+            : 'Mới nhất trước'}
+        </p>
       </div>
 
       {/* Loading State */}
@@ -39,7 +52,7 @@ export function AccountTable({ model }: { model: Pick<ReturnType<typeof useAccou
       )}
 
       {/* Empty State */}
-      {!r.loading && r.data?.length === 0 && (
+      {!r.loading && rows?.length === 0 && (
         <div className="p-12 text-center">
           <Users className="mx-auto size-10 text-slate-300" />
           <h4 className="mt-3 text-sm font-bold text-slate-800 dark:text-slate-200">
@@ -52,7 +65,7 @@ export function AccountTable({ model }: { model: Pick<ReturnType<typeof useAccou
       )}
 
       {/* Data Table */}
-      {!r.loading && r.data && r.data.length > 0 && (
+      {!r.loading && rows && rows.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
@@ -68,7 +81,7 @@ export function AccountTable({ model }: { model: Pick<ReturnType<typeof useAccou
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {r.data.map((u) => {
+              {rows.map((u) => {
                 const initial = u.fullName ? u.fullName.charAt(0).toUpperCase() : 'U'
                 return (
                   <tr
@@ -179,6 +192,77 @@ export function AccountTable({ model }: { model: Pick<ReturnType<typeof useAccou
           </table>
         </div>
       )}
+      {pages > 1 && <Pagination page={page} pages={pages} disabled={r.loading} onPage={setPage} />}
     </div>
+  )
+}
+/** Page numbers with the current page centred; first/last pages always reachable. */
+function pageItems(page: number, pages: number): (number | 'gap')[] {
+  const keep = new Set([0, pages - 1, page - 1, page, page + 1].filter((p) => p >= 0 && p < pages))
+  const sorted = [...keep].sort((a, b) => a - b)
+  const out: (number | 'gap')[] = []
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push('gap')
+    out.push(p)
+  })
+  return out
+}
+function Pagination({
+  page,
+  pages,
+  disabled,
+  onPage,
+}: {
+  page: number
+  pages: number
+  disabled: boolean
+  onPage: (page: number) => void
+}) {
+  const btn =
+    'inline-flex h-9 min-w-9 items-center justify-center rounded-full px-3 text-xs font-bold transition disabled:pointer-events-none disabled:opacity-40'
+  return (
+    <nav
+      aria-label="Phân trang danh sách tài khoản"
+      className="flex flex-wrap items-center justify-center gap-1.5 border-t border-slate-100 p-4 dark:border-slate-800"
+    >
+      <button
+        type="button"
+        className={`${btn} text-slate-600 ring-1 ring-slate-200 hover:ring-emerald-400 dark:text-slate-300 dark:ring-slate-700`}
+        disabled={disabled || page === 0}
+        onClick={() => onPage(page - 1)}
+      >
+        <ChevronLeft size={14} /> Trước
+      </button>
+      {pageItems(page, pages).map((p, i) =>
+        p === 'gap' ? (
+          <span key={`gap-${i}`} className="px-1 text-xs text-slate-400">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            type="button"
+            aria-current={p === page ? 'page' : undefined}
+            disabled={disabled}
+            onClick={() => onPage(p)}
+            className={`${btn} ${
+              p === page
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                : 'text-slate-600 ring-1 ring-slate-200 hover:ring-emerald-400 dark:text-slate-300 dark:ring-slate-700'
+            }`}
+          >
+            {p + 1}
+          </button>
+        ),
+      )}
+      <button
+        type="button"
+        className={`${btn} text-slate-600 ring-1 ring-slate-200 hover:ring-emerald-400 dark:text-slate-300 dark:ring-slate-700`}
+        disabled={disabled || page >= pages - 1}
+        onClick={() => onPage(page + 1)}
+      >
+        Sau <ChevronRight size={14} />
+      </button>
+    </nav>
   )
 }

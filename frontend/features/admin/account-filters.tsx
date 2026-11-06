@@ -7,9 +7,9 @@ import { Filter, Search } from 'lucide-react'
 export function AccountFilters({
   model,
 }: {
-  model: Pick<ReturnType<typeof useAccounts>, 'search' | 'setPath'>
+  model: Pick<ReturnType<typeof useAccounts>, 'search' | 'reset'>
 }) {
-  const { search, setPath } = model
+  const { search, reset } = model
   return (
     <div className="p-5 rounded-3xl border border-slate-200/90 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 home-rise">
       <form
@@ -78,8 +78,9 @@ export function AccountFilters({
           <Button
             type="button"
             variant="outline"
-            onClick={() => {
-              setPath('/admin/accounts')
+            onClick={(e) => {
+              e.currentTarget.form?.reset()
+              reset()
             }}
             className="h-11 text-xs rounded-xl"
           >

@@ -98,7 +98,6 @@ try{
  const publish=seller.page.getByRole('button',{name:'Đăng tin chuyển nhượng',exact:true});assert.equal(await publish.isDisabled(),true);assert.equal(await seller.page.locator('input[name*=bank],input[name*=beneficiary]').count(),0)
  await seller.page.getByRole('checkbox').check();await publish.click();await seller.page.waitForURL(`**/transfers/${listing}`);assert.equal(seller.state.mutations.find(m=>m.path==='/transfers').body.acceptedTermsHash,terms.termsHash)
  await seller.page.goto(`${base}/customer/transfers`);await seller.page.getByText('Cơ sở phải trả bạn 95.000 ₫ sau phí 5.000 ₫.',{exact:true}).waitFor();assert.equal(await seller.page.getByRole('button',{name:'Trả tiền mô phỏng cho A',exact:true}).count(),0)
- const admin=await fixture('ADMIN');await admin.page.goto(`${base}/admin/reports`);await admin.page.getByRole('heading',{name:'Giám sát hệ thống mô phỏng',exact:true}).waitFor();await admin.page.getByRole('row').filter({hasText:'Trả người bán · Cụm sân DEMO'}).waitFor();assert.equal(await admin.page.getByRole('button',{name:'Trả tiền mô phỏng cho A',exact:true}).count(),0);assert.equal(await admin.page.getByRole('button',{name:'Hoàn tiền mô phỏng',exact:true}).count(),0)
- console.log('PASS A quote/consent/no banking inputs/own unpaid status; mutation refreshes report in another tab; Admin monitor read only')
+ console.log('PASS A quote/consent/no banking inputs/own unpaid status; mutation refreshes report in another tab')
  assert.deepEqual(errors,[])
 }finally{for(const context of contexts)await context.close();await browser.close()}

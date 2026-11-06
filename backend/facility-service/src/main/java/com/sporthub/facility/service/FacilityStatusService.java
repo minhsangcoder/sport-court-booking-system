@@ -40,5 +40,7 @@ public class FacilityStatusService {
  }
  public List<Map<String,Object>> history(UUID id,Caller actor){if(!actor.hasRole("ADMIN"))facilities.ownedEntity(id,actor);else facilities.find(id);return jdbc.queryForList("SELECT * FROM facility_status_decisions WHERE facility_id=? ORDER BY occurred_at,id",id);}
  public Map<String,Object> statistics(Caller actor){actor.requireRole("ADMIN");return Map.of("dateBasis","CURRENT_STATE","regions",jdbc.queryForList("SELECT province_code,status,count(*) AS facility_count FROM facilities GROUP BY province_code,status ORDER BY province_code,status"),"publicationPolicy","First facilities require a committed Owner application; ACTIVE state alone is not proof of publication");}
+ /** Every court with its sport and facility name/address: lets the admin report label booking figures per sport and facility. */
+ public List<Map<String,Object>> courtDirectory(Caller actor){actor.requireRole("ADMIN");return jdbc.queryForList("SELECT c.id AS court_id,c.facility_id,f.name AS facility_name,f.address_line,f.ward,f.province,f.status AS facility_status,s.name AS sport FROM courts c JOIN facilities f ON f.id=c.facility_id JOIN sport_categories s ON s.id=c.sport_category_id ORDER BY f.name,c.name");}
  private String fingerprint(List<Reservation> rows){var sorted=rows.stream().sorted(Comparator.comparing(r->r.reservationId().toString())).toList();return Signatures.sha256(json.valueToTree(sorted).toString());}
 }

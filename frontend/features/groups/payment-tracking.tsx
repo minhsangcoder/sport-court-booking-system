@@ -2,7 +2,13 @@
 import { Button } from '@/components/ui/button'
 import { CourtLines } from '@/features/home/home-art'
 import { money } from '@/features/schedule/types'
-import { amberNotice, card, emeraldNotice, outlinePill, primaryPill } from '@/features/transfers/transfer-styles'
+import {
+  amberNotice,
+  card,
+  emeraldNotice,
+  outlinePill,
+  primaryPill,
+} from '@/features/transfers/transfer-styles'
 import { api } from '@/lib/api'
 import { useRef, useState } from 'react'
 import { type ContributionClaim, type Group, type ReminderResult, memberStates } from './types'
@@ -85,7 +91,10 @@ export function GroupPaymentTracking({
         : m.amountPaid < m.amountDue),
   )
   return (
-    <section className="home-rise min-w-0 [animation-delay:120ms]" aria-label="Theo dõi thanh toán nhóm">
+    <section
+      className="home-rise min-w-0 [animation-delay:120ms]"
+      aria-label="Theo dõi thanh toán nhóm"
+    >
       {owner &&
         g.state === 'GROUP_PENDING' &&
         g.allocationsLocked &&
@@ -159,8 +168,8 @@ export function GroupPaymentTracking({
         {result && (
           <div role="status" className={`${emeraldNotice} mt-4 font-normal`}>
             <p>
-              Đã nhận {result.acceptedCount} lời nhắc. Thành viên nhận qua chuông thông báo trong ứng
-              dụng và email/SĐT đã xác minh. Bỏ qua {result.skippedCount} thành viên.
+              Đã nhận {result.acceptedCount} lời nhắc. Thành viên nhận qua chuông thông báo trong
+              ứng dụng và email/SĐT đã xác minh. Bỏ qua {result.skippedCount} thành viên.
             </p>
             {result.members
               .filter((m) => m.outcome === 'SKIPPED')
@@ -176,11 +185,15 @@ export function GroupPaymentTracking({
           </div>
         )}
         {confirmation && (
-          <div className={`${amberNotice} mt-4`} role="region" aria-label="Xác nhận nhắc thanh toán">
+          <div
+            className={`${amberNotice} mt-4`}
+            role="region"
+            aria-label="Xác nhận nhắc thanh toán"
+          >
             <h3 className="font-bold">Xác nhận gửi nhắc thanh toán</h3>
             <p className="mt-2">
-              Hạn góp tiền: {date(g.deadline)}. Hệ thống kiểm tra lại số tiền và trạng thái trước khi
-              nhận lời nhắc.
+              Hạn góp tiền: {date(g.deadline)}. Hệ thống kiểm tra lại số tiền và trạng thái trước
+              khi nhận lời nhắc.
             </p>
             <ul className="mt-3 space-y-2">
               {recipients.map((m) => (
@@ -237,7 +250,9 @@ export function GroupPaymentTracking({
                     )}
                   </p>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    <span className={paid ? 'font-semibold text-emerald-700 dark:text-emerald-400' : ''}>
+                    <span
+                      className={paid ? 'font-semibold text-emerald-700 dark:text-emerald-400' : ''}
+                    >
                       {g.allocationsLocked && m.amountDue === 0
                         ? 'Không cần đóng'
                         : memberStates[m.paymentState]}
@@ -250,14 +265,14 @@ export function GroupPaymentTracking({
                   </p>
                   {organizerPaying && (
                     <p role="status" className={`${amberNotice} mt-3 p-3 text-xs`}>
-                      Người tổ chức đang thanh toán thay phần này. Bạn không cần chuyển khoản; nếu còn
-                      giữ QR cũ, đừng dùng lại.
+                      Người tổ chức đang thanh toán thay phần này. Bạn không cần chuyển khoản; nếu
+                      còn giữ QR cũ, đừng dùng lại.
                     </p>
                   )}
                   {memberPaying && (
                     <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
-                      Thành viên đang mở QR. “Thanh toán thay” sẽ vô hiệu QR đó; hãy báo họ dừng chuyển
-                      khoản.
+                      Thành viên đang mở QR. “Thanh toán thay” sẽ vô hiệu QR đó; hãy báo họ dừng
+                      chuyển khoản.
                     </p>
                   )}
                   {m.lastReminderAt && (
@@ -270,9 +285,11 @@ export function GroupPaymentTracking({
                       Có thể nhắc lại từ {date(m.nextReminderAt)}
                     </p>
                   )}
-                  {owner && m.userId !== g.ownerId && m.reminderBlockedReason === 'WINDOW_CLOSED' && (
-                    <p className="mt-2 text-xs text-slate-500">Đã đóng thời hạn góp tiền</p>
-                  )}
+                  {owner &&
+                    m.userId !== g.ownerId &&
+                    m.reminderBlockedReason === 'WINDOW_CLOSED' && (
+                      <p className="mt-2 text-xs text-slate-500">Đã đóng thời hạn góp tiền</p>
+                    )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   {owner &&
@@ -296,7 +313,11 @@ export function GroupPaymentTracking({
                       </label>
                     )}
                   {payable && (owner || self) && !organizerPaying && (
-                    <Button disabled={busy || sending} onClick={() => pay(m.id)} className={primaryPill}>
+                    <Button
+                      disabled={busy || sending}
+                      onClick={() => pay(m.id)}
+                      className={primaryPill}
+                    >
                       {self
                         ? 'Đóng phần của tôi'
                         : claim?.paidByCaller

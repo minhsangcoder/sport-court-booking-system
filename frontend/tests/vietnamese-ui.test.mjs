@@ -426,3 +426,34 @@ test('first facility review points the Admin to its Owner application instead of
   assert.match(linked, /AB12CD34/)
   assert.match(render(null), /Phê duyệt cơ sở/)
 })
+
+test('admin account list is paged by the server and shows the full match count', () => {
+  const account = (i) => ({
+    id: `tk-${i}`,
+    fullName: `Người dùng ${i}`,
+    email: `u${i}@sporthub.local`,
+    emailVerified: true,
+    phone: null,
+    phoneVerified: false,
+    roles: ['CUSTOMER'],
+    status: 'ACTIVE',
+    createdAt: '2026-11-01T00:00:00Z',
+  })
+  const page = {
+    content: Array.from({ length: 20 }, (_, i) => account(i + 21)),
+    page: 1,
+    size: 20,
+    totalElements: 200,
+    totalPages: 10,
+    first: false,
+    last: false,
+  }
+  const app = application({ resources: { '/admin/accounts?page=0&size=20': { data: page } } })
+  const html = app.render(app.load('features/admin/account-table.tsx').AccountTable, {
+    model: { r: { data: page, loading: false, error: '', reload() {} }, page: 1, setPage() {} },
+  })
+  assert.match(html, /Hiển thị 21–40 \/ 200 tài khoản/)
+  assert.match(html, /aria-current="page"[^>]*>2</)
+  assert.match(html, />10</)
+  assert.doesNotMatch(html, /Tối đa 100/)
+})

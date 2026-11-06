@@ -74,7 +74,9 @@ export function SearchPage({ initial, today }: { initial: Record<string, string>
   const districts = useApi<FormerDistrict[]>(
     provinceCode ? `/facilities/areas?provinceCode=${provinceCode}` : null,
   )
-  const currentDistrict = provinceCode ? districts.data?.find((d) => d.name === district) : undefined
+  const currentDistrict = provinceCode
+    ? districts.data?.find((d) => d.name === district)
+    : undefined
   const wardOptions = currentDistrict?.wards ?? (provinceCode ? provinceWards : [])
   useEffect(() => {
     if (!provinceCode) return

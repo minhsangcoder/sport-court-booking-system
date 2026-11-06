@@ -4,7 +4,23 @@ Current change: `add-flexible-booking-and-peer-resale`
 Proposal: `openspec/changes/add-flexible-booking-and-peer-resale/proposal.md`
 Selection confirmed by the user: 2026-10-27.
 
-Latest business revision: section 44 (2026-11-01): customers upload a profile photo (preview before saving, removable,
+Latest business revision: section 48 (2026-11-06): admin report money is written in full Vietnamese currency format
+(2.900.000 ₫); adds bookings by sport (donut) and the top 5 facilities by revenue (name, address, revenue), using a
+per-court `courts` field on booking statistics and a new admin `/admin/facilities/court-directory`; no migration.
+
+Earlier business revision: section 47 (2026-11-06): the admin report adds quick periods (today, 7 days, 30 days, this
+month, this quarter, Vietnam days), Excel (.xlsx) and CSV export built in the browser, and a ranked horizontal bar chart
+of facilities by province (top 10, expandable); frontend only.
+
+Earlier business revision: section 46 (2026-11-06): the admin report KPIs add total booking revenue (successful bookings)
+and change against the previous equal-length period; the cancel rate splits into customer cancels, unpaid expiry and
+facility/admin cancels (`cancellations` on the booking statistics API); bookings by status become a donut chart.
+
+Earlier business revision: section 45 (2026-11-06): the admin report shows platform activity only (bookings, accounts,
+facilities by province, pending Owner applications) in the Home design; money, hold, simulated and facility-obligation
+blocks are removed from the page; frontend only, no API or data removed.
+
+Earlier business revision: section 44 (2026-11-01): customers upload a profile photo (preview before saving, removable,
 re-encoded, public by random address, V17) and the bank settings screen shows the photo above a read-only bank account
 with an edit button; no bank-change lock or resale rule changes.
 

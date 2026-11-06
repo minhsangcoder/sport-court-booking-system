@@ -120,7 +120,6 @@
     "frontend/features/admin/account-detail.tsx": "36cf5e897861b8b375255e6d4e7900238ad45c087f45d1c9e5fee7465da35acf",
     "frontend/features/admin/account-list.tsx": "468ed41197e95352175ae602d1f0e99a12f7a57452a10031f37fc09269c78ef9",
     "frontend/features/admin/booking-monitor.tsx": "a2b3979964646b9d5ab863efff0d081d971d9ce7d6374c36ddc18743bd09c41a",
-    "frontend/features/admin/demo-money-monitor.tsx": "d17fb475b051a1c55e73f7aba28cf757c15ad67a6ef692a0bf883e6c170b83da",
     "frontend/features/admin/facility-review.tsx": "9159296d6ef56c95a7c60f56024c933c80f25a133fdf38d305d173cd1dc41022",
     "frontend/features/admin/payment-monitor.tsx": "7c3615e32a6ef64f0ce56cc5f32c518560e3abd3b09cdbb786ad7813560e0117",
     "frontend/features/admin/report-page.tsx": "813fa3c0fcc0a5ed4949d6f62cdbf0fd429d82578b009a4b3e9779e4f38c91e5",

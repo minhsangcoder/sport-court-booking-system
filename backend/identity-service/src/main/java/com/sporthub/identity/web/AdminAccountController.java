@@ -12,7 +12,7 @@ import java.util.*;
 @RestController @RequestMapping("/api/v1/admin/accounts")
 public class AdminAccountController {
  private final AdminAccountService service;public AdminAccountController(AdminAccountService service){this.service=service;}
- @GetMapping public ApiResponse<List<Account>> search(@RequestParam(required=false) String q,@RequestParam(required=false) AccountStatus status,@RequestParam(required=false) Role role,@AuthenticationPrincipal AuthenticatedUser actor){return ApiResponse.success(service.search(q,status,role,actor));}
+ @GetMapping public ApiResponse<com.sporthub.common.dto.PageResponse<Account>> search(@RequestParam(required=false) String q,@RequestParam(required=false) AccountStatus status,@RequestParam(required=false) Role role,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,@AuthenticationPrincipal AuthenticatedUser actor){return ApiResponse.success(service.searchPage(q,status,role,page,size,actor));}
  @GetMapping("/statistics") public ApiResponse<List<Map<String,Object>>> stats(@AuthenticationPrincipal AuthenticatedUser actor){return ApiResponse.success(service.statistics(actor));}
  @GetMapping("/{id}") public ApiResponse<Detail> detail(@PathVariable UUID id,@AuthenticationPrincipal AuthenticatedUser actor){return ApiResponse.success(service.detail(id,actor));}
  @PostMapping("/{id}/lock") public ApiResponse<Account> lock(@PathVariable UUID id,@Valid @RequestBody LockInput input,@AuthenticationPrincipal AuthenticatedUser actor,HttpServletRequest request){return ApiResponse.success(service.lock(id,input,actor,RequestMetadata.from(request)));}
