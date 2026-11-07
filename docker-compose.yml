@@ -362,6 +362,20 @@ services:
       start_period: 15s
     networks: [sporthub]
 
+  adminer:
+    profiles: [tools]
+    image: adminer:4.8.1
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "${ADMINER_PORT:-127.0.0.1:8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [sporthub]
+
 networks:
   sporthub:
     driver: bridge
