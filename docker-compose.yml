@@ -256,6 +256,8 @@ services:
       APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
       PAYMENT_WEBHOOK_ORIGIN: ${PAYMENT_WEBHOOK_ORIGIN:-}
       PAYMENT_SECRET_KEYS: ${PAYMENT_SECRET_KEYS:-}
+      SEPAY_COLLECTION_CREATE_ENABLED: ${SEPAY_COLLECTION_CREATE_ENABLED:-false}
+      SPORTHUB_COLLECTION_PROVIDER: ${SPORTHUB_COLLECTION_PROVIDER:-SEPAY}
       DEMO_PAYMENT_CALLBACK_URL: http://payment-service:8085/api/v1/payments/providers/demo/callback
     depends_on:
       postgres:
