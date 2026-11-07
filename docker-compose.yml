@@ -371,7 +371,7 @@ services:
       ADMINER_DEFAULT_SERVER: postgres
       ADMINER_VIEWER_PASSWORD: ${ADMINER_VIEWER_PASSWORD:-}
     volumes:
-      - ./ops/adminer/autologin.php:/var/www/html/plugins-enabled/autologin.php:ro
+      - ./scripts/adminer/autologin.php:/var/www/html/plugins-enabled/autologin.php:ro
     ports:
       - "${ADMINER_PORT:-127.0.0.1:8081}:8080"
     depends_on:
